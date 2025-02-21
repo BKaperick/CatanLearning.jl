@@ -1,3 +1,5 @@
+using Logging
+
 using Catan
 import Catan
 
@@ -7,6 +9,8 @@ include("structs.jl")
 include("helpers.jl")
 include("mutation_rule_library.jl")
 include("evolution.jl")
+include("players/structs.jl")
+include("players/mutated_empath_player.jl")
 
 
 team_to_mutation = Dict([
@@ -22,7 +26,7 @@ global_logger(logger)
 SAVE_GAME_TO_FILE = false
 #SAVEFILEIO = open(SAVEFILE, "a")
 
-map_file = "$(DATA_DIR)/_temp_map_file.csv"
+map_file = "$(Catan.DATA_DIR)/_temp_map_file.csv"
 winners = Dict{Union{Symbol, Nothing}, Int}([(k,0) for k in collect(keys(team_to_mutation))])
 winners[nothing] = 0
 
@@ -42,7 +46,7 @@ for k=1:tourney.epochs
         println("$(player): $(print_mutation(mt))")
     end
     for j=1:tourney.maps_per_epoch
-        map = generate_random_map(map_file)
+        map = Catan.generate_random_map(map_file)
         for i=1:tourney.games_per_map
             game = Game(generate_players())
             println("starting game $(game.unique_id)")
