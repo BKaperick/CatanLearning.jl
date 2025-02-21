@@ -1,0 +1,1370 @@
+game ss 1
+board bs :Cyan (3,1)
+board br :Cyan (3,1) (3,2)
+game fp :Cyan 
+board bs :Red (5,3)
+board br :Red (5,3) (4,4)
+game fp :Red 
+board bs :Yellow (6,4)
+board br :Yellow (6,4) (6,5)
+game fp :Yellow 
+board bs :Green (5,9)
+board br :Green (5,9) (4,10)
+game fp :Green 
+game ft 
+board bs :Green (2,5)
+board br :Green (2,5) (3,6)
+:Green gr :Grain
+:Green gr :Wood
+:Green gr :Wood
+board bs :Yellow (4,3)
+board br :Yellow (4,3) (4,2)
+:Yellow gr :Pasture
+:Yellow gr :Brick
+:Yellow gr :Stone
+board bs :Red (2,3)
+board br :Red (2,3) (3,4)
+:Red gr :Grain
+:Red gr :Brick
+:Red gr :Wood
+board bs :Cyan (6,1)
+board br :Cyan (6,1) (6,2)
+:Cyan gr :Wood
+game st 
+:Red gr :Grain
+game dt 
+game df 
+game fp :Cyan 
+game dt 
+:Red dc :Wood
+:Red dc :Brick
+board br :Red (5,3) (5,2)
+game df 
+game fp :Red 
+:Yellow gr :Grain
+:Yellow gr :Pasture
+game dt 
+game dd :Knight 
+:Yellow dc :Stone
+:Yellow dc :Grain
+:Yellow dc :Pasture
+:Yellow ad :Knight
+board mr :E
+:Green tr :Wood
+:Yellow gr :Wood
+:Yellow pd :Knight
+:Yellow dc :Wood
+:Yellow dc :Brick
+board br :Yellow (6,5) (5,6)
+game df 
+game fp :Yellow 
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+:Green gr :Wood
+:Red gr :Brick
+:Yellow gr :Brick
+game dt 
+game df 
+game fp :Cyan 
+:Green gr :Grain
+:Green gr :Stone
+game dt 
+game df 
+game fp :Red 
+board mr :D
+:Red tr :Brick
+:Yellow gr :Brick
+game dt 
+game df 
+game fp :Yellow 
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+game dt 
+game df 
+game fp :Cyan 
+:Green gr :Grain
+:Green gr :Stone
+game dt 
+:Red tr :Grain
+:Cyan gr :Grain
+:Cyan tr :Wood
+:Red gr :Wood
+game df 
+game fp :Red 
+game dt 
+game df 
+game fp :Yellow 
+:Yellow gr :Grain
+:Yellow gr :Pasture
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+game dt 
+:Cyan tr :Grain
+:Green gr :Grain
+:Green tr :Wood
+:Cyan gr :Wood
+game df 
+game fp :Cyan 
+:Red gr :Pasture
+game dt 
+game df 
+game fp :Red 
+:Cyan gr :Wood
+:Red gr :Wood
+:Cyan gr :Stone
+:Yellow gr :Stone
+game dt 
+game dd :RoadBuilding 
+:Yellow dc :Stone
+:Yellow dc :Grain
+:Yellow dc :Pasture
+:Yellow ad :RoadBuilding
+board br :Yellow (5,6) (5,5)
+board br :Yellow (5,5) (4,6)
+:Yellow pd :RoadBuilding
+game df 
+game fp :Yellow 
+:Cyan gr :Wood
+:Red gr :Wood
+:Cyan gr :Stone
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+board mr :I
+:Yellow tr :Stone
+:Cyan gr :Stone
+game dt 
+game df 
+game fp :Cyan 
+game dt 
+game df 
+game fp :Red 
+:Green gr :Wood
+:Red gr :Brick
+:Yellow gr :Brick
+game dt 
+game df 
+game fp :Yellow 
+:Cyan gr :Wood
+:Red gr :Wood
+:Cyan gr :Stone
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+:Yellow gr :Grain
+game dt 
+game df 
+game fp :Cyan 
+:Yellow gr :Grain
+game dt 
+:Red dc :Wood
+:Red dc :Brick
+board br :Red (4,4) (4,5)
+game df 
+game fp :Red 
+:Red gr :Brick
+:Red gr :Pasture
+game dt 
+game dd :VictoryPoint 
+:Yellow dc :Stone
+:Yellow dc :Grain
+:Yellow dc :Pasture
+:Yellow ad :VictoryPoint
+game df 
+game fp :Yellow 
+:Yellow gr :Grain
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+:Yellow gr :Grain
+game dt 
+game df 
+game fp :Cyan 
+game dt 
+:Red dc :Wood
+:Red dc :Grain
+:Red dc :Brick
+:Red dc :Pasture
+board bs :Red (4,5)
+game df 
+game fp :Red 
+:Green gr :Wood
+:Red gr :Brick
+:Yellow gr :Brick
+game dt 
+game df 
+game fp :Yellow 
+board mr :D
+:Green dc :Stone :Grain :Wood :Grain
+:Red tr :Brick
+:Green gr :Brick
+game dt 
+:Green dc :Wood
+:Green dc :Brick
+board br :Green (3,6) (3,7)
+game df 
+game fp :Green 
+game ft 
+game st 
+:Cyan gr :Wood
+:Red gr :Wood
+:Cyan gr :Stone
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Cyan 
+:Green gr :Wood
+:Red gr :Brick
+:Yellow gr :Brick
+game dt 
+:Red dc :Wood
+:Red dc :Brick
+board br :Red (2,3) (2,2)
+game df 
+game fp :Red 
+:Red gr :Grain
+game dt 
+game df 
+game fp :Yellow 
+:Green gr :Wood
+:Red gr :Brick
+:Yellow gr :Brick
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+:Cyan gr :Wood
+:Red gr :Wood
+:Cyan gr :Stone
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Cyan 
+:Yellow gr :Grain
+:Red gr :Pasture
+:Yellow gr :Pasture
+game dt 
+:Red dc :Wood
+:Red dc :Brick
+board br :Red (5,3) (5,4)
+game df 
+game fp :Red 
+board mr :J
+:Yellow dc :Pasture :Brick :Grain :Brick :Grain :Brick
+:Red tr :Wood
+:Yellow gr :Wood
+game dt 
+:Yellow dc :Wood
+:Yellow dc :Brick
+board br :Yellow (6,4) (6,3)
+game df 
+game fp :Yellow 
+:Cyan gr :Wood
+:Red gr :Wood
+:Cyan gr :Stone
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+:Green gr :Wood
+:Red gr :Brick
+:Yellow gr :Brick
+game dt 
+game df 
+game fp :Cyan 
+:Red gr :Brick
+:Red gr :Pasture
+:Red gr :Pasture
+game dt 
+:Red dc :Wood
+:Red dc :Brick
+board br :Red (3,4) (3,3)
+:Red dc :Wood
+:Red dc :Brick
+board br :Red (5,2) (5,1)
+game df 
+game fp :Red 
+board mr :N
+:Yellow dc :Grain :Brick :Stone :Brick
+:Red tr :Pasture
+:Yellow gr :Pasture
+game dt 
+game dd :RoadBuilding 
+:Yellow dc :Stone
+:Yellow dc :Grain
+:Yellow dc :Pasture
+:Yellow ad :RoadBuilding
+game df 
+game fp :Yellow 
+:Yellow gr :Grain
+:Red gr :Pasture
+:Yellow gr :Pasture
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+game dt 
+:Cyan tr :Wood
+:Yellow gr :Wood
+:Yellow tr :Grain
+:Cyan gr :Grain
+game df 
+game fp :Cyan 
+board mr :P
+:Green tr :Wood
+:Red gr :Wood
+game dt 
+game df 
+game fp :Red 
+game dt 
+:Yellow dc :Wood
+:Yellow dc :Brick
+board br :Yellow (4,6) (4,5)
+board br :Yellow (4,2) (4,1)
+board br :Yellow (6,5) (6,6)
+:Yellow pd :RoadBuilding
+game df 
+game fp :Yellow 
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+:Yellow gr :Grain
+:Red gr :Pasture
+:Yellow gr :Pasture
+game dt 
+game df 
+game fp :Cyan 
+game dt 
+game df 
+game fp :Red 
+:Yellow gr :Grain
+:Red gr :Pasture
+:Yellow gr :Pasture
+game dt 
+game dd :Knight 
+:Yellow dc :Stone
+:Yellow dc :Grain
+:Yellow dc :Pasture
+:Yellow ad :Knight
+game df 
+game fp :Yellow 
+board mr :I
+:Yellow tr :Pasture
+:Green gr :Pasture
+game dt 
+game dd :Knight 
+:Green dc :Stone
+:Green dc :Grain
+:Green dc :Pasture
+:Green ad :Knight
+board mr :C
+:Green pd :Knight
+game df 
+game fp :Green 
+game ft 
+game st 
+game dt 
+game df 
+game fp :Cyan 
+:Yellow gr :Grain
+:Red gr :Pasture
+:Yellow gr :Pasture
+game dt 
+game df 
+game fp :Red 
+board mr :N
+:Red tr :Wood
+:Yellow gr :Wood
+game dt 
+board mr :C
+:Yellow pd :Knight
+:Yellow tr :Grain
+:Red gr :Grain
+:Red tr :Pasture
+:Yellow gr :Pasture
+game df 
+game fp :Yellow 
+:Yellow gr :Grain
+:Red gr :Pasture
+:Yellow gr :Pasture
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+:Green gr :Wood
+:Red gr :Brick
+:Yellow gr :Brick
+game dt 
+game df 
+game fp :Cyan 
+:Green gr :Grain
+:Green gr :Stone
+game dt 
+game df 
+game fp :Red 
+:Green gr :Grain
+:Green gr :Stone
+game dt 
+:Yellow dc :Wood
+:Yellow dc :Grain
+:Yellow dc :Brick
+:Yellow dc :Pasture
+board bs :Yellow (6,6)
+game df 
+game fp :Yellow 
+game dt 
+:Green tr :Grain
+:Cyan gr :Grain
+:Cyan tr :Wood
+:Green gr :Wood
+game df 
+game fp :Green 
+game ft 
+game st 
+board mr :J
+:Cyan dc :Stone :Grain :Wood :Stone :Stone :Wood :Wood
+:Red tr :Grain
+:Cyan gr :Grain
+game dt 
+:Cyan dc :Stone :Stone :Stone
+:Cyan dc :Grain :Grain
+board bc :Cyan (3,1)
+game df 
+game fp :Cyan 
+game dt 
+:Red tr :Grain
+:Cyan gr :Grain
+:Cyan tr :Wood
+:Red gr :Wood
+:Red dc :Wood
+:Red dc :Brick
+board br :Red (2,2) (2,1)
+game df 
+game fp :Red 
+board mr :K
+game dt 
+game df 
+game fp :Yellow 
+board mr :N
+:Green dc :Stone :Wood :Wood :Wood
+:Red tr :Pasture
+:Green gr :Pasture
+game dt 
+game dd :Knight 
+:Green dc :Stone
+:Green dc :Grain
+:Green dc :Pasture
+:Green ad :Knight
+board mr :A
+:Red tr :Pasture
+:Green gr :Pasture
+:Green pd :Knight
+game df 
+game fp :Green 
+game ft 
+game st 
+:Cyan gr :Wood
+:Red gr :Wood
+:Cyan gr :Stone
+:Cyan gr :Stone
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Cyan 
+game dt 
+game df 
+game fp :Red 
+board mr :B
+:Green tr :Wood
+:Yellow gr :Wood
+game dt 
+game dd :Knight 
+:Yellow dc :Stone
+:Yellow dc :Grain
+:Yellow dc :Pasture
+:Yellow ad :Knight
+game df 
+game fp :Yellow 
+:Red gr :Brick
+:Red gr :Pasture
+:Red gr :Pasture
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+:Cyan gr :Wood
+:Red gr :Wood
+:Cyan gr :Stone
+:Cyan gr :Stone
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Cyan 
+board mr :P
+:Red dc :Brick :Pasture :Pasture :Wood :Pasture
+:Green tr :Wood
+:Red gr :Wood
+game dt 
+game df 
+game fp :Red 
+:Yellow gr :Stone
+game dt 
+board mr :J
+:Red tr :Wood
+:Yellow gr :Wood
+:Yellow pd :Knight
+:Yellow la 
+game df 
+game fp :Yellow 
+:Cyan gr :Wood
+:Red gr :Wood
+:Cyan gr :Stone
+:Cyan gr :Stone
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+board mr :G
+:Cyan dc :Wood :Stone :Stone :Stone :Stone :Wood
+game dt 
+game df 
+game fp :Cyan 
+:Green gr :Wood
+:Red gr :Brick
+:Yellow gr :Brick
+game dt 
+:Red dc :Wood
+:Red dc :Brick
+board br :Red (4,4) (4,3)
+game df 
+game fp :Red 
+:Yellow gr :Stone
+game dt 
+:Yellow dc :Wood
+:Yellow dc :Brick
+board br :Yellow (5,5) (5,4)
+game df 
+game fp :Yellow 
+:Green gr :Wood
+:Red gr :Wood
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Cyan 
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Red 
+:Green gr :Grain
+:Green gr :Stone
+game dt 
+game df 
+game fp :Yellow 
+board mr :L
+game dt 
+game dd :Monopoly 
+:Green dc :Stone
+:Green dc :Grain
+:Green dc :Pasture
+:Green ad :Monopoly
+:Cyan tr :Wood
+:Green gr :Wood
+:Cyan tr :Wood
+:Green gr :Wood
+:Red tr :Wood
+:Green gr :Wood
+:Red tr :Wood
+:Green gr :Wood
+:Yellow tr :Wood
+:Green gr :Wood
+:Green tr :Wood
+:Green gr :Wood
+:Green tr :Wood
+:Green gr :Wood
+:Green tr :Wood
+:Green gr :Wood
+:Green tr :Wood
+:Green gr :Wood
+:Green tr :Wood
+:Green gr :Wood
+:Green tr :Wood
+:Green gr :Wood
+:Green tr :Wood
+:Green gr :Wood
+:Green pd :Monopoly
+:Yellow rl 
+:Yellow la 
+game df 
+game fp :Green 
+game ft 
+game st 
+:Cyan gr :Wood
+:Red gr :Wood
+:Cyan gr :Stone
+:Cyan gr :Stone
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Cyan 
+:Cyan gr :Wood
+:Red gr :Wood
+:Cyan gr :Stone
+:Cyan gr :Stone
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Red 
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Yellow 
+:Green gr :Grain
+:Green gr :Stone
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Cyan 
+:Cyan gr :Wood
+:Red gr :Wood
+:Cyan gr :Stone
+:Cyan gr :Stone
+:Yellow gr :Stone
+game dt 
+:Red tr :Pasture
+:Green gr :Pasture
+:Green tr :Wood
+:Red gr :Wood
+game df 
+game fp :Red 
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Yellow 
+board mr :G
+:Green dc :Wood :Stone :Wood :Wood :Pasture
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+:Green gr :Grain
+:Green gr :Stone
+game dt 
+game df 
+game fp :Cyan 
+game dt 
+game df 
+game fp :Red 
+game dt 
+game df 
+game fp :Yellow 
+:Red gr :Grain
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+game dt 
+game df 
+game fp :Cyan 
+:Cyan gr :Wood
+:Red gr :Wood
+:Cyan gr :Stone
+:Cyan gr :Stone
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Red 
+game dt 
+game df 
+game fp :Yellow 
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+game dt 
+game df 
+game fp :Cyan 
+board mr :P
+:Red dc :Wood :Pasture :Grain :Wood
+:Green tr :Stone
+:Red gr :Stone
+game dt 
+:Red tr :Pasture
+:Cyan gr :Pasture
+:Cyan tr :Wood
+:Red gr :Wood
+game df 
+game fp :Red 
+:Cyan gr :Wood
+:Red gr :Wood
+:Cyan gr :Stone
+:Cyan gr :Stone
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Yellow 
+board mr :R
+:Yellow tr :Pasture
+:Green gr :Pasture
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+:Yellow gr :Stone
+game dt 
+game dd :VictoryPoint 
+:Cyan dc :Stone
+:Cyan dc :Grain
+:Cyan dc :Pasture
+:Cyan ad :VictoryPoint
+game df 
+game fp :Cyan 
+:Green gr :Wood
+:Red gr :Brick
+:Yellow gr :Brick
+game dt 
+:Red dc :Wood
+:Red dc :Brick
+board br :Red (2,3) (2,4)
+:Red tr :Wood
+:Yellow gr :Wood
+:Yellow tr :Pasture
+:Red gr :Pasture
+game df 
+game fp :Red 
+:Green gr :Grain
+:Green gr :Stone
+game dt 
+:Yellow dc :Wood
+:Yellow dc :Brick
+board br :Yellow (5,6) (5,7)
+game df 
+game fp :Yellow 
+:Green gr :Wood
+:Red gr :Wood
+game dt 
+game dd :Knight 
+:Green dc :Stone
+:Green dc :Grain
+:Green dc :Pasture
+:Green ad :Knight
+board mr :G
+:Green pd :Knight
+:Yellow rl 
+:Yellow la 
+game df 
+game fp :Green 
+game ft 
+game st 
+game dt 
+game df 
+game fp :Cyan 
+:Green gr :Wood
+:Red gr :Brick
+:Yellow gr :Brick
+game dt 
+:Red dc :Wood
+:Red dc :Brick
+board br :Red (2,2) (1,1)
+:Red tr :Stone
+:Cyan gr :Stone
+:Cyan tr :Wood
+:Red gr :Wood
+game df 
+game fp :Red 
+game dt 
+game df 
+game fp :Yellow 
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+:Cyan gr :Wood
+:Red gr :Wood
+:Cyan gr :Stone
+:Cyan gr :Stone
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Cyan 
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Red 
+game dt 
+game df 
+game fp :Yellow 
+board mr :K
+:Green dc :Wood :Grain :Grain :Grain
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+game dt 
+game df 
+game fp :Cyan 
+:Cyan gr :Wood
+:Red gr :Wood
+:Cyan gr :Stone
+:Cyan gr :Stone
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Red 
+:Green gr :Wood
+:Red gr :Brick
+:Yellow gr :Brick
+game dt 
+game df 
+game fp :Yellow 
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+:Green gr :Wood
+:Red gr :Brick
+:Yellow gr :Brick
+game dt 
+game df 
+game fp :Cyan 
+:Cyan gr :Wood
+:Red gr :Wood
+:Cyan gr :Stone
+:Cyan gr :Stone
+:Yellow gr :Stone
+game dt 
+:Red dc :Wood
+:Red dc :Brick
+board br :Red (4,3) (3,3)
+:Red dc :Wood
+:Red dc :Brick
+board br :Red (2,4) (1,3)
+game df 
+game fp :Red 
+:Red gr :Brick
+:Red gr :Pasture
+:Red gr :Pasture
+game dt 
+game df 
+game fp :Yellow 
+:Red gr :Brick
+:Red gr :Pasture
+:Red gr :Pasture
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+board mr :O
+:Cyan dc :Stone :Wood :Wood :Stone :Stone :Stone :Wood :Stone :Stone :Stone :Wood :Stone
+:Cyan dc :Wood :Stone :Stone :Stone :Wood :Stone
+game dt 
+game df 
+game fp :Cyan 
+game dt 
+game df 
+game fp :Red 
+:Cyan gr :Wood
+:Red gr :Wood
+:Cyan gr :Stone
+:Cyan gr :Stone
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Yellow 
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+game dt 
+game df 
+game fp :Cyan 
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Red 
+board mr :B
+:Yellow dc :Stone :Stone :Brick :Stone :Stone :Stone :Stone :Stone :Stone :Stone :Stone :Stone
+:Yellow dc :Stone :Stone :Stone :Stone :Stone :Brick
+:Green tr :Wood
+:Yellow gr :Wood
+game dt 
+:Yellow dc :Wood
+:Yellow dc :Brick
+board br :Yellow (5,7) (5,8)
+game df 
+game fp :Yellow 
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+board mr :C
+:Cyan dc :Stone :Stone :Stone :Stone :Wood
+game dt 
+game df 
+game fp :Cyan 
+:Red gr :Grain
+game dt 
+:Red dc :Wood
+:Red dc :Grain
+:Red dc :Brick
+:Red dc :Pasture
+board bs :Red (5,1)
+game df 
+game fp :Red 
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Yellow 
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+game dt 
+game df 
+game fp :Cyan 
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Red 
+:Cyan gr :Wood
+:Red gr :Wood
+:Cyan gr :Stone
+:Cyan gr :Stone
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Yellow 
+:Green gr :Grain
+:Green gr :Stone
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+:Green gr :Wood
+:Red gr :Brick
+:Red gr :Brick
+:Yellow gr :Brick
+game dt 
+game df 
+game fp :Cyan 
+game dt 
+game df 
+game fp :Red 
+:Red gr :Brick
+:Red gr :Pasture
+:Red gr :Pasture
+game dt 
+game df 
+game fp :Yellow 
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+game dt 
+game df 
+game fp :Cyan 
+:Yellow gr :Grain
+:Red gr :Pasture
+:Yellow gr :Pasture
+game dt 
+game df 
+game fp :Red 
+board mr :F
+:Yellow dc :Grain :Stone :Stone :Stone :Stone :Stone
+:Green tr :Wood
+:Yellow gr :Wood
+game dt 
+:Yellow dc :Wood
+:Yellow dc :Brick
+board br :Yellow (4,1) (3,1)
+game df 
+game fp :Yellow 
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+game dt 
+game df 
+game fp :Cyan 
+game dt 
+game df 
+game fp :Red 
+:Cyan gr :Wood
+:Red gr :Wood
+:Cyan gr :Stone
+:Cyan gr :Stone
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Yellow 
+:Green gr :Wood
+:Red gr :Wood
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Cyan 
+:Cyan gr :Wood
+:Red gr :Wood
+:Cyan gr :Stone
+:Cyan gr :Stone
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Red 
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Yellow 
+:Yellow gr :Grain
+:Red gr :Pasture
+:Yellow gr :Pasture
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+:Red gr :Grain
+game dt 
+game df 
+game fp :Cyan 
+:Green gr :Wood
+:Red gr :Brick
+:Red gr :Brick
+:Yellow gr :Brick
+game dt 
+:Red dc :Wood
+:Red dc :Grain
+:Red dc :Brick
+:Red dc :Pasture
+board bs :Red (1,3)
+game df 
+game fp :Red 
+:Yellow gr :Grain
+:Red gr :Pasture
+:Yellow gr :Pasture
+game dt 
+:Yellow dc :Stone :Stone :Stone
+:Yellow dc :Grain :Grain
+board bc :Yellow (6,4)
+game df 
+game fp :Yellow 
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+:Green gr :Wood
+:Red gr :Wood
+:Red gr :Brick
+:Red gr :Brick
+:Yellow gr :Brick
+game dt 
+game df 
+game fp :Cyan 
+:Red gr :Grain
+:Red gr :Grain
+game dt 
+game df 
+game fp :Red 
+board mr :B
+:Yellow dc :Stone :Pasture :Stone :Stone :Brick
+:Red tr :Wood
+:Yellow gr :Wood
+game dt 
+:Yellow dc :Wood
+:Yellow dc :Brick
+board br :Yellow (4,6) (4,7)
+game df 
+game fp :Yellow 
+board mr :L
+:Green dc :Wood :Stone :Wood :Wood :Wood
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+board mr :P
+:Cyan dc :Stone :Stone :Stone :Stone :Stone :Wood :Stone
+:Green tr :Wood
+:Cyan gr :Wood
+game dt 
+game df 
+game fp :Cyan 
+:Green gr :Wood
+:Red gr :Wood
+:Red gr :Brick
+:Red gr :Brick
+:Yellow gr :Brick
+game dt 
+:Red tr :Brick
+:Green gr :Brick
+:Green tr :Grain
+:Red gr :Grain
+game df 
+game fp :Red 
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Yellow 
+:Red gr :Grain
+:Red gr :Grain
+game dt 
+:Green dc :Wood
+:Green dc :Brick
+board br :Green (5,9) (5,8)
+game df 
+game fp :Green 
+game ft 
+game st 
+game dt 
+game df 
+game fp :Cyan 
+game dt 
+game df 
+game fp :Red 
+:Cyan gr :Wood
+:Red gr :Wood
+:Cyan gr :Stone
+:Cyan gr :Stone
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Yellow 
+:Red gr :Brick
+:Red gr :Pasture
+:Red gr :Pasture
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+:Green gr :Grain
+game dt 
+game df 
+game fp :Cyan 
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Red 
+board mr :L
+:Yellow dc :Stone :Stone :Stone :Stone
+game dt 
+game df 
+game fp :Yellow 
+:Yellow gr :Grain
+:Yellow gr :Grain
+:Red gr :Pasture
+:Yellow gr :Pasture
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+:Yellow gr :Grain
+:Yellow gr :Grain
+:Red gr :Pasture
+:Yellow gr :Pasture
+game dt 
+game df 
+game fp :Cyan 
+:Yellow gr :Grain
+:Yellow gr :Grain
+:Red gr :Pasture
+:Yellow gr :Pasture
+game dt 
+game df 
+game fp :Red 
+:Green gr :Wood
+:Red gr :Wood
+:Red gr :Brick
+:Red gr :Brick
+:Yellow gr :Brick
+game dt 
+game dd :YearOfPlenty 
+:Yellow dc :Stone
+:Yellow dc :Grain
+:Yellow dc :Pasture
+:Yellow ad :YearOfPlenty
+:Yellow gr :Grain
+:Yellow gr :Pasture
+:Yellow pd :YearOfPlenty
+:Yellow rl 
+:Yellow la 
+game df 
+game fp :Yellow 
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+:Red gr :Grain
+:Red gr :Grain
+game dt 
+game df 
+game fp :Cyan 
+game dt 
+game df 
+game fp :Red 
+:Red gr :Brick
+:Red gr :Pasture
+:Red gr :Pasture
+game dt 
+game df 
+game fp :Yellow 
+:Cyan gr :Wood
+:Red gr :Wood
+:Cyan gr :Stone
+:Cyan gr :Stone
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+:Yellow gr :Grain
+:Yellow gr :Grain
+:Red gr :Pasture
+:Yellow gr :Pasture
+game dt 
+game df 
+game fp :Cyan 
+:Cyan gr :Wood
+:Red gr :Wood
+:Cyan gr :Stone
+:Cyan gr :Stone
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Red 
+board mr :O
+:Yellow dc :Brick :Pasture :Stone :Pasture :Pasture :Grain :Grain :Pasture :Pasture
+:Yellow dc :Grain :Grain :Grain :Stone
+game dt 
+game df 
+game fp :Yellow 
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+board mr :F
+:Cyan dc :Stone :Wood :Stone :Stone :Stone :Stone :Wood :Wood
+:Cyan dc :Wood :Stone :Stone :Wood
+:Green tr :Wood
+:Cyan gr :Wood
+game dt 
+game df 
+game fp :Cyan 
+:Yellow gr :Stone
+game dt 
+game df 
+game fp :Red 
+game dt 
+game dd :Knight 
+:Yellow dc :Stone
+:Yellow dc :Grain
+:Yellow dc :Pasture
+:Yellow ad :Knight
+game df 
+game fp :Yellow 
+:Red gr :Brick
+:Red gr :Pasture
+:Red gr :Pasture
+game dt 
+game df 
+game fp :Green 
+game ft 
+game st 
+game dt 
+game df 
+game fp :Cyan 
+:Yellow gr :Grain
+:Yellow gr :Grain
+:Red gr :Pasture
+:Yellow gr :Pasture
+game dt 
+game df 
+game fp :Red 
+board mr :P
+:Green tr :Grain
+:Yellow gr :Grain
+:Yellow pd :Knight
+:Yellow rl 
+:Yellow la 
+:Cyan gr :Wood
+:Red gr :Wood
+:Cyan gr :Stone
+:Cyan gr :Stone
+:Yellow gr :Stone
+game dt 
+game dd :VictoryPoint 
+:Yellow dc :Stone
+:Yellow dc :Grain
+:Yellow dc :Pasture
+:Yellow ad :VictoryPoint
+game df 
+game fp :Yellow 
+:Yellow gr :Grain
+:Yellow gr :Grain
+:Red gr :Pasture
+:Yellow gr :Pasture
+game dt 
+game df 
+game fp :Green 
+game ft 

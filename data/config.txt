@@ -1,0 +1,4 @@
+cyan,DefaultRobotPlayer
+red,NewRobotPlayer
+yellow,DefaultRobotPlayer
+green,DefaultRobotPlayer
