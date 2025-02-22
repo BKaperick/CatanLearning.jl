@@ -29,7 +29,7 @@ function load_model_from_csv(model_file_name)::Machine
 end
 
 function train_model_from_csv(tree, csv_name="$(@__DIR__)../../features.csv")
-
+    println("training from csv")
     # Load data
     data, header = readdlm(csv_name, ',', header=true)
     df = DataFrame(data, vec(header))
