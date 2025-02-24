@@ -4,10 +4,25 @@ import DataFramesMeta as DFM
 import Base: deepcopy
 using DelimitedFiles
 
-mutable struct MutatedEmpathRobotPlayer <: RobotPlayer
+abstract type LearningPlayer <: RobotPlayer
+end
+
+mutable struct EmpathRobotPlayer <: LearningPlayer 
+    player::Player
+    machine::Machine
+end
+
+mutable struct MutatedEmpathRobotPlayer <: LearningPlayer 
     player::Player
     machine::Machine
     mutation::Dict #{Symbol, AbstractFloat}
+end
+
+mutable struct TemporalDifferencePlayer <: LearningPlayer
+    player::Player
+    machine::Machine
+    process::MarkovRewardProcess
+    policy::MarkovPolicy
 end
 
 MutatedEmpathRobotPlayer(team::Symbol) = MutatedEmpathRobotPlayer(team, "../../features.csv", Dict{Symbol, AbstractFloat}())
@@ -28,11 +43,6 @@ function Base.deepcopy(player::MutatedEmpathRobotPlayer)
     return MutatedEmpathRobotPlayer(deepcopy(player.player), deepcopy(player.machine), deepcopy(player.mutation)) #TODO needto deepcopy the machine?
 end
 
-mutable struct EmpathRobotPlayer <: RobotPlayer
-    player::Player
-    machine::Machine
-end
-
 EmpathRobotPlayer(team::Symbol) = EmpathRobotPlayer(team, "../../features.csv")
 function EmpathRobotPlayer(team::Symbol, features_file_name::String)
     Tree = load_tree_model()
@@ -49,3 +59,11 @@ end
 function Base.deepcopy(player::EmpathRobotPlayer)
     return EmpathRobotPlayer(deepcopy(player.player), player.machine) #TODO needto deepcopy the machine?
 end
+
+inner_player(player::EmpathRobotPlayer)::Player = p -> p.player
+inner_player(player::MutatedEmpathRobotPlayer)::Player = p -> p.player
+inner_player(player::TemporalDifferencePlayer)::Player = p -> p.player
+ml_machine(player::LearningPlayer)::Machine = p -> p.machine
+ml_machine(player::EmpathRobotPlayer)::Machine = p -> p.machine
+ml_machine(player::MutatedEmpathRobotPlayer)::Machine = p -> p.machine
+ml_machine(player::TemporalDifferencePlayer)::Machine = p -> p.machine

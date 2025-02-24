@@ -1,24 +1,5 @@
 
 state_to_value = Dict()
-
-struct MarkovState
-    # hash of game state to be used to track state value
-    key::Int
-    features::Dict{Symbol, Float}
-    reward::Float
-end
-abstract type AbstractMarkovRewardProcess
-end
-struct MarkovRewardProcess <: AbstractMarkovRewardProcess
-    reward_discount::Float
-    learning_rate::Float
-    win_loss_coeff::Float
-    value_coeff::Float
-    points_coeff::Float
-end
-abstract type MarkovPolicy
-end
-
 function query_state_value(state_key, default = 0.5)
     if haskey(state_to_value, state_key)
         return state_to_value[state_key]
@@ -53,9 +34,18 @@ function sample_from_policy(process::MarkovRewardProcess, policy::MarkovPolicy, 
     return reachable_states[argmax(values)]
 end
 
+function do_catan_temporal_difference(map_file, game, board, players, player)
+    println("starting game $(game.unique_id)")
+    _,winner = initialize_and_do_game!(game, map_file)
+    
+end
+
 function temporal_difference(process::MarkovRewardProcess, policy::MarkovPolicy, init_state::MarkovState, state_to_value)
     for t=1:100
         state = temporal_difference(process, policy, state, state_to_value)
+
+        # TODO how to actually apply it to the game
+        
     end
 end
 function temporal_difference_step(process::MarkovRewardProcess, policy::MarkovPolicy, current_state::MarkovState, state_to_value)

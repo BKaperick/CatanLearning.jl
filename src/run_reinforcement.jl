@@ -3,17 +3,11 @@ using Logging
 using Catan
 import Catan
 
-#include("../main.jl")
-#include("../apis/player_api.jl")
 include("structs.jl")
-include("io.jl")
 include("constants.jl")
 include("helpers.jl")
-include("mutation_rule_library.jl")
-include("evolution.jl")
 include("players/structs.jl")
-include("players/mutated_robot_player.jl")
-include("players/learning_player_base.jl")
+include("players/temporal_difference_player.jl")
 
 
 team_to_mutation = Dict([

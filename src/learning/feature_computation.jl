@@ -72,7 +72,7 @@ compute_count_dev_cards_owned_victory_point = (board, player) -> get_dev_cards_o
 compute_count_victory_points = (board, player) -> player.vp_count
 #compute_is_not_loss = (board, player) -> 
 
-function compute_features(board, player)
+function compute_features(board, player)::Vector{Pair{Symbol, Float64}}
     return [
         :CountSettlement => compute_count_settlement(board, player),
         :CountCity => compute_count_city(board, player),
@@ -133,9 +133,9 @@ function get_sum_resource_dice_weight(board, team, resource)::Int
     total_weight = 0
     for (c,b) in board.coord_to_building
         if b.team == team
-            for tile in COORD_TO_TILES[c]
+            for tile in Catan.COORD_TO_TILES[c]
                 if board.tile_to_resource[tile] == resource
-                    weight = DICEVALUE_TO_PROBA_WEIGHT[board.tile_to_dicevalue[tile]]
+                    weight = Catan.DICEVALUE_TO_PROBA_WEIGHT[board.tile_to_dicevalue[tile]]
                     if b.type == :City
                         weight *= 2
                     end
@@ -178,6 +178,10 @@ end
 
 function predict_model(machine::Machine, board::Board, player::PlayerType)
     features = [x for x in compute_features(board, player.player)]
+    return predict_model(machine, features)
+end
+
+function predict_model(machine::Machine, features::Vector{Pair{Symbol, Float64}})
     header = get_csv_friendly.(first.(features))
     feature_vals = last.(features)
     pred = _predict_model_feature_vec(machine, feature_vals, header)
