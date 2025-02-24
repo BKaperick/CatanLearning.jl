@@ -1,5 +1,6 @@
 include("../learning/feature_computation.jl")
 include("../learning/production_model.jl")
+import Catan: choose_next_action
 
 
 """
@@ -28,10 +29,9 @@ end
 
 Gathers all legal actions, and chooses the one that most increases the player's probability of victory, based on his `player.machine` model.  If no action increases the probability of victory, then do nothing.
 """
-function Catan.choose_next_action(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, actions::Set{Symbol})
+function choose_next_action(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, actions::Set{Symbol})
     best_action_index = 0
     best_action_proba = -1
-    
     #machine = ml_machine(player)
     machine = player.machine
     #current_features = compute_features(board, inner_player(player))
@@ -56,3 +56,17 @@ function Catan.choose_next_action(board::Board, players::Vector{PlayerPublicView
     end
     return nothing
 end
+
+function save_parameters_after_game_end(file::IO, board::Board, players::Vector{PlayerType}, player::LearningPlayer, winner_team::Symbol)
+    features = compute_features(board, player.player)
+
+    # For now, we just use a binary label to say who won
+    label = get_csv_friendly(player.player.team == winner_team)
+    values = join([get_csv_friendly(f[2]) for f in features], ",")
+    
+    println("values = $values,$label")
+    write(file, "$values,$label\n")
+end
+
+# TODO implement this based on ML model, only accept trade if win proba augments more than the other player's win proba from the trade
+# function choose_accept_trade(board::Board, player::RobotPlayer, from_player::PlayerPublicView, from_goods::Vector{Symbol}, to_goods::Vector{Symbol})::Bool
