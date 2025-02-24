@@ -31,6 +31,7 @@ using DelimitedFiles
 :CountYearOfPlenty => 0.0,
 :CountRoadBuilding => 0.0,
 :CountVictoryPoint => 0.0
+# :IsNotLoss => 0.0
 """
 
 macro feature(name)
@@ -69,6 +70,7 @@ compute_count_dev_cards_owned_road_building = (board, player) -> get_dev_cards_o
 compute_count_dev_cards_owned_victory_point = (board, player) -> get_dev_cards_owned_count(player, :VictoryPoint)
 
 compute_count_victory_points = (board, player) -> player.vp_count
+#compute_is_not_loss = (board, player) -> 
 
 function compute_features(board, player)
     return [
@@ -98,6 +100,7 @@ function compute_features(board, player)
         :CountDevCardsRoadBuilding => compute_count_dev_cards_owned_road_building(board, player),
         :CountDevCardsVictoryPoint => compute_count_dev_cards_owned_victory_point(board, player),
         :CountVictoryPoints => compute_count_victory_points(board, player)
+        # :IsNotLoss => compute_is_not_loss(board, player)
        ]
 end
 
