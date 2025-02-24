@@ -2,7 +2,6 @@ include("../learning/feature_computation.jl")
 include("../learning/production_model.jl")
 import Catan: choose_next_action
 
-
 """
     `get_action_with_features(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, actions::Set{Symbol})`
 
@@ -17,7 +16,6 @@ function get_action_with_features(board::Board, players::Vector{PlayerPublicView
         hypoth_player = deepcopy(player)
         hypoth_game = Game([DefaultRobotPlayer(p.team) for p in players])
         action_func!(hypoth_game, hypoth_board, hypoth_player)
-        #features = compute_features(hypoth_board, inner_player(hypoth_player))
         features = compute_features(hypoth_board, hypoth_player.player)
         push!(reachable_states, (action_func!, features))
     end

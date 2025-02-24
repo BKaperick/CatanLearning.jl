@@ -23,6 +23,22 @@ mutable struct TemporalDifferencePlayer <: LearningPlayer
     machine::Machine
     process::MarkovRewardProcess
     policy::MarkovPolicy
+    state_to_value::Dict{UInt64, Float64}
+end
+
+function TemporalDifferencePlayer(team::Symbol)
+    Tree = load_tree_model()
+    tree = Base.invokelatest(Tree,
+        max_depth = 6,
+        min_gain = 0.0,
+        min_records = 2,
+        max_features = 0,
+        splitting_criterion = BetaML.Utils.gini)
+    machine = try_load_model_from_csv(tree, "$(DATA_DIR)/model.jls", "$(DATA_DIR)/features.csv")
+
+    process = MarkovRewardProcess(0.5, 0.1, 0.5, 0.5)
+    policy = MarkovPolicy(machine)
+    TemporalDifferencePlayer(Player(team), machine, process, policy, Dict())
 end
 
 MutatedEmpathRobotPlayer(team::Symbol) = MutatedEmpathRobotPlayer(team, "../../features.csv", Dict{Symbol, AbstractFloat}())
