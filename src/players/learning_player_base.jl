@@ -9,7 +9,6 @@ Gets the legal action functions for the player at this board state, and computes
 This is a critical helper function for all the machine-learning players.
 """
 function get_action_with_features(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, actions::Set{Symbol})
-    println("IN BASE FUNCTION")
     action_functions = Catan.get_legal_action_functions(board, players, player, actions)
     reachable_states = []
     for (i,action_func!) in enumerate(action_functions)
@@ -30,7 +29,6 @@ end
 Gathers all legal actions, and chooses the one that most increases the player's probability of victory, based on his `player.machine` model.  If no action increases the probability of victory, then do nothing.
 """
 function Catan.choose_next_action(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, actions::Set{Symbol})
-    println("choose_next_action : $(typeof(player))")
     best_action_index = 0
     best_action_proba = -1
     
