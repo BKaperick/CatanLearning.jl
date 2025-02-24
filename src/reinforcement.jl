@@ -59,11 +59,12 @@ function get_new_current_value(process, current_value, next_state, next_value)
     return current_value + (process.learning_rate * delta)
 end
 
+"""
 function temporal_difference_step!(process::MarkovRewardProcess, policy::MarkovPolicy, current_state::MarkovState, state_to_value)
     reachable_states = get_reachable_states(current_state)
     return temporal_difference_step!(process, policy, current_state, state_to_value, reachable_states).first
 end
-
+"""
 
 """
     `temporal_difference_step!(process::MarkovRewardProcess, policy::MarkovPolicy, current_state::MarkovState, state_to_value::Dict{UInt64, Float64}, reachable_states::Vector{MarkovState})`
@@ -76,8 +77,8 @@ function temporal_difference_step!(process::MarkovRewardProcess, policy::MarkovP
     index, next_state = sample_from_policy(process, policy, current_state, reachable_states)
     
     # Update current state value
-    current_value = query_state_value(current_state.key)
-    next_value = query_state_value(next_state.key)
+    current_value = query_state_value(state_to_value, current_state.key)
+    next_value = query_state_value(state_to_value, next_state.key)
     new_current_value = get_new_current_value(process, current_value, next_state, next_value)
     state_to_value[current_state.key] = new_current_value
     return index, next_state

@@ -4,7 +4,7 @@ using MLJ
 using DataFrames
 import DataFramesMeta as DFM
 using DelimitedFiles
-
+include("../io.jl")
 
 """
 :SettlementCount => 0.0,
@@ -99,7 +99,7 @@ function compute_features(board, player)::Vector{Pair{Symbol, Float64}}
         :CountDevCardsYearOfPlenty => compute_count_dev_cards_owned_year_of_plenty(board, player),
         :CountDevCardsRoadBuilding => compute_count_dev_cards_owned_road_building(board, player),
         :CountDevCardsVictoryPoint => compute_count_dev_cards_owned_victory_point(board, player),
-        :CountVictoryPoints => compute_count_victory_points(board, player)
+        :CountVictoryPoint => compute_count_victory_points(board, player)
         # :IsNotLoss => compute_is_not_loss(board, player)
        ]
 end
@@ -181,6 +181,9 @@ function predict_model(machine::Machine, board::Board, player::PlayerType)
     return predict_model(machine, features)
 end
 
+function predict_model(machine::Machine, features::Dict{Symbol, Float64})
+    return predict_model(machine, collect(features))
+end
 function predict_model(machine::Machine, features::Vector{Pair{Symbol, Float64}})
     header = get_csv_friendly.(first.(features))
     feature_vals = last.(features)

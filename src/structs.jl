@@ -7,11 +7,11 @@ struct Tournament
     mutation_rule::Symbol
 end
 
-struct MarkovState
+mutable struct MarkovState
     # hash of game state to be used to track state value
     key::UInt
-    features::Dict{Symbol, AbstractFloat}
-    reward::Union{Nothing, AbstractFloat}
+    features::Dict{Symbol, Float64}
+    reward::Union{Nothing, Float64}
 end
 
 struct MarkovPolicy
@@ -19,7 +19,7 @@ struct MarkovPolicy
 end
 
 function MarkovState(features)
-    return MarkovState(hash(features), features, nothing)
+    return MarkovState(hash(features), Dict(features), nothing)
 end
 
 abstract type AbstractMarkovRewardProcess

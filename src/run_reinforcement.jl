@@ -39,9 +39,6 @@ for k=1:tourney.epochs
     for (w,v) in winners
         winners[w] = 0
     end
-    for (player,mt) in team_to_mutation
-        println("$(player): $(print_mutation(mt))")
-    end
     for j=1:tourney.maps_per_epoch
         map = Catan.generate_random_map(map_file)
         for i=1:tourney.games_per_map
