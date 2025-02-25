@@ -10,18 +10,38 @@ end
 #
 
 function read_values_file(values_file::String)::Dict{UInt64, Float64}
+    if ~isfile(values_file)
+        io = open(values_file, "w")
+        close(io)
+    end
     out = Dict{UInt64, Float64}() 
     data = split(read(values_file, String), "\n")
     for line in data
-        (key,value) = split(line, ",")
-        out[parse(UInt64, key)] = parse(Float64, value)
+        if occursin(",", line)
+            (key,value) = split(line, ",")
+            parsed_key = parse(UInt64, key)
+            if haskey(out, parsed_key)
+                println("key collision: $key")
+            end
+            out[parse(UInt64, key)] = parse(Float64, value)
+        end
     end
     return out
 end
+
 function write_values_file(winner::TemporalDifferencePlayer)
     values_file = winner.io_config.values
-    state_to_value = winner.state_to_value
-    data = "\n" * join(["$k,$v" for (k,v) in collect(state_to_value)], "\n")
+    state_to_value = winner.process.new_state_to_value
+    write_values_file(values_file, new_state_to_value)
+
+    # Merge all new entries from this game into the main state_to_value dict
+    merge!(winner.process.state_to_value, winner.process.new_state_to_value)
+    # and clear the new state to values learned
+    empty!(winner.process.new_state_to_value)
+end
+
+function write_values_file(values_file::String, state_to_value)
+    data = join(["$k,$v\n" for (k,v) in collect(state_to_value)])
     file = open(values_file, "a")
     write(file, data)
     close(file)

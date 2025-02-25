@@ -1,7 +1,7 @@
 using MLJ
 using DataFrames
 import DataFramesMeta as DFM
-import Base: deepcopy
+import Base: deepcopy,hash
 using DelimitedFiles
 
 abstract type LearningPlayer <: RobotPlayer
@@ -23,7 +23,6 @@ mutable struct TemporalDifferencePlayer <: LearningPlayer
     machine::Machine
     process::MarkovRewardProcess
     policy::MarkovPolicy
-    state_to_value::Dict{UInt64, Float64}
     io_config::IoConfig
 end
 
@@ -32,7 +31,7 @@ function TemporalDifferencePlayer(team::Symbol)
     state_to_value = read_values_file(io_config.values)
     return TemporalDifferencePlayer(team, state_to_value)
 end
-function TemporalDifferencePlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64})
+function TemporalDifferencePlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64})
     Tree = load_tree_model()
     io_config = IoConfig()
     tree = Base.invokelatest(Tree,
@@ -43,9 +42,9 @@ function TemporalDifferencePlayer(team::Symbol, master_state_to_value::Dict{UInt
         splitting_criterion = BetaML.Utils.gini)
     machine = try_load_model_from_csv(tree, io_config.model, io_config.features)
 
-    process = MarkovRewardProcess(0.5, 0.1, 0.5, 0.5)
+    process = MarkovRewardProcess(0.5, 0.1, 0.5, 0.5, master_state_to_value, new_state_to_value)
     policy = MarkovPolicy(machine)
-    TemporalDifferencePlayer(Player(team), machine, process, policy, master_state_to_value, io_config)
+    TemporalDifferencePlayer(Player(team), machine, process, policy, io_config)
 end
 
 MutatedEmpathRobotPlayer(team::Symbol) = MutatedEmpathRobotPlayer(team, "../../features.csv", Dict{Symbol, AbstractFloat}())
@@ -68,7 +67,7 @@ end
 
 function Base.deepcopy(player::TemporalDifferencePlayer)
     # Note, we deepcopy only the player data, while the RL data should persist in order to pass updates the state info properly
-    return TemporalDifferencePlayer(deepcopy(player.player), player.machine, player.process, player.policy, player.state_to_value, player.io_config)
+    return TemporalDifferencePlayer(deepcopy(player.player), player.machine, player.process, player.policy, player.io_config)
 end
 
 EmpathRobotPlayer(team::Symbol) = EmpathRobotPlayer(team, "../../features.csv")

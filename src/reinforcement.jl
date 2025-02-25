@@ -7,6 +7,23 @@ function query_state_value(state_to_value, state_key, default = 0.5)
         return default
     end
 end
+function query_state_value(process::MarkovRewardProcess, state_key, default = 0.5)
+    if haskey(process.state_to_value, state_key)
+        return process.state_to_value[state_key]
+    elseif haskey(process.new_state_to_value, state_key)
+        return process.new_state_to_value[state_key]
+    else
+        return default
+    end
+end
+
+function update_state_value(process, state, new_value)
+    if haskey(process.state_to_value, state.key)
+        process.state_to_value[state.key] = new_value
+    else
+        process.state_to_value[state.key] = new_value
+    end
+end
 
 function get_combined_reward(process::MarkovRewardProcess, machine::Machine, state)
     #value = query_state_value(state.key)
@@ -71,15 +88,16 @@ end
 
 Performces one step of tabular temporal difference (0)
 """
-function temporal_difference_step!(process::MarkovRewardProcess, policy::MarkovPolicy, current_state::MarkovState, state_to_value::Dict{UInt64, Float64}, reachable_states::Vector{MarkovState})
+function temporal_difference_step!(process::MarkovRewardProcess, policy::MarkovPolicy, current_state::MarkovState, reachable_states::Vector{MarkovState})
     
     # sample from policy to get next state
     index, next_state = sample_from_policy(process, policy, current_state, reachable_states)
     
     # Update current state value
-    current_value = query_state_value(state_to_value, current_state.key)
-    next_value = query_state_value(state_to_value, next_state.key)
+    current_value = query_state_value(process, current_state.key)
+    next_value = query_state_value(process, next_state.key)
     new_current_value = get_new_current_value(process, current_value, next_state, next_value)
-    state_to_value[current_state.key] = new_current_value
+    update_state_value(process, current_state, new_current_value)
+    #process.new_state_to_value[current_state.key] = new_current_value
     return index, next_state
 end

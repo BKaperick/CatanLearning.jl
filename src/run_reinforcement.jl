@@ -30,12 +30,15 @@ winners[nothing] = 0
 # Number of games to play per map
 # Number of maps to generate
 # Number of epochs (1 epoch is M*N games) to run
-tourney = Tournament(2,2,2, :Sequential)
+tourney = Tournament(5,5,1, :Sequential)
 #tourney = Tournament(20,8,20, :FiftyPercentWinnerStays)
 #tourney = Tournament(5,4,10, :SixtyPercentWinnerStays)
 
 master_state_to_value = read_values_file(IoConfig().values)::Dict{UInt64, Float64}
+new_state_to_value = Dict{UInt64, Float64}()
 #master_state_to_value = Dict{UInt64, Float64}()
+start_length = length(master_state_to_value)
+println("starting states known: $(start_length)")
 
 for k=1:tourney.epochs
     for (w,v) in winners
@@ -44,7 +47,7 @@ for k=1:tourney.epochs
     for j=1:tourney.maps_per_epoch
         map = Catan.generate_random_map(map_file)
         for i=1:tourney.games_per_map
-            game = Game([TemporalDifferencePlayer(t, master_state_to_value) for t in teams])
+            game = Game([TemporalDifferencePlayer(t, master_state_to_value, new_state_to_value) for t in teams])
             println("starting game $(game.unique_id)")
             _,winner = initialize_and_do_game!(game, map_file)
 
@@ -62,7 +65,12 @@ for k=1:tourney.epochs
     if k < tourney.epochs
         ordered_winners = order_winners(winners)
     end
+
+
+
+    end_length = length(master_state_to_value)
+    println("ending states known: $(end_length) ($(end_length - start_length) new states visited, so now ~$(100*end_length / (32^5))% of total state space has been explored)")
 end
+
+return write_values_file(IoConfig().values, master_state_to_value)
 println(winners)
-println(length(master_state_to_value))
-println(collect(master_state_to_value)[1:10])

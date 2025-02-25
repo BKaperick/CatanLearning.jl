@@ -18,7 +18,7 @@ function choose_next_action(board::Board, players::Vector{PlayerPublicView}, pla
         return nothing
     end
     
-    best_action_index, next_state = temporal_difference_step!(player.process, player.policy, current_state, player.state_to_value, reachable_states)
+    best_action_index, next_state = temporal_difference_step!(player.process, player.policy, current_state, reachable_states)
     
     # Only do an action if it will improve his reward
     if next_state.reward > current_reward
