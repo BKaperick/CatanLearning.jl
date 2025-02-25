@@ -1,8 +1,9 @@
 function Catan.do_post_game_action(board::Board, players::Vector{PlayerType}, winner::LearningPlayer)
     return write_features_file(board::Board, players::Vector{PlayerType}, winner::PlayerType)
 end
-function Catan.do_post_game_action(board::Board, players::Vector{PlayerType}, winner::TemporalDifferencePlayer)
-    return write_values_file(players, winner)
+function Catan.do_post_game_action(board::Board, players::Vector{PlayerType}, winner::Union{TemporalDifferencePlayer, Nothing})
+
+    return write_values_file(players)
 end
 
 #
@@ -28,11 +29,14 @@ function read_values_file(values_file::String)::Dict{UInt64, Float64}
             out[parse(UInt64, key)] = parse(Float64, value)
         end
     end
-    println("key collisions: $key_collisions")
+    if key_collisions > 0
+        println("key collisions: $key_collisions")
+    end
     return out
 end
 
-function write_values_file(players, winner::TemporalDifferencePlayer)
+function write_values_file(players)
+    winner = players[1]
     values_file = winner.io_config.values
     state_to_value = winner.process.new_state_to_value
     write_values_file(values_file, new_state_to_value)
@@ -42,7 +46,6 @@ function write_values_file(players, winner::TemporalDifferencePlayer)
     # and clear the new state to values learned
     empty!(winner.process.new_state_to_value)
     
-    println("emptying player dicts")
     for player in players
         empty!(player.process.new_state_to_value)
         player.process.state_to_value = winner.process.state_to_value
