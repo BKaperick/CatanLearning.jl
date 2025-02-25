@@ -14,3 +14,7 @@ where $P_i(s)$ is the number of victory points controlled by player $i$ in state
 The value (that is, the reward + an exponentially-decaying summation of future state rewards branching from this state) $V_i(s)$ is updated via tabular Temporal Difference learning, which bootstraps our initial value guess in each state and gradually refines its value estimates of each game state as more states are explored (via self-play).
 
 Our current approach is limited by the large state space of Catan, and so the next step is to implement some ideas to approximate the value of unseen states based on its proximity to already-explored states, as it is quite reasonable to expect that there is some continuity in the feature space of the state value function.  For examplee, if we consider state $s$ and state $s'$ which are identical except player $i$ having one extra sheep in his hand, we expect $V_i(s)$ and $V_i(s')$ to be close.  So even if we haven't visited $s'$ in our training data, the model should be able to infer this from its training data.
+
+## State space exploration
+
+Based on experiments doing TD learning on 4 players simultaneously, we reach ~2000 new states per game played.  With our set of 32 integer-valued features, we roughly estimate $32^5$ total feature values exist in realistic game positions, so that means we should need to play approximately 17,000 games to fully explore the state space.

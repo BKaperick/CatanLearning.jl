@@ -22,7 +22,6 @@ struct FeatureVector <: AbstractVector{Pair{Symbol, Float64}}
 end
 
 function MarkovState(features::Vector{Pair{Symbol, Float64}})
-
     # In order to avoid numerical instability issues in `Float64`, we apply rounding to the featurees first
     # Essentially applying a grid to our feature space, and considering all points the same if they are
     # within the same box.
@@ -33,6 +32,7 @@ end
 
 abstract type AbstractMarkovRewardProcess
 end
+
 struct MarkovRewardProcess <: AbstractMarkovRewardProcess
     reward_discount::AbstractFloat
     learning_rate::AbstractFloat
@@ -44,11 +44,13 @@ struct MarkovRewardProcess <: AbstractMarkovRewardProcess
     # Coefficient for the number of victory points term in combined reward function 
     points_coeff::AbstractFloat
 
+    # Two dictionaries to keep track of state -> value mapping.
+    # Do not access them directly! Use the following helper methods!
+    # Writing: `update_state_value(process, state_key, new_value)`
+    # Reading: `query_state_value(process, state_key, default = 0.5)`
     state_to_value::Dict{UInt64, Float64}
     new_state_to_value::Dict{UInt64, Float64}
 end
-
-#MarkovRewardProcess(r, l, m, p, sv) = MarkovRewardProcess(r, l, m, p, sv, Dict())
 
 struct IoConfig
     model::String

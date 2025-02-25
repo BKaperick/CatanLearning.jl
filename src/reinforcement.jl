@@ -17,11 +17,11 @@ function query_state_value(process::MarkovRewardProcess, state_key, default = 0.
     end
 end
 
-function update_state_value(process, state, new_value)
-    if haskey(process.state_to_value, state.key)
-        process.state_to_value[state.key] = new_value
+function update_state_value(process, state_key, new_value)
+    if haskey(process.state_to_value, state_key)
+        process.state_to_value[state_key] = new_value
     else
-        process.state_to_value[state.key] = new_value
+        process.state_to_value[state_key] = new_value
     end
 end
 
@@ -97,7 +97,6 @@ function temporal_difference_step!(process::MarkovRewardProcess, policy::MarkovP
     current_value = query_state_value(process, current_state.key)
     next_value = query_state_value(process, next_state.key)
     new_current_value = get_new_current_value(process, current_value, next_state, next_value)
-    update_state_value(process, current_state, new_current_value)
-    #process.new_state_to_value[current_state.key] = new_current_value
+    update_state_value(process, current_state.key, new_current_value)
     return index, next_state
 end
