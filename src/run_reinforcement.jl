@@ -30,7 +30,7 @@ winners[nothing] = 0
 # Number of games to play per map
 # Number of maps to generate
 # Number of epochs (1 epoch is M*N games) to run
-tourney = Tournament(10,200,1, :Sequential)
+tourney = Tournament(10,2000,1, :Sequential)
 #tourney = Tournament(20,8,20, :FiftyPercentWinnerStays)
 #tourney = Tournament(5,4,10, :SixtyPercentWinnerStays)
 
@@ -62,7 +62,7 @@ for k=1:tourney.epochs
             end
             winners[w] += 1
             if winner != nothing
-                println("Game $((j - 1)*tourney.maps_per_epoch + i) / $(i * j): $(winner.player.team)")
+                println("Game $((j - 1)*tourney.games_per_map + i) / $(tourney.maps_per_epoch * tourney.games_per_map): $(winner.player.team)")
             end
 
             end_length = length(master_state_to_value)
