@@ -21,7 +21,7 @@ end
 function write_values_file(winner::TemporalDifferencePlayer)
     values_file = winner.io_config.values
     state_to_value = winner.state_to_value
-    data = "\n" + join(["$k,$v" for (k,v) in collect(state_to_value)], "\n")
+    data = "\n" * join(["$k,$v" for (k,v) in collect(state_to_value)], "\n")
     file = open(values_file, "a")
     write(file, data)
     close(file)
