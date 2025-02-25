@@ -30,7 +30,7 @@ winners[nothing] = 0
 # Number of games to play per map
 # Number of maps to generate
 # Number of epochs (1 epoch is M*N games) to run
-tourney = Tournament(5,1,1, :Sequential)
+tourney = Tournament(5,5,1, :Sequential)
 #tourney = Tournament(20,8,20, :FiftyPercentWinnerStays)
 #tourney = Tournament(5,4,10, :SixtyPercentWinnerStays)
 
@@ -40,16 +40,24 @@ new_state_to_value = Dict{UInt64, Float64}()
 start_length = length(master_state_to_value)
 println("starting states known: $(start_length)")
 
+map = Catan.generate_random_map(map_file)
+
 for k=1:tourney.epochs
     for (w,v) in winners
         winners[w] = 0
     end
     for j=1:tourney.maps_per_epoch
-        map = Catan.generate_random_map(map_file)
+        #map = Catan.generate_random_map(map_file)
         for i=1:tourney.games_per_map
+            @assert length(new_state_to_value) == 0
+            @assert isempty(intersect(keys(new_state_to_value), keys(master_state_to_value)))
             game = Game([TemporalDifferencePlayer(t, master_state_to_value, new_state_to_value) for t in teams])
             println("starting game $(game.unique_id)")
+            @assert length(new_state_to_value) == 0
+            @assert isempty(intersect(keys(new_state_to_value), keys(master_state_to_value)))
             _,winner = initialize_and_do_game!(game, map_file)
+            @assert length(new_state_to_value) == 0
+            @assert isempty(intersect(keys(new_state_to_value), keys(master_state_to_value)))
 
             w = winner
             if winner != nothing

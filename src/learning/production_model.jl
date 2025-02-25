@@ -6,7 +6,7 @@ import DataFramesMeta as DFM
 using DelimitedFiles
 
 function load_tree_model()
-    @load RandomForestClassifier pkg=BetaML
+    @load RandomForestClassifier pkg=BetaML verbosity=0
 end
 
 """

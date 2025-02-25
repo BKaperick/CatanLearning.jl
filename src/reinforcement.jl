@@ -18,10 +18,11 @@ function query_state_value(process::MarkovRewardProcess, state_key, default = 0.
 end
 
 function update_state_value(process, state_key, new_value)
+    @assert ~(haskey(process.state_to_value, state_key) && haskey(process.new_state_to_value, state_key))
     if haskey(process.state_to_value, state_key)
         process.state_to_value[state_key] = new_value
     else
-        process.state_to_value[state_key] = new_value
+        process.new_state_to_value[state_key] = new_value
     end
 end
 

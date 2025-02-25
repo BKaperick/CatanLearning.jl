@@ -33,7 +33,7 @@ end
 abstract type AbstractMarkovRewardProcess
 end
 
-struct MarkovRewardProcess <: AbstractMarkovRewardProcess
+mutable struct MarkovRewardProcess <: AbstractMarkovRewardProcess
     reward_discount::AbstractFloat
     learning_rate::AbstractFloat
     # TODO not activated yet

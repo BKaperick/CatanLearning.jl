@@ -2,7 +2,7 @@ function Catan.do_post_game_action(board::Board, players::Vector{PlayerType}, wi
     return write_features_file(board::Board, players::Vector{PlayerType}, winner::PlayerType)
 end
 function Catan.do_post_game_action(board::Board, players::Vector{PlayerType}, winner::TemporalDifferencePlayer)
-    return write_values_file(winner)
+    return write_values_file(players, winner)
 end
 
 #
@@ -16,20 +16,23 @@ function read_values_file(values_file::String)::Dict{UInt64, Float64}
     end
     out = Dict{UInt64, Float64}() 
     data = split(read(values_file, String), "\n")
+    key_collisions = 0
     for line in data
         if occursin(",", line)
             (key,value) = split(line, ",")
             parsed_key = parse(UInt64, key)
             if haskey(out, parsed_key)
-                println("key collision: $key")
+                key_collisions += 1
+                #println("key collision: $key")
             end
             out[parse(UInt64, key)] = parse(Float64, value)
         end
     end
+    println("key collisions: $key_collisions")
     return out
 end
 
-function write_values_file(winner::TemporalDifferencePlayer)
+function write_values_file(players, winner::TemporalDifferencePlayer)
     values_file = winner.io_config.values
     state_to_value = winner.process.new_state_to_value
     write_values_file(values_file, new_state_to_value)
@@ -38,6 +41,12 @@ function write_values_file(winner::TemporalDifferencePlayer)
     merge!(winner.process.state_to_value, winner.process.new_state_to_value)
     # and clear the new state to values learned
     empty!(winner.process.new_state_to_value)
+    
+    println("emptying player dicts")
+    for player in players
+        empty!(player.process.new_state_to_value)
+        player.process.state_to_value = winner.process.state_to_value
+    end
 end
 
 function write_values_file(values_file::String, state_to_value)
