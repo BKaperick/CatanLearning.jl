@@ -30,10 +30,11 @@ winners[nothing] = 0
 # Number of games to play per map
 # Number of maps to generate
 # Number of epochs (1 epoch is M*N games) to run
-tourney = Tournament(2,2,2, :Sequential)
+tourney = Tournament(1,1,1, :Sequential)
 #tourney = Tournament(20,8,20, :FiftyPercentWinnerStays)
 #tourney = Tournament(5,4,10, :SixtyPercentWinnerStays)
 
+master_state_to_value = Dict{UInt64, Float64}() 
 
 for k=1:tourney.epochs
     for (w,v) in winners
@@ -42,7 +43,7 @@ for k=1:tourney.epochs
     for j=1:tourney.maps_per_epoch
         map = Catan.generate_random_map(map_file)
         for i=1:tourney.games_per_map
-            game = Game([TemporalDifferencePlayer(t) for t in teams])
+            game = Game([TemporalDifferencePlayer(t, master_state_to_value) for t in teams])
             println("starting game $(game.unique_id)")
             _,winner = initialize_and_do_game!(game, map_file)
 
@@ -62,7 +63,11 @@ for k=1:tourney.epochs
     end
 end
 println(winners)
+println(length(master_state_to_value))
+println(collect(master_state_to_value)[1:10])
 
+"""
 for (player,mt) in team_to_mutation
     println("$(player): $(print_mutation(mt))")
 end
+"""

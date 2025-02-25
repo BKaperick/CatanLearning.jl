@@ -26,7 +26,7 @@ mutable struct TemporalDifferencePlayer <: LearningPlayer
     state_to_value::Dict{UInt64, Float64}
 end
 
-function TemporalDifferencePlayer(team::Symbol)
+function TemporalDifferencePlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64})
     Tree = load_tree_model()
     tree = Base.invokelatest(Tree,
         max_depth = 6,
@@ -38,7 +38,7 @@ function TemporalDifferencePlayer(team::Symbol)
 
     process = MarkovRewardProcess(0.5, 0.1, 0.5, 0.5)
     policy = MarkovPolicy(machine)
-    TemporalDifferencePlayer(Player(team), machine, process, policy, Dict())
+    TemporalDifferencePlayer(Player(team), machine, process, policy, master_state_to_value)
 end
 
 MutatedEmpathRobotPlayer(team::Symbol) = MutatedEmpathRobotPlayer(team, "../../features.csv", Dict{Symbol, AbstractFloat}())
@@ -57,6 +57,11 @@ end
 
 function Base.deepcopy(player::MutatedEmpathRobotPlayer)
     return MutatedEmpathRobotPlayer(deepcopy(player.player), deepcopy(player.machine), deepcopy(player.mutation)) #TODO needto deepcopy the machine?
+end
+
+function Base.deepcopy(player::TemporalDifferencePlayer)
+    # Note, we deepcopy only the player data, while the RL data should persist in order to pass updates the state info properly
+    return TemporalDifferencePlayer(deepcopy(player.player), player.machine, player.process, player.policy, player.state_to_value)
 end
 
 EmpathRobotPlayer(team::Symbol) = EmpathRobotPlayer(team, "../../features.csv")
