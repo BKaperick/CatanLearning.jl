@@ -30,11 +30,12 @@ winners[nothing] = 0
 # Number of games to play per map
 # Number of maps to generate
 # Number of epochs (1 epoch is M*N games) to run
-tourney = Tournament(1,1,1, :Sequential)
+tourney = Tournament(2,2,2, :Sequential)
 #tourney = Tournament(20,8,20, :FiftyPercentWinnerStays)
 #tourney = Tournament(5,4,10, :SixtyPercentWinnerStays)
 
-master_state_to_value = Dict{UInt64, Float64}() 
+master_state_to_value = read_values_file(IoConfig().values)::Dict{UInt64, Float64}
+#master_state_to_value = Dict{UInt64, Float64}()
 
 for k=1:tourney.epochs
     for (w,v) in winners
@@ -65,9 +66,3 @@ end
 println(winners)
 println(length(master_state_to_value))
 println(collect(master_state_to_value)[1:10])
-
-"""
-for (player,mt) in team_to_mutation
-    println("$(player): $(print_mutation(mt))")
-end
-"""

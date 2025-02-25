@@ -35,3 +35,12 @@ struct MarkovRewardProcess <: AbstractMarkovRewardProcess
     # Coefficient for the number of victory points term in combined reward function 
     points_coeff::AbstractFloat
 end
+
+struct IoConfig
+    model::String
+    features::String
+    values::String
+end
+
+IoConfig() = IoConfig("$(DATA_DIR)/model.jls", "$(DATA_DIR)/features.csv", "$(DATA_DIR)/state_values.csv")
+
