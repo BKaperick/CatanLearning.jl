@@ -44,9 +44,12 @@ for k=1:tourney.epochs
     for j=1:tourney.maps_per_epoch
         map = Catan.generate_random_map(map_file)
         for i=1:tourney.games_per_map
-            player_one = TemporalDifferencePlayer{MaxValueMarkovPolicy}(teams[1], master_state_to_value, new_state_to_value)
-            others = [DefaultRobotPlayer(t, master_state_to_value, new_state_to_value) for t in teams[2:end]]
-            game = Game(vcat(player_one, others))
+            #player_one = TemporalDifferencePlayer(MaxValueMarkovPolicy, teams[1], master_state_to_value, new_state_to_value)
+            player_one = TemporalDifferencePlayer(MaxRewardPlusValueMarkovPolicy, teams[1], master_state_to_value, new_state_to_value)
+
+            @assert length(collect(player_one.process.state_to_value)) > 10_000_000
+            others = [Catan.DefaultRobotPlayer(t) for t in teams[2:end]]
+            game = Game(vcat(others, player_one))
             _,winner = initialize_and_do_game!(game, map_file)
 
             w = winner

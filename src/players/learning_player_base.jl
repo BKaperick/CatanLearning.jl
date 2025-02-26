@@ -61,8 +61,6 @@ function save_parameters_after_game_end(file::IO, board::Board, players::Vector{
     # For now, we just use a binary label to say who won
     label = get_csv_friendly(player.player.team == winner_team)
     values = join([get_csv_friendly(f[2]) for f in features], ",")
-    
-    println("values = $values,$label")
     write(file, "$values,$label\n")
 end
 

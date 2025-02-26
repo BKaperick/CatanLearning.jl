@@ -15,10 +15,24 @@ mutable struct MarkovState
 end
 
 abstract type MarkovPolicy end
+
+"""
+Samples reachable states by choosing maximum of reward + estimated value
+"""
+struct MaxRewardPlusValueMarkovPolicy <: MarkovPolicy
+    machine::Machine
+end
+
+"""
+Samples reachable states by choosing maximum reward
+"""
 struct MaxRewardMarkovPolicy <: MarkovPolicy
     machine::Machine
 end
 
+"""
+Samples reachable states by choosing maximum estimated value
+"""
 struct MaxValueMarkovPolicy <: MarkovPolicy
     machine::Machine
 end

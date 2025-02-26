@@ -10,7 +10,7 @@ function choose_next_action(board::Board, players::Vector{PlayerPublicView}, pla
 
     current_features = compute_features(board, player.player)
     current_state = MarkovState(current_features)
-    current_reward = get_combined_reward(player.process, machine, current_state)
+    current_quantity = get_state_optimizing_quantity(player.process, player.policy, current_state)
     actions_and_features = get_action_with_features(board, players, player, actions)
     reachable_states = [MarkovState(af[2]) for af in actions_and_features]
     
@@ -18,11 +18,11 @@ function choose_next_action(board::Board, players::Vector{PlayerPublicView}, pla
         return nothing
     end
     
-    best_action_index, next_state = temporal_difference_step!(player.process, player.policy, current_state, reachable_states)
+    best_action_index, next_state, next_state_quantity = temporal_difference_step!(player.process, player.policy, current_state, reachable_states)
     
-    # Only do an action if it will improve his reward
-    if next_state.reward > current_reward
-        @info "And his reward will go to $(best_action_reward) with this next move"
+    # Only do an action if it will improve his optimized quantity
+    if next_state_quantity > current_quantity
+        #println("$next_state_quantity > $current_quantity")
         return actions_and_features[best_action_index][1]
     end
 

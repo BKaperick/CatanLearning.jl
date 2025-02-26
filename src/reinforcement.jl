@@ -26,6 +26,17 @@ function update_state_value(process, state_key, new_value)
     end
 end
 
+
+function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::MaxRewardMarkovPolicy, state)
+    return get_combined_reward(process, policy.machine, state) 
+end
+function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::MaxValueMarkovPolicy, state)
+    return query_state_value(process, state.key) 
+end
+function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::MaxRewardPlusValueMarkovPolicy, state)
+    return get_combined_reward(process, policy.machine, state) + query_state_value(process, state.key) 
+end
+
 function get_combined_reward(process::MarkovRewardProcess, machine::Machine, state)
     #value = query_state_value(state.key)
     model_proba = predict_model(machine, state.features)
@@ -46,60 +57,28 @@ end
 """
     `sample_from_policy(process::MarkovRewardProcess, policy::MarkovPolicy, current_state, reachable_states)`
 
-Default implementation simply chooses the next state to maximize the reward.
+Default implementation simply chooses the next state to maximize the `get_state_optimizing_quantity`.
 """
 function sample_from_policy(process::MarkovRewardProcess, policy::MarkovPolicy, current_state, reachable_states)
-    rewards = [get_combined_reward(process, policy.machine, s) for s in reachable_states]
+    rewards = [get_state_optimizing_quantity(process, policy, s) for s in reachable_states]
     return argmax(rewards), reachable_states[argmax(rewards)]
 end
 
 """
-    `sample_from_policy(process::MarkovRewardProcess, policy::MarkovPolicy, current_state, reachable_states)`
+    `get_new_current_value(process, current_value, next_state, next_value)`
 
-For a player that is not exploring, but rather trying to choose the state with the best value.
 """
-function sample_from_policy(process::MarkovRewardProcess, policy::MaxValueMarkovPolicy, current_state, reachable_states)
-    values = [query_state_value(process, s.key) for s in reachable_states]
-    return argmax(values), reachable_states[argmax(values)]
-end
-
-function do_catan_temporal_difference(map_file, game, board, players, player)
-    println("starting game $(game.unique_id)")
-    _,winner = initialize_and_do_game!(game, map_file)
-
-    
-end
-
-function temporal_difference(process::MarkovRewardProcess, policy::MarkovPolicy, init_state::MarkovState, state_to_value)
-    for t=1:100
-        
-        next_state = temporal_difference_step!(process, policy, state, state_to_value)
-        
-        # TODO how to actually apply it to the game
-        
-        state = next_state
-        
-    end
-end
-
 function get_new_current_value(process, current_value, next_state, next_value)
     delta = next_state.reward + (process.reward_discount * next_value) - current_value
     return current_value + (process.learning_rate * delta)
 end
 
 """
-function temporal_difference_step!(process::MarkovRewardProcess, policy::MarkovPolicy, current_state::MarkovState, state_to_value)
-    reachable_states = get_reachable_states(current_state)
-    return temporal_difference_step!(process, policy, current_state, state_to_value, reachable_states).first
-end
-"""
-
-"""
     `temporal_difference_step!(process::MarkovRewardProcess, policy::MarkovPolicy, current_state::MarkovState, state_to_value::Dict{UInt64, Float64}, reachable_states::Vector{MarkovState})`
 
-Performces one step of tabular temporal difference (0)
+Performs one step of tabular temporal difference (0)
 """
-function temporal_difference_step!(process::MarkovRewardProcess, policy::MarkovPolicy, current_state::MarkovState, reachable_states::Vector{MarkovState})
+function temporal_difference_step!(process::MarkovRewardProcess, policy::MaxRewardMarkovPolicy, current_state::MarkovState, reachable_states::Vector{MarkovState})
     
     # sample from policy to get next state
     index, next_state = sample_from_policy(process, policy, current_state, reachable_states)
@@ -107,7 +86,20 @@ function temporal_difference_step!(process::MarkovRewardProcess, policy::MarkovP
     # Update current state value
     current_value = query_state_value(process, current_state.key)
     next_value = query_state_value(process, next_state.key)
-    new_current_value = get_new_current_value(process, current_value, next_state, next_value)
+    new_current_value = get_new_current_value(process, policy, current_value, next_state, next_value)
     update_state_value(process, current_state.key, new_current_value)
     return index, next_state
+end
+
+"""
+    `temporal_difference_step!(process::MarkovRewardProcess, policy::MarkovPolicy, current_state::MarkovState, state_to_value::Dict{UInt64, Float64}, reachable_states::Vector{MarkovState})`
+
+Simply samples according to the policy, without updating states values.
+"""
+function temporal_difference_step!(process::MarkovRewardProcess, policy::MarkovPolicy, current_state::MarkovState, reachable_states::Vector{MarkovState})
+    
+    # sample from policy to get next state
+    index, next_state = sample_from_policy(process, policy, current_state, reachable_states)
+    next_state_quantity = get_state_optimizing_quantity(process, policy, next_state)
+    return index, next_state, next_state_quantity
 end

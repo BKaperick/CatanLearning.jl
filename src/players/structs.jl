@@ -26,38 +26,16 @@ mutable struct TemporalDifferencePlayer <: LearningPlayer
     io_config::IoConfig
 end
 
-mutable struct MaximumValuePlayer <: LearningPlayer
-    player::Player
-    machine::Machine
-    process::MarkovRewardProcess
-    policy::MarkovPolicy
-    io_config::IoConfig
-end
-MaxValueMarkovPolicy
-
-function MaximumValuePlayer(team::Symbol)
-    Tree = load_tree_model()
-    io_config = IoConfig()
-    tree = Base.invokelatest(Tree,
-        max_depth = 6,
-        min_gain = 0.0,
-        min_records = 2,
-        max_features = 0,
-        splitting_criterion = BetaML.Utils.gini)
-    machine = try_load_model_from_csv(tree, io_config.model, io_config.features)
-
-    process = MarkovRewardProcess(0.5, 0.1, 0.5, 0.5, master_state_to_value, new_state_to_value)
-    policy = MaxValueMarkovPolicy(machine)
-    TemporalDifferencePlayer(Player(team), machine, process, policy, io_config)
-
-end
-function TemporalDifferencePlayer{TPolicy}(team::Symbol) where TPolicy <: MarkovPolicy
+function TemporalDifferencePlayer(TPolicy::Type, team::Symbol)
     io_config = IoConfig()
     state_to_value = read_values_file(io_config.values)
-    return TemporalDifferencePlayer{TPolicy}(team, state_to_value, Dict())
+    return TemporalDifferencePlayer(TPolicy, team, state_to_value, Dict())
 end
+TemporalDifferencePlayer(team::Symbol) = TemporalDifferencePlayer(MaxRewardMarkovPolicy, team::Symbol)
 
-function TemporalDifferencePlayer{TPolicy}(team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}) where TPolicy <: MarkovPolicy
+TemporalDifferencePlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}) = TemporalDifferencePlayer(MaxRewardMarkovPolicy, team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64})
+
+function TemporalDifferencePlayer(TPolicy::Type, team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64})
     Tree = load_tree_model()
     io_config = IoConfig()
     tree = Base.invokelatest(Tree,
