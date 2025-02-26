@@ -1,5 +1,5 @@
 [dependencies]
-openssl = ">=3, <3.1"
+openssl = ">=3, <3.1, >=3, <3.1"
 libstdcxx-ng = ">=3.4,<13.0, >=3.4,<13.0"
 
     [dependencies.scikit-learn]

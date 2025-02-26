@@ -18,3 +18,10 @@ Our current approach is limited by the large state space of Catan, and so the ne
 ## State space exploration
 
 Based on experiments doing TD learning on 4 players simultaneously, we reach ~2000 new states per game played.  With our set of 32 integer-valued features, we roughly estimate $32^5$ total feature values exist in realistic game positions, so that means we should need to play approximately 17,000 games to fully explore the state space.
+
+### Experiments
+
+Running `julia --project ./src/run_reinforcement.jl` starts running tournaments of 4 `TemporalDifferencePlayer` players against each other, and recording the estimated values of each hashed game state.
+After approximately 9000 games, across 900 maps (10 games per randomly-generated map), we have explored ~20 million, or $2.0\times 10^7$i states at least once.  Given our above estimate of $32^5$ total states, we have explorted ~47% of the total state space.
+
+
