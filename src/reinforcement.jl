@@ -53,6 +53,16 @@ function sample_from_policy(process::MarkovRewardProcess, policy::MarkovPolicy, 
     return argmax(rewards), reachable_states[argmax(rewards)]
 end
 
+"""
+    `sample_from_policy(process::MarkovRewardProcess, policy::MarkovPolicy, current_state, reachable_states)`
+
+For a player that is not exploring, but rather trying to choose the state with the best value.
+"""
+function sample_from_policy(process::MarkovRewardProcess, policy::MaxValueMarkovPolicy, current_state, reachable_states)
+    values = [query_state_value(process, s.key) for s in reachable_states]
+    return argmax(values), reachable_states[argmax(values)]
+end
+
 function do_catan_temporal_difference(map_file, game, board, players, player)
     println("starting game $(game.unique_id)")
     _,winner = initialize_and_do_game!(game, map_file)

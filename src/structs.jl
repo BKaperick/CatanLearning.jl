@@ -14,7 +14,12 @@ mutable struct MarkovState
     reward::Union{Nothing, Float64}
 end
 
-struct MarkovPolicy
+abstract type MarkovPolicy end
+struct MaxRewardMarkovPolicy <: MarkovPolicy
+    machine::Machine
+end
+
+struct MaxValueMarkovPolicy <: MarkovPolicy
     machine::Machine
 end
 

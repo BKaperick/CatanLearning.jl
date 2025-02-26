@@ -26,12 +26,16 @@ mutable struct TemporalDifferencePlayer <: LearningPlayer
     io_config::IoConfig
 end
 
-function TemporalDifferencePlayer(team::Symbol)
-    io_config = IoConfig()
-    state_to_value = read_values_file(io_config.values)
-    return TemporalDifferencePlayer(team, state_to_value)
+mutable struct MaximumValuePlayer <: LearningPlayer
+    player::Player
+    machine::Machine
+    process::MarkovRewardProcess
+    policy::MarkovPolicy
+    io_config::IoConfig
 end
-function TemporalDifferencePlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64})
+MaxValueMarkovPolicy
+
+function MaximumValuePlayer(team::Symbol)
     Tree = load_tree_model()
     io_config = IoConfig()
     tree = Base.invokelatest(Tree,
@@ -43,7 +47,29 @@ function TemporalDifferencePlayer(team::Symbol, master_state_to_value::Dict{UInt
     machine = try_load_model_from_csv(tree, io_config.model, io_config.features)
 
     process = MarkovRewardProcess(0.5, 0.1, 0.5, 0.5, master_state_to_value, new_state_to_value)
-    policy = MarkovPolicy(machine)
+    policy = MaxValueMarkovPolicy(machine)
+    TemporalDifferencePlayer(Player(team), machine, process, policy, io_config)
+
+end
+function TemporalDifferencePlayer{TPolicy}(team::Symbol) where TPolicy <: MarkovPolicy
+    io_config = IoConfig()
+    state_to_value = read_values_file(io_config.values)
+    return TemporalDifferencePlayer{TPolicy}(team, state_to_value, Dict())
+end
+
+function TemporalDifferencePlayer{TPolicy}(team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}) where TPolicy <: MarkovPolicy
+    Tree = load_tree_model()
+    io_config = IoConfig()
+    tree = Base.invokelatest(Tree,
+        max_depth = 6,
+        min_gain = 0.0,
+        min_records = 2,
+        max_features = 0,
+        splitting_criterion = BetaML.Utils.gini)
+    machine = try_load_model_from_csv(tree, io_config.model, io_config.features)
+
+    process = MarkovRewardProcess(0.5, 0.1, 0.5, 0.5, master_state_to_value, new_state_to_value)
+    policy = TPolicy(machine)
     TemporalDifferencePlayer(Player(team), machine, process, policy, io_config)
 end
 
