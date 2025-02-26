@@ -24,4 +24,4 @@ Based on experiments doing TD learning on 4 players simultaneously, we reach ~20
 Running `julia --project ./src/run_reinforcement.jl` starts running tournaments of 4 `TemporalDifferencePlayer` players against each other, and recording the estimated values of each hashed game state.
 After approximately 9000 games, across 900 maps (10 games per randomly-generated map), we have explored ~20 million, or $2.0\times 10^7$i states at least once.  Given our above estimate of $32^5$ total states, we have explorted ~47% of the total state space.
 
-
+![Value estimates](https://github.com/BKaperick/CatanLearning.jl/blob/master/data/sorted_value_estimates.png)
