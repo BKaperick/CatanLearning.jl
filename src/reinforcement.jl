@@ -86,9 +86,9 @@ function temporal_difference_step!(process::MarkovRewardProcess, policy::MaxRewa
     # Update current state value
     current_value = query_state_value(process, current_state.key)
     next_value = query_state_value(process, next_state.key)
-    new_current_value = get_new_current_value(process, policy, current_value, next_state, next_value)
+    new_current_value = get_new_current_value(process, current_value, next_state, next_value)
     update_state_value(process, current_state.key, new_current_value)
-    return index, next_state
+    return index, next_state, next_state.reward
 end
 
 """

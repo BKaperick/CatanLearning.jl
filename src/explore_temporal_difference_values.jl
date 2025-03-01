@@ -48,7 +48,7 @@ for k=1:tourney.epochs
         for i=1:tourney.games_per_map
             @assert length(new_state_to_value) == 0
             @assert isempty(intersect(keys(new_state_to_value), keys(master_state_to_value)))
-            game = Game([TemporalDifferencePlayer(t, master_state_to_value, new_state_to_value) for t in teams])
+            game = Game(Vector{TemporalDifferencePlayer}([TemporalDifferencePlayer(t, master_state_to_value, new_state_to_value) for t in teams]))
             #println("starting game $(game.unique_id)")
             @assert length(new_state_to_value) == 0
             @assert isempty(intersect(keys(new_state_to_value), keys(master_state_to_value)))

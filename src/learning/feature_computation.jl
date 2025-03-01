@@ -34,41 +34,78 @@ include("../io.jl")
 # :IsNotLoss => 0.0
 """
 
-macro feature(name)
+
+struct Feature
+    name::Symbol
+    type::Type
+    min::Float64
+    max::Float64
+end
+feature_library = Dict{Symbol, Feature}()
+
+function register_feature(name::Symbol, type::Type, min, max)
+    feature_library[name] = Feature(name, type, min, max)
 end
 
 # Helper functions start with `get_`, and feature computers take (board, player) and start with `compute_`.
 
-@feature :SettlementCount
+register_feature(:SettlementCount,Int8,0,5)
 compute_count_settlement = (board, player) -> get_building_count(board, :Settlement, player.team)
+
+register_feature(:CityCount, Int8, 0, 4)
 compute_count_city = (board, player) -> get_building_count(board, :City, player.team)
+
+register_feature(:RoadCount, Int8, 0, 14)
 compute_count_road = (board, player) -> get_road_count(board, player.team)
+
+register_feature(:MaxRoadLength, Int8, 0, 14)
 compute_max_road_length = (board, player) -> get_max_road_length(board, player.team)
 
+register_feature(:SumWoodDiceWeight, Int8, 4, 186)
 compute_sum_wood_dice_weight = (board, player) -> get_sum_resource_dice_weight(board, player.team, :Wood)
+register_feature(:SumBrickDiceWeight, Int8, 4, 186)
 compute_sum_brick_dice_weight = (board, player) -> get_sum_resource_dice_weight(board, player.team, :Brick)
+register_feature(:SumPastureDiceWeight, Int8, 4, 186)
 compute_sum_pasture_dice_weight = (board, player) -> get_sum_resource_dice_weight(board, player.team, :Pasture)
+register_feature(:SumStoneDiceWeight, Int8, 4, 186)
 compute_sum_stone_dice_weight = (board, player) -> get_sum_resource_dice_weight(board, player.team, :Stone)
+register_feature(:SumGrainDiceWeight, Int8, 4, 186)
 compute_sum_grain_dice_weight = (board, player) -> get_sum_resource_dice_weight(board, player.team, :Grain)
 
+register_feature(:PortWood, Int8, 0, 1)
 compute_count_port_wood = (board, player) -> get_resource_port_count(board, player.team, :Wood)
+register_feature(:PortBrick, Int8, 0, 1)
 compute_count_port_brick = (board, player) -> get_resource_port_count(board, player.team, :Brick)
+register_feature(:PortPasture, Int8, 0, 1)
 compute_count_port_pasture = (board, player) -> get_resource_port_count(board, player.team, :Pasture)
+register_feature(:PortStone, Int8, 0, 1)
 compute_count_port_stone = (board, player) -> get_resource_port_count(board, player.team, :Stone)
+register_feature(:PortGrain, Int8, 0, 1)
 compute_count_port_grain = (board, player) -> get_resource_port_count(board, player.team, :Grain)
 
-compute_count_hand_wood = (board, player) -> get_resource_hand_count(player, :Wood)
+register_feature(:CountWood, Int8, 0, 20)
+compute_count_hand_wood = (board, player) -> get_resource_hand_count(player, :Brick)
+register_feature(:CountBrick, Int8, 0, 20)
 compute_count_hand_brick = (board, player) -> get_resource_hand_count(player, :Brick)
+register_feature(:CountPasture, Int8, 0, 20)
 compute_count_hand_pasture = (board, player) -> get_resource_hand_count(player, :Pasture)
+register_feature(:CountStone, Int8, 0, 20)
 compute_count_hand_stone = (board, player) -> get_resource_hand_count(player, :Stone)
+register_feature(:CountGrain, Int8, 0, 20)
 compute_count_hand_grain = (board, player) -> get_resource_hand_count(player, :Grain)
 
+register_feature(:CountDevCardsKnight, Int8, 0, Catan.DEVCARD_COUNTS[:Knight])
 compute_count_dev_cards_owned_knight = (board, player) -> get_dev_cards_owned_count(player, :Knight)
+register_feature(:CountDevCardsMonopoly, Int8, 0, Catan.DEVCARD_COUNTS[:Monopoly])
 compute_count_dev_cards_owned_monopoly = (board, player) -> get_dev_cards_owned_count(player, :Monopoly)
+register_feature(:CountDevCardsYearOfPlenty, Int8, 0, Catan.DEVCARD_COUNTS[:YearOfPlenty])
 compute_count_dev_cards_owned_year_of_plenty = (board, player) -> get_dev_cards_owned_count(player, :YearOfPlenty)
+register_feature(:CountDevCardsRoadBuilding, Int8, 0, Catan.DEVCARD_COUNTS[:RoadBuilding])
 compute_count_dev_cards_owned_road_building = (board, player) -> get_dev_cards_owned_count(player, :RoadBuilding)
+register_feature(:CountDevCardsVictoryPoint, Int8, 0, Catan.DEVCARD_COUNTS[:VictoryPoint])
 compute_count_dev_cards_owned_victory_point = (board, player) -> get_dev_cards_owned_count(player, :VictoryPoint)
 
+register_feature(:CountVictoryPoint, Int8, 0, 10)
 compute_count_victory_points = (board, player) -> player.vp_count
 #compute_is_not_loss = (board, player) -> 
 
@@ -127,7 +164,9 @@ end
 """
     get_sum_resource_dice_weight(board, player.team, resource)
 
-The sum of dice weight (
+The sum of dice weight (0-5 increasing probability of rolling number, 7 is 0, while 2 and 12 are 1.)
+MAX => 3*(2(4*5) + (2*5 + 3*4)) = 186
+MIN => 2*2 = 4
 """
 function get_sum_resource_dice_weight(board, team, resource)::Int
     total_weight = 0
@@ -189,8 +228,8 @@ function predict_model(machine::Machine, features::Vector{Pair{Symbol, Float64}}
     feature_vals = last.(features)
     pred = _predict_model_feature_vec(machine, feature_vals, header)
 
-    # Returns the win probability (proba weight on category for label `1.0` indicating win)
-    return pdf(pred[1], 1.0)
+    # Returns the win probability (proba weight on category for label `1` indicating win)
+    return pdf(pred[1], 1)
 end
 
 function _predict_model_feature_vec(machine::Machine, feature_vals::Vector{T}, header::Vector{String}) where T <: Number
