@@ -1,6 +1,8 @@
-function Catan.do_post_game_action(board::Board, players::Vector{PlayerType}, winner::Union{LearningPlayer, Nothing})
-    return write_values_file(players)
-    #return write_features_file(board::Board, players::Vector{PlayerType}, winner::PlayerType)
+function Catan.do_post_game_action(board::Board, players::Vector{PlayerType}, winner::Nothing)
+    return
+end
+function Catan.do_post_game_action(board::Board, players::Vector{PlayerType}, winner::PlayerType)
+    return write_features_file(board::Board, players::Vector{PlayerType}, winner::PlayerType)
 end
 """
 function Catan.do_post_game_action(board::Board, players::Vector{PlayerType}, winner::Union{TemporalDifferencePlayer, Nothing})
@@ -14,6 +16,7 @@ end
 #
 
 function read_values_file(values_file::String)::Dict{UInt64, Float64}
+    println("reading values file...")
     if ~isfile(values_file)
         io = open(values_file, "w")
         close(io)
@@ -39,7 +42,12 @@ function read_values_file(values_file::String)::Dict{UInt64, Float64}
 end
 
 function write_values_file(players::Vector{PlayerType})
-    winner = players[1]
+    winners = [p for p in players if typeof(p) == TemporalDifferencePlayer]
+    if length(winners) == 0
+        return nothing
+    end
+    winner = winners[1]
+        
     values_file = winner.io_config.values
     state_to_value = winner.process.new_state_to_value
     write_values_file(values_file, new_state_to_value)

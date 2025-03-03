@@ -30,12 +30,9 @@ winners[nothing] = 0
 # Number of games to play per map
 # Number of maps to generate
 # Number of epochs (1 epoch is M*N games) to run
-tourney = Tournament(10,2000,1, :Sequential)
+tourney = Tournament(100,2000,1, :Sequential)
 #tourney = Tournament(20,8,20, :FiftyPercentWinnerStays)
 #tourney = Tournament(5,4,10, :SixtyPercentWinnerStays)
-
-master_state_to_value = read_values_file(IoConfig().values)::Dict{UInt64, Float64}
-new_state_to_value = Dict{UInt64, Float64}()
 
 for k=1:tourney.epochs
     for (w,v) in winners
@@ -45,10 +42,9 @@ for k=1:tourney.epochs
         map = Catan.generate_random_map(map_file)
         for i=1:tourney.games_per_map
             #player_one = TemporalDifferencePlayer(MaxValueMarkovPolicy, teams[1], master_state_to_value, new_state_to_value)
-            player_one = TemporalDifferencePlayer(MaxRewardPlusValueMarkovPolicy, teams[1], master_state_to_value, new_state_to_value)
 
-            others = [Catan.DefaultRobotPlayer(t) for t in teams[2:end]]
-            game = Game(vcat(others, player_one))
+            others = [Catan.DefaultRobotPlayer(t) for t in teams]
+            game = Game(others)
             println("starting game $(game.unique_id)")
             _,winner = initialize_and_do_game!(game, map_file)
             println("finished game $(game.unique_id)")
@@ -68,5 +64,4 @@ for k=1:tourney.epochs
     end
 end
 
-return write_values_file(IoConfig().values, master_state_to_value)
 println(winners)

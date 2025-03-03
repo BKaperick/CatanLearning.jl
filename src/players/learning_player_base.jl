@@ -55,7 +55,7 @@ function choose_next_action(board::Board, players::Vector{PlayerPublicView}, pla
     return nothing
 end
 
-function save_parameters_after_game_end(file::IO, board::Board, players::Vector{PlayerType}, player::LearningPlayer, winner_team::Symbol)
+function save_parameters_after_game_end(file::IO, board::Board, players::Vector{PlayerType}, player::PlayerType, winner_team::Symbol)
     features = compute_features(board, player.player)
 
     # For now, we just use a binary label to say who won
