@@ -14,7 +14,7 @@ logger = ConsoleLogger(stderr, Logging.Debug)
 #logger = ConsoleLogger(stderr, Logging.LogLevel(5000))
 global_logger(logger)
 
-features_csv = "$(@__DIR__)/../../features.csv"
+features_csv = "./data/features.csv"
 
 data, header = readdlm(features_csv, ',', header=true)
 df = DataFrame(data, vec(header))
@@ -68,7 +68,8 @@ function analyze_acc(mach, X, y)
     return acc
 end
 
-mach = fit_machine(tree, X[1:100,1:end], y[1:100])
+#mach = fit_machine(tree, X[1:100,1:end], y[1:100])
+mach = fit_machine(tree, X, y)
 acc = analyze_acc(mach, X, y)
 test_acc = analyze_acc(mach, X_test, y_test)
 
