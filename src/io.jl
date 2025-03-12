@@ -95,6 +95,8 @@ end
 get_csv_friendly(value::Nothing) = "\"\""
 get_csv_friendly(value::AbstractString) = "\"$value\""
 get_csv_friendly(value::Int) = string(value)
+get_csv_friendly(value::Int8) = string(value)
+get_csv_friendly(value::AbstractFloat) = string(value)
 get_csv_friendly(value::Bool) = string(Int(value))
 get_csv_friendly(value::Symbol) = "\"$value\""
 get_csv_friendly(value) = "\"$value\""
