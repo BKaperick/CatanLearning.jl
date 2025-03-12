@@ -26,7 +26,7 @@ function build_roc(results, y_true, res = 0.1)
             end
         end
         tpr = tp / (tp + fn) 
-        fpr = tn / (fp + tn)
+        fpr = fp / (fp + tn)
         push!(data, (thresh, tpr, fpr))
     end
     return data
