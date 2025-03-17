@@ -1,7 +1,10 @@
 using Test
 using StatsBase
+using Logging
 
-include("../src/CatanLearning.jl")
+using CatanLearning:
+    compute_features
+#include("../src/CatanLearning.jl")
 
 
 function test_evolving_robot_game(neverend)
@@ -77,6 +80,13 @@ features_increasing_good = Set([
 ])
 
 MAIN_DATA_DIR = "../data/"
+
+function test_compute_features()
+    #players = setup_players()
+    player = DefaultRobotPlayer(:Blue)
+    board = read_map("../../CatanEngine.jl/data/sample.csv")
+    compute_features(board, player)
+end
 
 function generate_realistic_features(features)
     feature_values = Dict([f => 0.0 for f in features])
@@ -164,16 +174,20 @@ function test_feature_perturbations(features, features_increasing_good, max_pert
 end
 
 
-(fails_m, fails_r, fails_v) = test_feature_perturbations(features, features_increasing_good)
-println("model fails with +3 perturbation $(length(fails_m[3])): $(fails_m[3])")
-println("model fails with +2 perturbation $(length(fails_m[2])): $(fails_m[2])")
-println("model fails with +1 perturbation $(length(fails_m[1])): $(fails_m[1])")
-"""
-println("reward fails with +3 perturbation: $(fails_r[3])")
-println("reward fails with +2 perturbation: $(fails_r[2])")
-println("reward fails with +1 perturbation: $(fails_r[1])")
-println("value fails with +3 perturbation: $(fails_v[3])")
-println("value fails with +2 perturbation: $(fails_v[2])")
-println("value fails with +1 perturbation: $(fails_v[1])")
-"""
-#test_evolving_robot_game(neverend)
+function run_tests(neverend = false)
+    test_compute_features()
+    """
+    (fails_m, fails_r, fails_v) = test_feature_perturbations(features, features_increasing_good)
+    println("model fails with +3 perturbation $(length(fails_m[3])): $(fails_m[3])")
+    println("model fails with +2 perturbation $(length(fails_m[2])): $(fails_m[2])")
+    println("model fails with +1 perturbation $(length(fails_m[1])): $(fails_m[1])")
+    println("reward fails with +3 perturbation: $(fails_r[3])")
+    println("reward fails with +2 perturbation: $(fails_r[2])")
+    println("reward fails with +1 perturbation: $(fails_r[1])")
+    println("value fails with +3 perturbation: $(fails_v[3])")
+    println("value fails with +2 perturbation: $(fails_v[2])")
+    println("value fails with +1 perturbation: $(fails_v[1])")
+    test_evolving_robot_game(neverend)
+    """
+end
+

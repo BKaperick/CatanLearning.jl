@@ -52,7 +52,7 @@ for k=1:tourney.epochs
             #println("starting game $(game.unique_id)")
             @assert length(new_state_to_value) == 0
             @assert isempty(intersect(keys(new_state_to_value), keys(master_state_to_value)))
-            _,winner = initialize_and_do_game!(game, map_file)
+            _,winner = Catan.run(game, map_file)
             @assert length(new_state_to_value) == 0
             @assert isempty(intersect(keys(new_state_to_value), keys(master_state_to_value)))
 

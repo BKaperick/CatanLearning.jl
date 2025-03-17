@@ -1,5 +1,5 @@
-using Logging
 
+module CatanLearning
 using Catan
 import Catan
 
@@ -55,7 +55,7 @@ function run_tournament(tourney, team_to_mutation)
             for i=1:tourney.games_per_map
                 game = Game(generate_players())
                 println("starting game $(game.unique_id)")
-                _,winner = initialize_and_do_game!(game, map_file)
+                _,winner = Catan.run(game, map_file)
 
                 w = winner
                 if winner != nothing
@@ -78,4 +78,5 @@ function run_tournament(tourney, team_to_mutation)
     for (player,mt) in team_to_mutation
         println("$(player): $(print_mutation(mt))")
     end
+end
 end

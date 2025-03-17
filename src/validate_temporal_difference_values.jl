@@ -50,7 +50,7 @@ for k=1:tourney.epochs
             others = [Catan.DefaultRobotPlayer(t) for t in teams[2:end]]
             game = Game(vcat(others, player_one))
             println("starting game $(game.unique_id)")
-            _,winner = initialize_and_do_game!(game, map_file)
+            _,winner = Catan.run(game, map_file)
             println("finished game $(game.unique_id)")
 
             w = winner
