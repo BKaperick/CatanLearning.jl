@@ -1,5 +1,5 @@
-
 module CatanLearning
+using Logging
 using Catan
 import Catan
 
