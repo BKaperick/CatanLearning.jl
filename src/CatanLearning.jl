@@ -17,6 +17,8 @@ include("players/mutated_robot_player.jl")
 include("players/temporal_difference_player.jl")
 include("io.jl")
 
+include("tournaments.jl")
+
 
 
 # Suppress all normal logs
@@ -26,7 +28,7 @@ SAVE_GAME_TO_FILE = false
 #SAVEFILEIO = open(SAVEFILE, "a")
 
 
-function run(T::Type)
+function run(T::MutatedEmpathRobotPlayer)
     player_constructors = Dict([
         :Blue => (mutation) -> T(:Blue, mutation), 
         :Green => (mutation) -> T(:Green, mutation), 
@@ -35,16 +37,62 @@ function run(T::Type)
     ])
     run(player_constructors)
 end
+function run(T)
+    player_constructors = Dict([
+        :Blue => (mutation) -> T(:Blue), 
+        :Green => (mutation) -> T(:Green), 
+        :Cyan => (mutation) -> T(:Cyan), 
+        :Yellow => (mutation) -> T(:Yellow)
+    ])
+    run(player_constructors)
+end
 
 function run()
     run(MutatedEmpathRobotPlayer)
+end
+function run_validation()
+    master_state_to_value = read_values_file(IoConfig().values)::Dict{UInt64, Float64}
+    new_state_to_value = Dict{UInt64, Float64}()
+    player_constructors = Dict([
+        :Blue => (mutation) -> TemporalDifferencePlayer(
+                                    MaxRewardPlusValueMarkovPolicy, 
+                                    :Blue, 
+                                    master_state_to_value, 
+                                    new_state_to_value
+                                    ), 
+        :Green => (mutation) -> Catan.DefaultRobotPlayer(:Green), 
+        :Cyan => (mutation) -> Catan.DefaultRobotPlayer(:Cyan), 
+        :Yellow => (mutation) -> Catan.DefaultRobotPlayer(:Yellow)
+    ])
+    run(player_constructors)
+end
+
+function run_explore()
+
+    master_state_to_value = read_values_file(IoConfig().values)::Dict{UInt64, Float64}
+    new_state_to_value = Dict{UInt64, Float64}()
+    player_maker = team -> ((mutation) -> TemporalDifferencePlayer(
+                                    MaxRewardPlusValueMarkovPolicy, 
+                                    team, 
+                                    master_state_to_value, 
+                                    new_state_to_value
+                                   )
+                           )
+    player_constructors = Dict([
+                                :Blue => player_maker(:Blue), 
+                                :Green => player_maker(:Green), 
+                                :Cyan => player_maker(:Cyan), 
+                                :Yellow => player_maker(:Yellow)
+    ])
+    run(player_constructors)
 end
 
 function run(player_constructors::Dict)
     # Number of games to play per map
     # Number of maps to generate
     # Number of epochs (1 epoch is M*N games) to run
-    tourney = Tournament(2,2,2, :Sequential)
+    #tourney = Tournament(2, 2, 2, :Sequential)
+    tourney = Tournament(10, 5, 1, :Sequential)
     #tourney = Tournament(20,8,20, :FiftyPercentWinnerStays)
     #tourney = Tournament(5,4,10, :SixtyPercentWinnerStays)
     if any([typeof(c(Dict())) <: MutatedEmpathRobotPlayer for (t,c) in collect(player_constructors)])
@@ -53,73 +101,4 @@ function run(player_constructors::Dict)
         run_tournament(tourney, player_constructors)
     end
 end
-
-function do_tournament_one_epoch(tourney, teams, map_file, player_constructors)
-    do_tournament_one_epoch(tourney, teams, map_file, player_constructors, Dict([(t,Dict()) for t in teams]A))
-end
-function do_tournament_one_epoch(tourney, teams, map_file, player_constructors, team_to_mutation)
-    winners = init_winners(teams)
-    for j=1:tourney.maps_per_epoch
-        map = Catan.generate_random_map(map_file)
-        for i=1:tourney.games_per_map
-            game = Game([player_constructors[t](team_to_mutation[t]) for t in teams])
-            do_tournament_one_game(tourney, i, j, winners, game, map_file)
-        end
-    end
-end
-
-function do_tournament_one_game(tourney, i, j, winners, game, map_file)
-    println("starting game $(game.unique_id)")
-    _,winner = Catan.run(game, map_file)
-
-    w = winner
-    if winner != nothing
-        w = winner.player.team
-    end
-    winners[w] += 1
-
-    if winner != nothing
-        println("Game $((j - 1)*tourney.games_per_map + i) / $(tourney.maps_per_epoch * tourney.games_per_map): $(winner.player.team)")
-        println("winner: $(winner.player.team)")
-    end
-    return winner
-end
-
-function init_winners(teams)
-    winners = Dict{Union{Symbol, Nothing}, Int}([(k,0) for k in teams])
-    winners[nothing] = 0
-    return winners
-end
-
-function run_mutating_tournament(tourney, player_constructors)
-    teams = collect(keys(player_constructors))
-    team_to_mutation = Dict([(t, Dict()) for t in teams])
-    map_file = "$(Catan.DATA_DIR)/_temp_map_file.csv"
-    winners = init_winners(teams)
-    for k=1:tourney.epochs
-        do_tournament_one_epoch(tourney, teams, map_file, player_constructors, team_to_mutation)
-        
-        # Don't assign new mutations on the last one so we can see the results
-        if k < tourney.epochs
-            ordered_winners = order_winners(winners)
-            apply_mutation_rule![tourney.mutation_rule](team_to_mutation, ordered_winners)
-        end
-    end
-    println(winners)
-
-    for (player,mt) in team_to_mutation
-        println("$(player): $(print_mutation(mt))")
-    end
-end
-
-function run_tournament(tourney, player_constructors)
-    teams = collect(keys(player_constructors))
-    map_file = "$(Catan.DATA_DIR)/_temp_map_file.csv"
-    winners = init_winners(teams)
-    for k=1:tourney.epochs
-        do_tournament_one_epoch(tourney, teams, map_file, player_constructors)
-    end
-    println(winners)
-end
-
 end
