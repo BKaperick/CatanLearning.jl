@@ -77,5 +77,5 @@ struct IoConfig
     values::String
 end
 
-IoConfig() = IoConfig("$(DATA_DIR)/model.jls", "$(DATA_DIR)/features.csv", "$(DATA_DIR)/state_values.csv")
-
+IoConfig(features_file) = IoConfig("$(DATA_DIR)/model.jls", features_file, "$(DATA_DIR)/state_values.csv")
+IoConfig() = IoConfig("$(DATA_DIR)/features.csv")

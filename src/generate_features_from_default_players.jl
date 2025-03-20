@@ -21,7 +21,6 @@ teams = [
 logger = ConsoleLogger(stderr, Logging.Warn)
 global_logger(logger)
 SAVE_GAME_TO_FILE = false
-#SAVEFILEIO = open(SAVEFILE, "a")
 
 map_file = "$(Catan.DATA_DIR)/_temp_map_file.csv"
 winners = Dict{Union{Symbol, Nothing}, Int}([(k,0) for k in teams])

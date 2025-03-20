@@ -95,15 +95,15 @@ register_feature(:CountGrain, Int8, 0, 20)
 compute_count_hand_grain = (board, player) -> get_resource_hand_count(player, :Grain)
 
 register_feature(:CountDevCardsKnight, Int8, 0, Catan.DEVCARD_COUNTS[:Knight])
-compute_count_dev_cards_owned_knight = (board, player) -> get_dev_cards_owned_count(player, :Knight)
+compute_count_devcards_owned_knight = (board, player) -> get_devcards_owned_count(player, :Knight)
 register_feature(:CountDevCardsMonopoly, Int8, 0, Catan.DEVCARD_COUNTS[:Monopoly])
-compute_count_dev_cards_owned_monopoly = (board, player) -> get_dev_cards_owned_count(player, :Monopoly)
+compute_count_devcards_owned_monopoly = (board, player) -> get_devcards_owned_count(player, :Monopoly)
 register_feature(:CountDevCardsYearOfPlenty, Int8, 0, Catan.DEVCARD_COUNTS[:YearOfPlenty])
-compute_count_dev_cards_owned_year_of_plenty = (board, player) -> get_dev_cards_owned_count(player, :YearOfPlenty)
+compute_count_devcards_owned_year_of_plenty = (board, player) -> get_devcards_owned_count(player, :YearOfPlenty)
 register_feature(:CountDevCardsRoadBuilding, Int8, 0, Catan.DEVCARD_COUNTS[:RoadBuilding])
-compute_count_dev_cards_owned_road_building = (board, player) -> get_dev_cards_owned_count(player, :RoadBuilding)
+compute_count_devcards_owned_road_building = (board, player) -> get_devcards_owned_count(player, :RoadBuilding)
 register_feature(:CountDevCardsVictoryPoint, Int8, 0, Catan.DEVCARD_COUNTS[:VictoryPoint])
-compute_count_dev_cards_owned_victory_point = (board, player) -> get_dev_cards_owned_count(player, :VictoryPoint)
+compute_count_devcards_owned_victory_point = (board, player) -> get_devcards_owned_count(player, :VictoryPoint)
 
 register_feature(:CountVictoryPoint, Int8, 0, 10)
 compute_count_victory_points = (board, player) -> player.vp_count
@@ -131,11 +131,11 @@ function compute_features(board, player)::Vector{Pair{Symbol, Float64}}
         :CountHandPasture => compute_count_hand_pasture(board, player),
         :CountHandStone => compute_count_hand_stone(board, player),
         :CountHandGrain => compute_count_hand_grain(board, player),
-        :CountDevCardsKnight => compute_count_dev_cards_owned_knight(board, player),
-        :CountDevCardsMonopoly => compute_count_dev_cards_owned_monopoly(board, player),
-        :CountDevCardsYearOfPlenty => compute_count_dev_cards_owned_year_of_plenty(board, player),
-        :CountDevCardsRoadBuilding => compute_count_dev_cards_owned_road_building(board, player),
-        :CountDevCardsVictoryPoint => compute_count_dev_cards_owned_victory_point(board, player),
+        :CountDevCardsKnight => compute_count_devcards_owned_knight(board, player),
+        :CountDevCardsMonopoly => compute_count_devcards_owned_monopoly(board, player),
+        :CountDevCardsYearOfPlenty => compute_count_devcards_owned_year_of_plenty(board, player),
+        :CountDevCardsRoadBuilding => compute_count_devcards_owned_road_building(board, player),
+        :CountDevCardsVictoryPoint => compute_count_devcards_owned_victory_point(board, player),
         :CountVictoryPoint => compute_count_victory_points(board, player)
         # :IsNotLoss => compute_is_not_loss(board, player)
        ]
@@ -162,7 +162,7 @@ function get_road_count(board, team)
 end
 
 """
-    get_sum_resource_dice_weight(board, player.team, resource)
+    `get_sum_resource_dice_weight(board, player.team, resource)::Int`
 
 The sum of dice weight (0-5 increasing probability of rolling number, 7 is 0, while 2 and 12 are 1.)
 MAX => 3*(2(4*5) + (2*5 + 3*4)) = 186
@@ -200,15 +200,15 @@ function get_resource_port_count(board, team, resource)::Int
     return count
 end
 
-function get_dev_cards_owned_count(player, dev_card)::Int
+function get_devcards_owned_count(player, devcard)::Int
     count = 0
-    for (card,cnt) in player.dev_cards
-        if card == dev_card
+    for (card,cnt) in player.devcards
+        if card == devcard
             count += cnt
         end
     end
-    for (card,cnt) in player.dev_cards_used
-        if card == dev_card
+    for (card,cnt) in player.devcards_used
+        if card == devcard
             count += cnt
         end
     end

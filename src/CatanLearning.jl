@@ -1,7 +1,8 @@
 module CatanLearning
 using Logging
-using Catan
+#using Catan
 import Catan
+import Catan: Player, PlayerPublicView, PlayerType, RobotPlayer, DefaultRobotPlayer, Game, Board
 
 #include("../main.jl")
 #include("../apis/player_api.jl")
@@ -18,31 +19,35 @@ include("io.jl")
 
 
 
-team_to_mutation = Dict([
-                       :Blue => Dict(),
-                       :Green => Dict(),
-                       :Cyan => Dict(),
-                       :Yellow => Dict()
-                      ])
-
 # Suppress all normal logs
 logger = ConsoleLogger(stderr, Logging.Warn)
 global_logger(logger)
 SAVE_GAME_TO_FILE = false
 #SAVEFILEIO = open(SAVEFILE, "a")
 
-map_file = "$(Catan.DATA_DIR)/_temp_map_file.csv"
-winners = Dict{Union{Symbol, Nothing}, Int}([(k,0) for k in collect(keys(team_to_mutation))])
-winners[nothing] = 0
 
-# Number of games to play per map
-# Number of maps to generate
-# Number of epochs (1 epoch is M*N games) to run
-tourney = Tournament(2,2,2, :Sequential)
-#tourney = Tournament(20,8,20, :FiftyPercentWinnerStays)
-#tourney = Tournament(5,4,10, :SixtyPercentWinnerStays)
+function run()
+    team_to_mutation = Dict([
+        :Blue => Dict(),
+        :Green => Dict(),
+        :Cyan => Dict(),
+        :Yellow => Dict()
+    ])
 
-function run_tournament(tourney, team_to_mutation)
+    # Number of games to play per map
+    # Number of maps to generate
+    # Number of epochs (1 epoch is M*N games) to run
+    tourney = Tournament(2,2,2, :Sequential)
+    #tourney = Tournament(20,8,20, :FiftyPercentWinnerStays)
+    #tourney = Tournament(5,4,10, :SixtyPercentWinnerStays)
+
+    run_tournament(typeof(MutatedEmpathRobotPlayer), tourney, team_to_mutation)
+end
+
+function run_tournament(T, tourney, team_to_mutation)
+    winners = Dict{Union{Symbol, Nothing}, Int}([(k,0) for k in collect(keys(team_to_mutation))])
+    winners[nothing] = 0
+    map_file = "$(Catan.DATA_DIR)/_temp_map_file.csv"
     for k=1:tourney.epochs
         for (w,v) in winners
             winners[w] = 0
@@ -53,7 +58,7 @@ function run_tournament(tourney, team_to_mutation)
         for j=1:tourney.maps_per_epoch
             map = Catan.generate_random_map(map_file)
             for i=1:tourney.games_per_map
-                game = Game(generate_players())
+                game = Game(generate_players(team_to_mutation))
                 println("starting game $(game.unique_id)")
                 _,winner = Catan.run(game, map_file)
 

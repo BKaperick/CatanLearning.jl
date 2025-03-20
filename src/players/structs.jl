@@ -4,6 +4,16 @@ import DataFramesMeta as DFM
 import Base: deepcopy,hash
 using DelimitedFiles
 
+function get_tree()
+    Tree = load_tree_model()
+    tree = Base.invokelatest(Tree,
+        max_depth = 6,
+        min_gain = 0.0,
+        min_records = 2,
+        max_features = 0,
+        splitting_criterion = BetaML.Utils.gini)
+end
+
 abstract type LearningPlayer <: RobotPlayer
 end
 
@@ -16,6 +26,21 @@ mutable struct MutatedEmpathRobotPlayer <: LearningPlayer
     player::Player
     machine::Machine
     mutation::Dict #{Symbol, AbstractFloat}
+    io_config::IoConfig
+end
+
+MutatedEmpathRobotPlayer(team::Symbol) = MutatedEmpathRobotPlayer(
+    team, Dict{Symbol, AbstractFloat}(), IoConfig())
+
+MutatedEmpathRobotPlayer(team::Symbol, mutation::Dict) = MutatedEmpathRobotPlayer(team, mutation, IoConfig())
+MutatedEmpathRobotPlayer(team::Symbol, mutation::Dict, features_file_name::String) = MutatedEmpathRobotPlayer(team, IoConfig(features_file_name), mutation)
+
+function MutatedEmpathRobotPlayer(team::Symbol, mutation::Dict, io_config::IoConfig) 
+    MutatedEmpathRobotPlayer(
+    Player(team), 
+    try_load_model_from_csv(get_tree(), io_config.model, io_config.features), 
+    mutation,
+    io_config)
 end
 
 mutable struct TemporalDifferencePlayer <: LearningPlayer
@@ -36,14 +61,8 @@ TemporalDifferencePlayer(team::Symbol) = TemporalDifferencePlayer(MaxRewardMarko
 TemporalDifferencePlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}) = TemporalDifferencePlayer(MaxRewardMarkovPolicy, team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64})
 
 function TemporalDifferencePlayer(TPolicy::Type, team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64})
-    Tree = load_tree_model()
     io_config = IoConfig()
-    tree = Base.invokelatest(Tree,
-        max_depth = 6,
-        min_gain = 0.0,
-        min_records = 2,
-        max_features = 0,
-        splitting_criterion = BetaML.Utils.gini)
+    tree = get_tree()
     machine = try_load_model_from_csv(tree, io_config.model, io_config.features)
 
     process = MarkovRewardProcess(0.5, 0.1, 0.5, 0.5, master_state_to_value, new_state_to_value)
@@ -51,44 +70,32 @@ function TemporalDifferencePlayer(TPolicy::Type, team::Symbol, master_state_to_v
     TemporalDifferencePlayer(Player(team), machine, process, policy, io_config)
 end
 
-MutatedEmpathRobotPlayer(team::Symbol) = MutatedEmpathRobotPlayer(team, "../../features.csv", Dict{Symbol, AbstractFloat}())
-MutatedEmpathRobotPlayer(team::Symbol, mutation::Dict) = MutatedEmpathRobotPlayer(team, "../../features.csv", mutation)
-
-function MutatedEmpathRobotPlayer(team::Symbol, features_file_name::String, mutation::Dict)
-    Tree = load_tree_model()
-    tree = Base.invokelatest(Tree,
-        max_depth = 6,
-        min_gain = 0.0,
-        min_records = 2,
-        max_features = 0,
-        splitting_criterion = BetaML.Utils.gini)
-    MutatedEmpathRobotPlayer(Player(team), try_load_model_from_csv(tree, "$(DATA_DIR)/model.jls", "$(DATA_DIR)/features.csv"), mutation)
-end
-
 function Base.deepcopy(player::MutatedEmpathRobotPlayer)
-    return MutatedEmpathRobotPlayer(deepcopy(player.player), deepcopy(player.machine), deepcopy(player.mutation)) #TODO needto deepcopy the machine?
+    return MutatedEmpathRobotPlayer(deepcopy(player.player), deepcopy(player.machine), deepcopy(player.mutation), player.io_config) 
 end
 
 function Base.deepcopy(player::TemporalDifferencePlayer)
     # Note, we deepcopy only the player data, while the RL data should persist in order to pass updates the state info properly
-    return TemporalDifferencePlayer(deepcopy(player.player), player.machine, player.process, player.policy, player.io_config)
+    return TemporalDifferencePlayer(
+        deepcopy(player.player), 
+        player.machine, 
+        player.process, 
+        player.policy, 
+        player.io_config
+    )
 end
 
-EmpathRobotPlayer(team::Symbol) = EmpathRobotPlayer(team, "../../features.csv")
-function EmpathRobotPlayer(team::Symbol, features_file_name::String)
-    Tree = load_tree_model()
-    tree = Base.invokelatest(Tree,
-        max_depth = 6,
-        min_gain = 0.0,
-        min_records = 2,
-        max_features = 0,
-        splitting_criterion = BetaML.Utils.gini)
-    EmpathRobotPlayer(Player(team), try_load_model_from_csv(tree, "$(DATA_DIR)/model.jls", "$(DATA_DIR)/features.csv"))
+EmpathRobotPlayer(team::Symbol) = EmpathRobotPlayer(team, IoConfig().features)
+function EmpathRobotPlayer(team::Symbol, features_file_name::String) 
+    io_config = IoConfig(features_file_name)
+    EmpathRobotPlayer(
+        Player(team), 
+        try_load_model_from_csv(get_tree(), io_config.model, io_config.features)
+    )
 end
-
 
 function Base.deepcopy(player::EmpathRobotPlayer)
-    return EmpathRobotPlayer(deepcopy(player.player), player.machine) #TODO needto deepcopy the machine?
+    return EmpathRobotPlayer(deepcopy(player.player), player.machine)
 end
 
 inner_player(player::EmpathRobotPlayer)::Player = p -> p.player
