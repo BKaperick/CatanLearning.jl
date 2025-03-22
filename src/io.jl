@@ -4,7 +4,8 @@ function Catan.do_post_game_action(board::Board, players::Vector{PlayerType}, wi
     return
 end
 """
-function Catan.do_post_game_action(board::Board, players::Vector{PlayerType}, winner::PlayerType)
+function Catan.do_post_game_action(board::Board, players::Vector{Catan.DefaultRobotPlayer}, winner::Union{Catan.DefaultRobotPlayer, Nothing})
+    println("writing features")
     return write_features_file(board::Board, players::Vector{PlayerType}, winner::PlayerType)
 end
 
