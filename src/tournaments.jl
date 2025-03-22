@@ -1,13 +1,12 @@
-function do_tournament_one_epoch(tourney, teams, map_file, player_constructors::Dict, T::Type)
-    do_tournament_one_epoch(tourney, teams, map_file, player_constructors, Dict([(t,Dict()) for t in teams]), T)
+function do_tournament_one_epoch(tourney, teams, map_file, player_constructors::Dict)
+    do_tournament_one_epoch(tourney, teams, map_file, player_constructors, Dict([(t,Dict()) for t in teams]))
 end
-function do_tournament_one_epoch(tourney, teams, map_file, player_constructors::Dict, team_to_mutation::Dict, T::Type)
+function do_tournament_one_epoch(tourney, teams, map_file, player_constructors::Dict, team_to_mutation::Dict)
     winners = init_winners(teams)
     for j=1:tourney.maps_per_epoch
         map = Catan.generate_random_map(map_file)
         for i=1:tourney.games_per_map
             players = [player_constructors[t](team_to_mutation[t]) for t in teams]
-            game = Game(players::Vector{T})
             game = Game(players)
             do_tournament_one_game(tourney, i, j, winners, game, map_file)
         end
@@ -39,7 +38,7 @@ function init_winners(teams)
     return winners
 end
 
-function run_mutating_tournament(tourney, player_constructors, T=Vector{PlayerType})
+function run_mutating_tournament(tourney, player_constructors)
     teams = collect(keys(player_constructors))
     team_to_mutation = Dict([(t, Dict()) for t in teams])
     map_file = "$(Catan.DATA_DIR)/_temp_map_file.csv"
@@ -58,12 +57,12 @@ function run_mutating_tournament(tourney, player_constructors, T=Vector{PlayerTy
     end
 end
 
-function run_tournament(tourney, player_constructors, T=Vector{PlayerType})
+function run_tournament(tourney, player_constructors)
     teams = collect(keys(player_constructors))
     map_file = "$(Catan.DATA_DIR)/_temp_map_file.csv"
     winners = init_winners(teams)
     for k=1:tourney.epochs
-        epoch_winners = do_tournament_one_epoch(tourney, teams, map_file, player_constructors, T)
+        epoch_winners = do_tournament_one_epoch(tourney, teams, map_file, player_constructors)
         println(epoch_winners)
         for (w,n) in collect(epoch_winners)
             winners[w] += n

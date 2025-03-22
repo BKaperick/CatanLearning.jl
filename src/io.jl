@@ -4,13 +4,13 @@ function Catan.do_post_game_action(board::Board, players::Vector{PlayerType}, wi
     return
 end
 """
-function Catan.do_post_game_action(board::Board, players::Vector{Catan.DefaultRobotPlayer}, winner::Union{Catan.DefaultRobotPlayer, Nothing})
-    println("writing features")
-    return write_features_file(board::Board, players::Vector{PlayerType}, winner::PlayerType)
+function Catan.do_post_game_action(board::Board, players::Vector{PlayerType}, player::Catan.DefaultRobotPlayer, winner::Union{PlayerType, Nothing})
+    return write_features_file(board::Board, players, player, winner)
 end
 
-function Catan.do_post_game_action(board::Board, players::Vector{PlayerType}, winner::Union{TemporalDifferencePlayer, Nothing})
-    return write_values_file(players)
+function do_post_game_action(board::Board, players::Vector{PlayerType}, player::TemporalDifferencePlayer, winner::Union{PlayerType, Nothing})
+    println("writing values")
+    return write_values_file(players, player)
 end
 
 #
@@ -43,26 +43,20 @@ function read_values_file(values_file::String)::Dict{UInt64, Float64}
     return out
 end
 
-function write_values_file(players::Vector{PlayerType})
-    winners = [p for p in players if typeof(p) == TemporalDifferencePlayer]
-    if length(winners) == 0
-        return nothing
-    end
-    winner = winners[1]
-        
-    values_file = winner.io_config.values
-    state_to_value = winner.process.new_state_to_value
+function write_values_file(players::Vector{PlayerType}, player::TemporalDifferencePlayer)
+    values_file = player.io_config.values
+    state_to_value = player.process.new_state_to_value
     write_values_file(values_file, state_to_value)
 
     # Merge all new entries from this game into the main state_to_value dict
-    merge!(winner.process.state_to_value, winner.process.new_state_to_value)
+    merge!(player.process.state_to_value, winner.process.new_state_to_value)
     # and clear the new state to values learned
-    empty!(winner.process.new_state_to_value)
+    empty!(player.process.new_state_to_value)
     
     for player in players
         if hasproperty(player, :process)
             empty!(player.process.new_state_to_value)
-            player.process.state_to_value = winner.process.state_to_value
+            player.process.state_to_value = player.process.state_to_value
         end
     end
 end
@@ -74,13 +68,10 @@ function write_values_file(values_file::String, state_to_value)
     close(file)
 end
 
-function write_features_file(board::Board, players::Vector{PlayerType}, winner::PlayerType) 
+function write_features_file(board::Board, players, player::PlayerType, winner::Union{PlayerType, Nothing}) 
     file = open(FEATURES_FILE, "a")
-    _write_feature_file_header(file, board, winner)
-
-    for player in players
-        save_parameters_after_game_end(file, board, players, player, winner.player.team)
-    end
+    _write_feature_file_header(file, board, player)
+    save_parameters_after_game_end(file, board, players, player, player.player.team)
     close(file)
 
 end

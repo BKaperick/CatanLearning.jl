@@ -35,7 +35,7 @@ function run(T::MutatedEmpathRobotPlayer)
         :Cyan => (mutation) -> T(:Cyan, mutation), 
         :Yellow => (mutation) -> T(:Yellow, mutation)
     ])
-    run(player_constructors, T)
+    run(player_constructors)
 end
 function run(T::Type)
     player_constructors = Dict([
@@ -44,7 +44,7 @@ function run(T::Type)
         :Cyan => (mutation) -> T(:Cyan), 
         :Yellow => (mutation) -> T(:Yellow)
     ])
-    run(player_constructors, T)
+    run(player_constructors)
 end
 
 function run()
@@ -87,7 +87,7 @@ function run_explore()
     run(player_constructors)
 end
 
-function run(player_constructors::Dict, T::Type)
+function run(player_constructors::Dict)
     # Number of games to play per map
     # Number of maps to generate
     # Number of epochs (1 epoch is M*N games) to run
@@ -96,9 +96,9 @@ function run(player_constructors::Dict, T::Type)
     #tourney = Tournament(20,8,20, :FiftyPercentWinnerStays)
     #tourney = Tournament(5,4,10, :SixtyPercentWinnerStays)
     if any([typeof(c(Dict())) <: MutatedEmpathRobotPlayer for (t,c) in collect(player_constructors)])
-        run_mutating_tournament(tourney, player_constructors, T)
+        run_mutating_tournament(tourney, player_constructors)
     else
-        run_tournament(tourney, player_constructors, T)
+        run_tournament(tourney, player_constructors)
     end
 end
 end
