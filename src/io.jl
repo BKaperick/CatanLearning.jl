@@ -1,15 +1,16 @@
+"""
 function Catan.do_post_game_action(board::Board, players::Vector{PlayerType}, winner::Nothing)
+    println("in CL version 1")
     return
 end
+"""
 function Catan.do_post_game_action(board::Board, players::Vector{PlayerType}, winner::PlayerType)
     return write_features_file(board::Board, players::Vector{PlayerType}, winner::PlayerType)
 end
-"""
-function Catan.do_post_game_action(board::Board, players::Vector{PlayerType}, winner::Union{TemporalDifferencePlayer, Nothing})
 
+function Catan.do_post_game_action(board::Board, players::Vector{PlayerType}, winner::Union{TemporalDifferencePlayer, Nothing})
     return write_values_file(players)
 end
-"""
 
 #
 # Feature writing utils
@@ -50,7 +51,7 @@ function write_values_file(players::Vector{PlayerType})
         
     values_file = winner.io_config.values
     state_to_value = winner.process.new_state_to_value
-    write_values_file(values_file, new_state_to_value)
+    write_values_file(values_file, state_to_value)
 
     # Merge all new entries from this game into the main state_to_value dict
     merge!(winner.process.state_to_value, winner.process.new_state_to_value)
@@ -96,7 +97,7 @@ get_csv_friendly(value::Nothing) = "\"\""
 get_csv_friendly(value::AbstractString) = "\"$value\""
 get_csv_friendly(value::Int) = string(value)
 get_csv_friendly(value::Int8) = string(value)
-get_csv_friendly(value::AbstractFloat) = string(value)
+get_csv_friendly(value::AbstractFloat) = rstrip(rstrip(string(value), '0'),'.')
 get_csv_friendly(value::Bool) = string(Int(value))
 get_csv_friendly(value::Symbol) = "\"$value\""
 get_csv_friendly(value) = "\"$value\""
