@@ -1,6 +1,6 @@
 include("../learning/feature_computation.jl")
 include("../learning/production_model.jl")
-import Catan: choose_next_action
+import Catan: choose_next_action, choose_place_robber
 
 """
     `get_action_with_features(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, actions::Set{Symbol})`
@@ -53,6 +53,13 @@ function choose_next_action(board::Board, players::Vector{PlayerPublicView}, pla
         return actions_and_features[best_action_index][1]
     end
     return nothing
+end
+
+
+function choose_place_robber(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer)::Symbol
+    println("INTELLIGENTLY PLACING ROBBER")
+    @assert false
+    return choose_next_action(board, players, player, Set([:PlaceRobber]))
 end
 
 function save_parameters_after_game_end(file::IO, board::Board, players::Vector{PlayerType}, player::PlayerType, winner_team::Symbol)

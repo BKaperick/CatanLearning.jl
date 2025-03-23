@@ -1,11 +1,40 @@
 using Test
 using StatsBase
 using Logging
+using Catan
+using Catan: Game, Board, Player, PlayerType, PlayerApi, BoardApi, GameApi,
+             DefaultRobotPlayer, PlayerPublicView, ALL_ACTIONS, choose_accept_trade,
+read_map,
+load_gamestate!,
+reset_savefile,
+random_sample_resources,
+decide_and_assign_largest_army!,
+get_admissible_theft_victims,
+choose_road_location,
+choose_validate_build_settlement!,
+choose_validate_build_city!,
+choose_validate_build_road!,
+do_monopoly_action,
+harvest_resources,
+roll_dice,
+get_legal_action_functions,
+PLAYER_ACTIONS,
+MAX_SETTLEMENT,
+MAX_CITY,
+MAX_ROAD,
+choose_building_location,
+choose_cards_to_discard,
+choose_monopoly_resource
+#choose_next_action,
+#choose_place_robber
 
 using CatanLearning:
-    compute_features
+    compute_features,
+    MutatedEmpathRobotPlayer
+#include("../../CatanEngine.jl/test/runtests.jl")
 #include("../src/CatanLearning.jl")
 
+SAMPLE_MAP = "../../CatanEngine.jl/data/sample.csv"
 
 function test_evolving_robot_game(neverend)
     team_and_playertype = [
@@ -79,12 +108,13 @@ features_increasing_good = Set([
 :CountVictoryPoint
 ])
 
+
 MAIN_DATA_DIR = "../data/"
 
 function test_compute_features()
     #players = setup_players()
-    player = DefaultRobotPlayer(:Blue)
-    board = read_map("../../CatanEngine.jl/data/sample.csv")
+    player = Catan.DefaultRobotPlayer(:Blue)
+    board = Catan.read_map("../../CatanEngine.jl/data/sample.csv")
     compute_features(board, player)
 end
 
@@ -173,8 +203,52 @@ function test_feature_perturbations(features, features_increasing_good, max_pert
     return fails_m, fails_r, fails_v
 end
 
+function test_player_implementation(T::Type) #where T <: PlayerType
+    private_players = [
+               T(:Blue),
+               DefaultRobotPlayer(:Cyan),
+               DefaultRobotPlayer(:Yellow),
+               DefaultRobotPlayer(:Red)
+              ]
+
+    player = private_players[1]
+    players = PlayerPublicView.(private_players)
+    game = Game(private_players)
+    board = read_map(SAMPLE_MAP)
+    from_player = players[2]
+    actions = ALL_ACTIONS
+
+    from_goods = [:Wood]
+    to_goods = [:Grain]
+
+    PlayerApi.give_resource!(player.player, :Grain)
+    PlayerApi.give_resource!(player.player, :Grain)
+    settlement_candidates = BoardApi.get_admissible_settlement_locations(board, player.player.team, true)
+    devcards = Dict([:Knight => 2])
+    player.player.devcards = devcards
+
+    choose_accept_trade(board, player, from_player, from_goods, to_goods)
+    coord = choose_building_location(board, players, player, settlement_candidates, :Settlement)
+    BoardApi.build_settlement!(board, player.player.team, coord)
+    road_candidates = BoardApi.get_admissible_road_locations(board, player.player.team, false)
+    
+    choose_building_location(board, players, player, [coord], :City)
+    choose_cards_to_discard(player, 1)
+    choose_monopoly_resource(board, players, player)
+    choose_next_action(board, players, player, actions)
+    choose_place_robber(board, players, player)
+    choose_play_devcard(board, players, player, devcards)
+    choose_road_location(board, players, player, road_candidates)
+    println("choosing robber victim")
+    choose_robber_victim(board, player, players[2], players[3])
+    choose_who_to_trade_with(board, player, players)
+    choose_year_of_plenty_resources(board, players, player)
+    get_legal_action_functions(board, players, player, actions)
+end
+
 
 function run_tests(neverend = false)
+    test_player_implementation(MutatedEmpathRobotPlayer)
     test_compute_features()
     """
     (fails_m, fails_r, fails_v) = test_feature_perturbations(features, features_increasing_good)
@@ -191,3 +265,4 @@ function run_tests(neverend = false)
     """
 end
 
+run_tests()
