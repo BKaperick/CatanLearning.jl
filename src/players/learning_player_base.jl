@@ -1,9 +1,31 @@
 include("../learning/feature_computation.jl")
 include("../learning/production_model.jl")
 import Catan: choose_next_action, choose_place_robber
-using Catan: BoardApi, PlayerApi, random_sample_resources, get_random_resource,
+using Catan: GameApi, BoardApi, PlayerApi, random_sample_resources, get_random_resource,
              construct_city, construct_settlement, construct_road,
-             buy_devcard, do_play_devcard, propose_trade_goods, do_robber_move_theft
+             do_play_devcard, propose_trade_goods, do_robber_move_theft
+
+"""
+    `get_estimated_remaining_devcards`
+
+A helper function for the learning player to make a probabilistic decision 
+about what remains in the devcard deck based on public information.
+"""
+function get_estimated_remaining_devcards(board::Board, players::Vector{PlayerPublicView}, player::Player)::Dict{Symbol, Int}
+    devcards = deepcopy(Catan.DEVCARD_COUNTS)
+    for (card,count) in collect(player.devcards)
+        devcards[card] -= count
+    end
+    for (card,count) in collect(player.devcards_used)
+        devcards[card] -= count
+    end
+    for other_player in players
+        for (card,count) in collect(other_player.devcards_used)
+            devcards[card] -= count
+        end
+    end
+    return devcards
+end
 
 function get_legal_action_functions(board::Board, players::Vector{PlayerPublicView}, player::Player, actions::Set{Symbol})
     action_functions = []
@@ -28,7 +50,11 @@ function get_legal_action_functions(board::Board, players::Vector{PlayerPublicVi
     end
 
     if :BuyDevCard in actions
-        push!(action_functions, (g, b, p) -> buy_devcard(g, p.player))
+        estimated_remaining_devcards = get_estimated_remaining_devcards(board, players, player)
+        sampled_devcards = Catan.random_sample_resources(estimated_remaining_devcards, 5, true)
+        for card in sampled_devcards 
+            push!(action_functions, (g, b, p) -> deterministic_draw_devcard(g, p, card))
+        end
     end
 
     if :PlayDevCard in actions
@@ -57,12 +83,30 @@ function get_legal_action_functions(board::Board, players::Vector{PlayerPublicVi
     if :PlaceRobber in actions
         # Get candidates
         for new_tile = BoardApi.get_admissible_robber_tiles(board)
+            # TODO stochastic
             push!(action_functions, (g, b, p) -> do_robber_move_theft(b, g.players, p, new_tile))
         end
     end
 
     return action_functions
 end
+
+"""
+    `deterministic_draw_devcard(game, player, card)`
+
+Equivalent to `Catan.draw_devcard`, but we pass an explicit card choice, since we're sampling from our estimated
+card counts, rather than leaking info from the main one during the hypothetical games.
+"""
+function deterministic_draw_devcard(game, player, card)
+    GameApi._draw_devcard(game, card)
+    PlayerApi.buy_devcard(player.player, card)
+end
+
+action_types = Dict([
+    :ConstructSettlement => :Deterministic,
+    :ConstructCity => :Stochastic,
+    :ConstructCity => :OtherPlayersInput
+])
 
 """
     `get_action_with_features(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, actions::Set{Symbol})`
