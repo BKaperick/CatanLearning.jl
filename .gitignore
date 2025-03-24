@@ -1,5 +1,7 @@
 data/state_values.csv
 data/features.csv
 data/old_features.csv
+features*.csv
+test/data/*
 .CondaPkg
 .CondaPkg/*

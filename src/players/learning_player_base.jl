@@ -1,6 +1,68 @@
 include("../learning/feature_computation.jl")
 include("../learning/production_model.jl")
 import Catan: choose_next_action, choose_place_robber
+using Catan: BoardApi, PlayerApi, random_sample_resources, get_random_resource,
+             construct_city, construct_settlement, construct_road,
+             buy_devcard, do_play_devcard, propose_trade_goods, do_robber_move_theft
+
+function get_legal_action_functions(board::Board, players::Vector{PlayerPublicView}, player::Player, actions::Set{Symbol})
+    action_functions = []
+    
+    if :ConstructCity in actions
+        candidates = BoardApi.get_admissible_city_locations(board, player.team)
+        for coord in candidates
+            push!(action_functions, (g, b, p) -> construct_city(b, p.player, coord))
+        end
+    end
+    if :ConstructSettlement in actions
+        candidates = BoardApi.get_admissible_settlement_locations(board, player.team)
+        for coord in candidates
+            push!(action_functions, (g, b, p) -> construct_settlement(b, p.player, coord))
+        end
+    end
+    if :ConstructRoad in actions
+        candidates = BoardApi.get_admissible_road_locations(board, player.team)
+        for coord in candidates
+            push!(action_functions, (g, b, p) -> construct_road(b, p.player, coord[1], coord[2]))
+        end
+    end
+
+    if :BuyDevCard in actions
+        push!(action_functions, (g, b, p) -> buy_devcard(g, p.player))
+    end
+
+    if :PlayDevCard in actions
+        devcards = PlayerApi.get_admissible_devcards(player)
+        for (card,cnt) in devcards
+            # TODO how do we stop them playing devcards first turn they get them?  Is this correctly handled in get_admissible call?
+            if card != :VictoryPoint
+                push!(action_functions, (g, b, p) -> do_play_devcard(b, g.players, p, card))
+            end
+        end
+    end
+    
+    # TODO: this is leaking info from other players, since `propose_trade_goods` 
+    # asks the other user if they would accept the offered trade, so the player 
+    # can check if the trade would be accepted before deciding to do it.
+    if :ProposeTrade in actions
+        sampled = random_sample_resources(player.resources, 1)
+        rand_resource_from = [sampled...]
+        rand_resource_to = [get_random_resource()]
+        while rand_resource_to[1] == rand_resource_from[1]
+            rand_resource_to = [get_random_resource()]
+        end
+        push!(action_functions, (g, b, p) -> propose_trade_goods(b, g.players, p, rand_resource_from, rand_resource_to))
+    end
+
+    if :PlaceRobber in actions
+        # Get candidates
+        for new_tile = BoardApi.get_admissible_robber_tiles(board)
+            push!(action_functions, (g, b, p) -> do_robber_move_theft(b, g.players, p, new_tile))
+        end
+    end
+
+    return action_functions
+end
 
 """
     `get_action_with_features(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, actions::Set{Symbol})`
@@ -9,7 +71,7 @@ Gets the legal action functions for the player at this board state, and computes
 This is a critical helper function for all the machine-learning players.
 """
 function get_action_with_features(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, actions::Set{Symbol})
-    action_functions = Catan.get_legal_action_functions(board, players, player, actions)
+    action_functions = get_legal_action_functions(board, players, player.player, actions)
     reachable_states = []
     for (i,action_func!) in enumerate(action_functions)
         hypoth_board = deepcopy(board)
