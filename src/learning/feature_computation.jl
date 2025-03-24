@@ -106,7 +106,7 @@ register_feature(:CountDevCardsVictoryPoint, Int8, 0, Catan.DEVCARD_COUNTS[:Vict
 compute_count_devcards_owned_victory_point = (board, player) -> get_devcards_owned_count(player, :VictoryPoint)
 
 register_feature(:CountVictoryPoint, Int8, 0, 10)
-compute_count_victory_points = (board, player) -> player.vp_count
+compute_count_victory_points = (board, player) -> Catan.GameRunner.get_total_vp_count(board, player)
 #compute_is_not_loss = (board, player) -> 
 
 function compute_features(board, player)::Vector{Pair{Symbol, Float64}}

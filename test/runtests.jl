@@ -7,33 +7,20 @@ using Catan: Game, Board, Player, PlayerType, PlayerApi, BoardApi, GameApi,
 read_map,
 load_gamestate!,
 reset_savefile,
-random_sample_resources,
-decide_and_assign_largest_army!,
-get_admissible_theft_victims,
-choose_road_location,
-choose_validate_build_settlement!,
-choose_validate_build_city!,
-choose_validate_build_road!,
-do_monopoly_action,
-harvest_resources,
-roll_dice,
-get_legal_action_functions,
-PLAYER_ACTIONS,
-MAX_SETTLEMENT,
-MAX_CITY,
-MAX_ROAD,
-choose_building_location,
-choose_cards_to_discard,
-choose_monopoly_resource,
 test_player_implementation
-#choose_next_action,
-#choose_place_robber
 
 using CatanLearning:
     compute_features,
-    MutatedEmpathRobotPlayer
-#include("../../CatanEngine.jl/test/runtests.jl")
-#include("../src/CatanLearning.jl")
+    MutatedEmpathRobotPlayer,
+
+read_values_file,
+feature_library,
+get_state_optimizing_quantity,
+predict_model,
+MarkovState,
+MaxValueMarkovPolicy,
+MaxRewardMarkovPolicy,
+TemporalDifferencePlayer
 
 SAMPLE_MAP = "../../CatanEngine.jl/data/sample.csv"
 
@@ -116,7 +103,7 @@ function test_compute_features()
     #players = setup_players()
     player = Catan.DefaultRobotPlayer(:Blue)
     board = Catan.read_map("../../CatanEngine.jl/data/sample.csv")
-    compute_features(board, player)
+    compute_features(board, player.player)
 end
 
 function generate_realistic_features(features)
@@ -208,8 +195,9 @@ end
 function run_tests(neverend = false)
     test_player_implementation(Catan.DefaultRobotPlayer)
     test_player_implementation(MutatedEmpathRobotPlayer)
-    #test_compute_features()
-    """(fails_m, fails_r, fails_v) = test_feature_perturbations(features, features_increasing_good)
+    test_compute_features()
+    (fails_m, fails_r, fails_v) = test_feature_perturbations(features, features_increasing_good)
+    """
     println("model fails with +3 perturbation $(length(fails_m[3])): $(fails_m[3])")
     println("model fails with +2 perturbation $(length(fails_m[2])): $(fails_m[2])")
     println("model fails with +1 perturbation $(length(fails_m[1])): $(fails_m[1])")
