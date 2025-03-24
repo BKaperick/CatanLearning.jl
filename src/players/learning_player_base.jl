@@ -33,19 +33,19 @@ function get_legal_action_functions(board::Board, players::Vector{PlayerPublicVi
     if :ConstructCity in actions
         candidates = BoardApi.get_admissible_city_locations(board, player.team)
         for coord in candidates
-            push!(action_functions, (g, b, p) -> construct_city(b, p.player, coord))
+            push!(action_functions, (:ConstructCity, (g, b, p) -> construct_city(b, p.player, coord)))
         end
     end
     if :ConstructSettlement in actions
         candidates = BoardApi.get_admissible_settlement_locations(board, player.team)
         for coord in candidates
-            push!(action_functions, (g, b, p) -> construct_settlement(b, p.player, coord))
+            push!(action_functions, (:ConstructSettlement, (g, b, p) -> construct_settlement(b, p.player, coord)))
         end
     end
     if :ConstructRoad in actions
         candidates = BoardApi.get_admissible_road_locations(board, player.team)
         for coord in candidates
-            push!(action_functions, (g, b, p) -> construct_road(b, p.player, coord[1], coord[2]))
+            push!(action_functions, (:ConstructRoad, (g, b, p) -> construct_road(b, p.player, coord[1], coord[2])))
         end
     end
 
@@ -53,7 +53,7 @@ function get_legal_action_functions(board::Board, players::Vector{PlayerPublicVi
         estimated_remaining_devcards = get_estimated_remaining_devcards(board, players, player)
         sampled_devcards = Catan.random_sample_resources(estimated_remaining_devcards, 5, true)
         for card in sampled_devcards 
-            push!(action_functions, (g, b, p) -> deterministic_draw_devcard(g, p, card))
+            push!(action_functions, (:BuyDevCard, (g, b, p) -> deterministic_draw_devcard(g, p, card)))
         end
     end
 
@@ -62,7 +62,7 @@ function get_legal_action_functions(board::Board, players::Vector{PlayerPublicVi
         for (card,cnt) in devcards
             # TODO how do we stop them playing devcards first turn they get them?  Is this correctly handled in get_admissible call?
             if card != :VictoryPoint
-                push!(action_functions, (g, b, p) -> do_play_devcard(b, g.players, p, card))
+                push!(action_functions, (:PlayDevCard, (g, b, p) -> do_play_devcard(b, g.players, p, card)))
             end
         end
     end
@@ -77,14 +77,14 @@ function get_legal_action_functions(board::Board, players::Vector{PlayerPublicVi
         while rand_resource_to[1] == rand_resource_from[1]
             rand_resource_to = [get_random_resource()]
         end
-        push!(action_functions, (g, b, p) -> propose_trade_goods(b, g.players, p, rand_resource_from, rand_resource_to))
+        push!(action_functions, (:ProposeTrade, (g, b, p) -> propose_trade_goods(b, g.players, p, rand_resource_from, rand_resource_to)))
     end
 
     if :PlaceRobber in actions
         # Get candidates
         for new_tile = BoardApi.get_admissible_robber_tiles(board)
             # TODO stochastic
-            push!(action_functions, (g, b, p) -> do_robber_move_theft(b, g.players, p, new_tile))
+            push!(action_functions, (:PlaceRobber, (g, b, p) -> do_robber_move_theft(b, g.players, p, new_tile)))
         end
     end
 
@@ -109,21 +109,24 @@ action_types = Dict([
 ])
 
 """
-    `get_action_with_features(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, actions::Set{Symbol})`
+    `get_action_with_features(board::Board, players::Vector{PlayerPublicView}, 
+                              player::PlayerType, actions::Set{Symbol})`
 
-Gets the legal action functions for the player at this board state, and computes the feature vector for each resulting state.
-This is a critical helper function for all the machine-learning players.
+Gets the legal action functions for the player at this board state, and 
+computes the feature vector for each resulting state.  This is a critical 
+helper function for all the machine-learning players.
 """
 function get_action_with_features(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, actions::Set{Symbol})
     action_functions = get_legal_action_functions(board, players, player.player, actions)
-    reachable_states = []
-    for (i,action_func!) in enumerate(action_functions)
+    reachable_states = Dict([(t, []) for t in Set([x[1] for x in action_functions])])
+    for (i,(action_type, action_func!)) in enumerate(action_functions)
         hypoth_board = deepcopy(board)
         hypoth_player = deepcopy(player)
         hypoth_game = Game([DefaultRobotPlayer(p.team) for p in players])
         action_func!(hypoth_game, hypoth_board, hypoth_player)
         features = compute_features(hypoth_board, hypoth_player.player)
-        push!(reachable_states, (action_func!, features))
+
+        push!(reachable_states[action_type], (action_func!, features))
     end
     return reachable_states
 end
@@ -131,10 +134,12 @@ end
 """
     `choose_next_action(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, actions::Set{Symbol})`
 
-Gathers all legal actions, and chooses the one that most increases the player's probability of victory, based on his `player.machine` model.  If no action increases the probability of victory, then do nothing.
+Gathers all legal actions, and chooses the one that most increases the player's 
+probability of victory, based on his `player.machine` model.  If no action 
+increases the probability of victory, then do nothing.
 """
 function choose_next_action(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, actions::Set{Symbol})
-    best_action_index = 0
+    best_action_type = nothing
     best_action_proba = -1
     #machine = ml_machine(player)
     machine = player.machine
@@ -143,20 +148,27 @@ function choose_next_action(board::Board, players::Vector{PlayerPublicView}, pla
     current_win_proba = predict_model(machine, current_features)
     # @info "$(inner_player(player).team) thinks his chance of winning is $(current_win_proba)"
     
-    actions_and_features = get_action_with_features(board, players, player, actions)
-    for (i,(action_func!, features)) in enumerate(actions_and_features)
-        p = predict_model(machine, features)
-        
+    type_to_actions_and_features = get_action_with_features(board, players, player, actions)
+    for (i,action_type) in enumerate(collect(keys(type_to_actions_and_features)))
+        probas = []
+        for (action_func!, features) in type_to_actions_and_features[action_type]
+            push!(probas, predict_model(machine, features))
+        end
+        p = sum(probas) / length(probas) # usually 1
+
         if p > best_action_proba
             best_action_proba = p
-            best_action_index = i
+            best_action_type = action_type
         end
     end
 
     # Only do an action if it will improve his estimated chances of winning
     if best_action_proba > current_win_proba
         @info "And his chance of winning will go to $(best_action_proba) with this next move"
-        return actions_and_features[best_action_index][1]
+        if best_action_type == :BuyDevCard
+            return (g, b, p) -> draw_devcard(g, p) 
+        end
+        return actions_and_features[best_action_type][1]
     end
     return nothing
 end
