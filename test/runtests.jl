@@ -3,15 +3,20 @@ using StatsBase
 using Logging
 using Catan
 using Catan: Game, Board, Player, PlayerType, PlayerApi, BoardApi, GameApi,
-             DefaultRobotPlayer, PlayerPublicView, ALL_ACTIONS, choose_accept_trade,
+             DefaultRobotPlayer, PlayerPublicView, 
+             ALL_ACTIONS, choose_accept_trade,
 read_map,
 load_gamestate!,
 reset_savefile,
-test_player_implementation
+test_player_implementation,
+setup_players,
+setup_and_do_robot_game,
+test_automated_game,
+SAVEFILE
 
 using CatanLearning:
     compute_features,
-    MutatedEmpathRobotPlayer,
+    MutatedEmpathRobotPlayer,EmpathRobotPlayer,
 
 read_values_file,
 feature_library,
@@ -31,8 +36,8 @@ function test_evolving_robot_game(neverend)
                           (:green, EmpathRobotPlayer),
                           (:red, MutatedEmpathRobotPlayer)
             ]
-    players = Catan.setup_players(team_and_playertype)
-    Catan.test_automated_game(neverend, players)
+    players = setup_players(team_and_playertype)
+    test_automated_game(neverend, players)
 end
 
 function empath_player()
@@ -67,6 +72,8 @@ features = [
 :CountMonopoly,
 :CountYearOfPlenty,
 :CountRoadBuilding,
+:HasLargestArmy,
+:HasLongestRoad,
 :CountVictoryPoint
 ]
 features_increasing_good = Set([
@@ -93,6 +100,8 @@ features_increasing_good = Set([
 :CountMonopoly,
 :CountYearOfPlenty,
 :CountRoadBuilding,
+:HasLargestArmy,
+:HasLongestRoad,
 :CountVictoryPoint
 ])
 
@@ -196,6 +205,7 @@ function run_tests(neverend = false)
     test_player_implementation(Catan.DefaultRobotPlayer)
     test_player_implementation(MutatedEmpathRobotPlayer)
     test_compute_features()
+    test_evolving_robot_game(neverend)
     (fails_m, fails_r, fails_v) = test_feature_perturbations(features, features_increasing_good)
     """
     println("model fails with +3 perturbation $(length(fails_m[3])): $(fails_m[3])")
@@ -207,7 +217,6 @@ function run_tests(neverend = false)
     println("value fails with +3 perturbation: $(fails_v[3])")
     println("value fails with +2 perturbation: $(fails_v[2])")
     println("value fails with +1 perturbation: $(fails_v[1])")
-    test_evolving_robot_game(neverend)
     """
 end
 

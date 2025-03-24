@@ -104,7 +104,12 @@ register_feature(:CountDevCardsRoadBuilding, Int8, 0, Catan.DEVCARD_COUNTS[:Road
 compute_count_devcards_owned_road_building = (board, player) -> get_devcards_owned_count(player, :RoadBuilding)
 register_feature(:CountDevCardsVictoryPoint, Int8, 0, Catan.DEVCARD_COUNTS[:VictoryPoint])
 compute_count_devcards_owned_victory_point = (board, player) -> get_devcards_owned_count(player, :VictoryPoint)
-
+register_feature(:HasLargestArmy, Bool, 0, 1)
+compute_has_largest_army = (board, player) -> board.largest_army == player.team
+register_feature(:HasLongestRoad, Bool, 0, 1)
+compute_has_longest_road = (board, player) -> board.longest_road == player.team
+register_feature(:CountDevCardsVictoryPoint, Int8, 0, Catan.DEVCARD_COUNTS[:VictoryPoint])
+compute_has_largest_army
 register_feature(:CountVictoryPoint, Int8, 0, 10)
 compute_count_victory_points = (board, player) -> Catan.GameRunner.get_total_vp_count(board, player)
 #compute_is_not_loss = (board, player) -> 
@@ -136,6 +141,10 @@ function compute_features(board, player)::Vector{Pair{Symbol, Float64}}
         :CountDevCardsYearOfPlenty => compute_count_devcards_owned_year_of_plenty(board, player),
         :CountDevCardsRoadBuilding => compute_count_devcards_owned_road_building(board, player),
         :CountDevCardsVictoryPoint => compute_count_devcards_owned_victory_point(board, player),
+
+        :HasLargestArmy => compute_has_largest_army(board, player),
+        :HasLongestRoad => compute_has_longest_road(board, player),
+
         :CountVictoryPoint => compute_count_victory_points(board, player)
         # :IsNotLoss => compute_is_not_loss(board, player)
        ]
