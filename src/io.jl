@@ -71,7 +71,11 @@ end
 function write_features_file(board::Board, players, player::PlayerType, winner::Union{PlayerType, Nothing}) 
     file = open(FEATURES_FILE, "a")
     _write_feature_file_header(file, board, player)
-    save_parameters_after_game_end(file, board, players, player, player.player.team)
+    if winner == nothing
+        save_parameters_after_game_end(file, board, players, player, nothing)
+    else
+        save_parameters_after_game_end(file, board, players, player, winner.player.team)
+    end
     close(file)
 
 end

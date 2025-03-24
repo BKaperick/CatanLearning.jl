@@ -92,7 +92,7 @@ function run(player_constructors::Dict)
     # Number of maps to generate
     # Number of epochs (1 epoch is M*N games) to run
     #tourney = Tournament(2, 2, 2, :Sequential)
-    tourney = Tournament(10, 5, 1, :Sequential)
+    tourney = Tournament(10000, 100, 1, :Sequential)
     #tourney = Tournament(20,8,20, :FiftyPercentWinnerStays)
     #tourney = Tournament(5,4,10, :SixtyPercentWinnerStays)
     if any([typeof(c(Dict())) <: MutatedEmpathRobotPlayer for (t,c) in collect(player_constructors)])
