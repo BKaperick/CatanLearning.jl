@@ -200,6 +200,17 @@ function test_feature_perturbations(features, features_increasing_good, max_pert
     return fails_m, fails_r, fails_v
 end
 
+function test_choose_road_location()
+
+    player1 = DefaultRobotPlayer(:Test1)
+    player2 = DefaultRobotPlayer(:Test2)
+    players = Vector{PlayerType}([player1, player2])
+    board = read_map(SAMPLE_MAP)
+    player1 = DefaultRobotPlayer(:Test1)
+choose_road_location(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Vector{Tuple{Int, Int}}})
+end
+
+
 
 function run_tests(neverend = false)
     test_player_implementation(Catan.DefaultRobotPlayer)
