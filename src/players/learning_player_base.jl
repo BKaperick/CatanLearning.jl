@@ -33,30 +33,47 @@ function get_estimated_remaining_devcards(board::Board, players::Vector{PlayerPu
 end
 
 
-#abstract type AbstractAction
-mutable struct Action
+abstract type AbstractActionSet end
+abstract type AbstractAction end
+mutable struct Action <: AbstractAction
     args::Tuple
     name::Symbol
     func!::Function
-    win_proba::Union{nothing, Float64}
+    win_proba::Union{Nothing, Float64}
+    features::Vector
+end
+mutable struct SampledAction <: AbstractAction
+    args::Tuple
+    name::Symbol
+    func!::Function
+    real_func!::Function
+    win_proba::Union{Nothing, Float64}
     features::Vector
 end
 
-mutable struct ActionSet
+
+mutable struct ActionSet{T<:AbstractAction} <: AbstractActionSet
     name::Symbol
-    actions::Vector{Action}
+    actions::Vector{T}
+    aggregated_win_proba::Union{Nothing, Float64}
 end
 
-function Action(name::Symbol, func::Function, args...) 
+function Action(name::Symbol, func!::Function, args...) 
     println("Adding action $args ($(typeof(args)))")
-    Action(args, func!, name, nothing)
+    Action(args, name, func!, nothing, [])
 end
-
-function aggregate(action_set::ActionSet)
-    for action in action_set.actions
-        if action
-    end
+function Action(name::Symbol, win_proba::Float64, func!::Function, args::Tuple) 
+    Action(args, name, func!, win_proba, [])
 end
+function SampledAction(name::Symbol, sampling_func!::Function, func!::Function, args...) 
+    println("Adding action $args ($(typeof(args)))")
+    SampledAction(args, name, sampling_func!, func!, nothing, [])
+end
+ActionSet(name::Symbol) = ActionSet(name, Vector{AbstractAction}([]), nothing)
+function ActionSet{T}(name::Symbol) where {T<:AbstractAction}
+ActionSet(name, Vector{T}([]), nothing) 
+end
+#ActionSet{T}(name::Symbol) = ActionSet{T}(name, [], nothing)
 
 action_types = Dict([
     :ConstructSettlement => :Deterministic,
@@ -66,67 +83,62 @@ action_types = Dict([
 
 
 function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, player::Player, actions::Set{Symbol})::Vector{ActionSet}
-    action_sets = []
+    main_action_set = ActionSet(:Deterministic)
+    action_sets = Vector{AbstractActionSet}([main_action_set])
     
     if :ConstructCity in actions
-        action_set = ActionSet(:ConstructCity)
         candidates = BoardApi.get_admissible_city_locations(board, player.team)
         for coord in candidates
-            push!(action_set.actions, Action(:ConstructCity, (g, b, p) -> construct_city(b, p.player, coord), coord))
+            push!(main_action_set.actions, Action(:ConstructCity, (g, b, p) -> construct_city(b, p.player, coord), coord))
         end
-        push!(action_sets, action_set)
     end
     if :ConstructSettlement in actions
-        action_set = ActionSet(:ConstructSettlement)
         candidates = BoardApi.get_admissible_settlement_locations(board, player.team)
         for coord in candidates
-            push!(action_set.actions, Action(:ConstructSettlement, (g, b, p) -> construct_settlement(b, p.player, coord), coord))
+            push!(main_action_set.actions, Action(:ConstructSettlement, (g, b, p) -> construct_settlement(b, p.player, coord), coord))
         end
-        push!(action_sets, action_set)
     end
     if :ConstructRoad in actions
-        action_set = ActionSet(:ConstructRoad)
         candidates = BoardApi.get_admissible_road_locations(board, player.team)
         for coord in candidates
-            push!(action_set.actions, Action(:ConstructRoad, (g, b, p) -> construct_road(b, p.player, coord[1], coord[2]), coord[1], coord[2]))
+            push!(main_action_set.actions, Action(:ConstructRoad, (g, b, p) -> construct_road(b, p.player, coord[1], coord[2]), coord[1], coord[2]))
         end
-        push!(action_sets, action_set)
     end
 
     if :BuyDevCard in actions
-        action_set = ActionSet(:BuyDevCard)
+        action_set = ActionSet{SampledAction}(:BuyDevCard)
         estimated_remaining_devcards = get_estimated_remaining_devcards(board, players, player)
         sampled_devcards = Catan.random_sample_resources(estimated_remaining_devcards, 5, true)
         for card in sampled_devcards 
-            push!(action_set.actions, Action(:BuyDevCard, (g, b, p) -> deterministic_draw_devcard(g, p, card)))
+            push!(action_set.actions, SampledAction(:BuyDevCard, 
+                                             (g, b, p) -> deterministic_draw_devcard(g, p, card),
+                                             (g, b, p) -> Catan.draw_devcard(g, p.player)))
         end
         push!(action_sets, action_set)
     end
 
     if :PlayDevCard in actions
-        action_set = ActionSet(:BuyDevCard)
         devcards = PlayerApi.get_admissible_devcards(player)
         for (card,cnt) in devcards
             # TODO how do we stop them playing devcards first turn they get them?  Is this correctly handled in get_admissible call?
             if card != :VictoryPoint
-                push!(action_set.actions, Action(:PlayDevCard, (g, b, p) -> do_play_devcard(b, g.players, p, card), card))
+                push!(main_action_set.actions, Action(:PlayDevCard, (g, b, p) -> do_play_devcard(b, g.players, p, card), card))
             end
         end
-        push!(action_sets, action_set)
     end
     
     # TODO: this is leaking info from other players, since `propose_trade_goods` 
     # asks the other user if they would accept the offered trade, so the player 
     # can check if the trade would be accepted before deciding to do it.
     if :ProposeTrade in actions
-        action_set = ActionSet(:ProposeTrade)
+        #action_set = ActionSet{Action}(:ProposeTrade)
         sampled = random_sample_resources(player.resources, 1)
         rand_resource_from = [sampled...]
         rand_resource_to = [get_random_resource()]
         while rand_resource_to[1] == rand_resource_from[1]
             rand_resource_to = [get_random_resource()]
         end
-        push!(action_set.actions, 
+        push!(main_action_set.actions, 
               Action(
                      :ProposeTrade, 
                      (g, b, p) -> propose_trade_goods(
@@ -134,30 +146,33 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
                                                       rand_resource_from, 
                                                       rand_resource_to), 
                      rand_resource_from, rand_resource_to))
-        push!(action_sets, action_set)
+        #push!(action_sets, action_set)
     end
 
     if :PlaceRobber in actions
-        action_set = ActionSet(:PlaceRobber)
         # Get candidates
         for candidate_tile = BoardApi.get_admissible_robber_tiles(board)
             candidate_victims = get_admissible_theft_victims(board, players, player, candidate_tile)
             for victim in candidate_victims
+                
+                # Here, we have one ActionSet per set of parameters
+                action_set = ActionSet{SampledAction}(:PlaceRobber)
                 resources = get_estimated_resources(board, players, victim)
                 for r in resources
                     push!(action_set.actions, 
-                          Action(
-                                 Symbol("PlaceRobber_$(candidate_tile)_$(victim.team)"), 
+                          SampledAction(
+                                 Symbol("$(r)"), 
                                  (g, b, p) -> do_robber_move_theft(
                                                                    b, g.players, 
                                                                    p, victim, 
                                                                    candidate_tile, 
                                                                    resource), 
+                                 (g, b, p) -> do_robber_move_theft(b, p, victim, candidate_tile),
                                  victim, candidate_tile))
                 end
+                push!(action_sets, action_set)
             end
         end
-        push!(action_sets, action_set)
     end
 
     return action_sets
@@ -194,25 +209,45 @@ Gets the legal action functions for the player at this board state, and
 computes the feature vector for each resulting state.  This is a critical 
 helper function for all the machine-learning players.
 """
-function get_action_with_features(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, actions::Set{Symbol})
+function get_action_with_features(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, actions::Set{Symbol})::Action
     action_sets = get_legal_action_sets(board, players, player.player, actions)
-    types = Set([a.name for a in action_sets])
-    reachable_states = Dict([(t, []) for t in types])
+    best_actions = ActionSet(:SecondRound)
     for (i,set) in enumerate(action_sets)
+        println("Analyzing set: $(typeof(set)) :: $(set.name)")
         for action in set.actions
             analyze_action!(action, board, players, player)
-            push!(reachable_states[action.name], action)
         end
+        @assert all([a.win_proba != nothing for a in set.actions])
+        push!(best_actions.actions, aggregate(set))
     end
-    return reachable_states
+    return aggregate(best_actions)
 end
 
-function analyze_action(action::Action, board::Board, players::Vector{PlayerPublicView}, player::PlayerType)
+"""
+    `aggregate(set::ActionSet)`
+
+Identifies the best parameters to use for this action
+"""
+function aggregate(set::ActionSet)::Action
+    println("Aggregating $(set.name) with features $([(a.name, a.win_proba) for a in set.actions])")
+    return argmax(a -> a.win_proba, set.actions)
+end
+function aggregate(set::ActionSet{SampledAction})::Action
+    avg_proba = sum([a.win_proba for a in set.actions]) / length(set.actions)
+    # an ActionSet{SampledAction} contains only actions with the same func (they differ only in Sampling Func)
+    # TODO some way to enforce this in the code?
+    func! = set.actions[1].func!
+    args = set.actions[1].args
+    return Action(set.name, avg_proba, func!, args)
+end
+function analyze_action!(action::AbstractAction, board::Board, players::Vector{PlayerPublicView}, player::PlayerType)
     hypoth_board = deepcopy(board)
     hypoth_player = deepcopy(player)
     hypoth_game = Game([DefaultRobotPlayer(p.team) for p in players])
     action.func!(hypoth_game, hypoth_board, hypoth_player)
     action.features = compute_features(hypoth_board, hypoth_player.player)
+    
+    # TODO Temporal difference algo does this later, so we don't want to double compute
     action.win_proba = predict_model(player.machine, action.features)
     return action
 end
@@ -236,43 +271,15 @@ function choose_next_action(board::Board, players::Vector{PlayerPublicView}, pla
     current_win_proba = predict_model(machine, current_features)
     # @info "$(inner_player(player).team) thinks his chance of winning is $(current_win_proba)"
     
-    type_to_actions_and_features = get_action_with_features(board, players, player, actions)
-    for (i,action_type) in enumerate(collect(keys(type_to_actions_and_features)))
-        probas = []
-        for (args, action_func!, features) in type_to_actions_and_features[action_type]
-            push!(probas, predict_model(machine, features))
-        end
-        if action_type == :BuyDevCard || 
-            (action_type != nothing && contains(String(action_type), "PlaceRobber"))
-            p = sum(probas) / length(probas)
-        else
-            p = maximum(probas)
-        end
-
-        if p > best_action_proba
-            best_action_proba = p
-            best_action_type = action_type
-            best_action_index = argmax(probas)
-            best_args = type_to_actions_and_features[action_type][1]
-        end
-    end
-
+    #best_action, reachable_states = get_action_with_features(board, players, player, actions)
+    best_action = get_action_with_features(board, players, player, actions)
+    
+    # TODO we could even make the "no-op" action and use that as a possibility?
     # Only do an action if it will improve his estimated chances of winning
-    if best_action_proba > current_win_proba
-        @info "And his chance of winning will go to $(best_action_proba) with this next move"
-
-        # TODO cleanup this hack-y exception for BuyDevCard and PlaceRobber
-        if best_action_type == :BuyDevCard
-            return (g, b, p) -> draw_devcard(g, p) 
-
-        elseif contains(String(best_action_type), "PlaceRobber")
-            (_, victim_team, tile) = split(String(best_action_type), "_")
-            return (g, b, p) -> do_robber_move_theft(b, p, [pp for pp in g.players 
-                                           if pp.player.team == victim_team][1], 
-                                    tile)
-        else
-            return best_args, type_to_actions_and_features[best_action_type][best_action_index]
-        end
+    if best_action.win_proba > current_win_proba
+        @info "And his chance of winning will go to $(best_action.proba) with this next move"
+        
+        return best_action.args, best_action.func!
     end
     return nothing, nothing
 end

@@ -11,8 +11,11 @@ function choose_next_action(board::Board, players::Vector{PlayerPublicView}, pla
     current_features = compute_features(board, player.player)
     current_state = MarkovState(current_features)
     current_quantity = get_state_optimizing_quantity(player.process, player.policy, current_state)
+
+    # TODO we have already computed win_proba, so we could pass it here and then 
+    # we wouldn't need to worry in reinforcement-learning code about it
     actions_and_features = get_action_with_features(board, players, player, actions)
-    reachable_states = [MarkovState(af[2]) for af in actions_and_features]
+    reachable_states = [MarkovState(af.features) for af in actions_and_features]
     
     if length(reachable_states) == 0
         return nothing
