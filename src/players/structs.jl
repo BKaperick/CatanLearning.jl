@@ -49,12 +49,13 @@ mutable struct TemporalDifferencePlayer <: LearningPlayer
     process::MarkovRewardProcess
     policy::MarkovPolicy
     io_config::IoConfig
+    current_state::Union{Nothing, MarkovState}
 end
 
 function TemporalDifferencePlayer(TPolicy::Type, team::Symbol)
     io_config = IoConfig()
     state_to_value = read_values_file(io_config.values)
-    return TemporalDifferencePlayer(TPolicy, team, state_to_value, Dict())
+    return TemporalDifferencePlayer(TPolicy, team, state_to_value, Dict{UInt64, Float64}())
 end
 TemporalDifferencePlayer(team::Symbol) = TemporalDifferencePlayer(MaxRewardMarkovPolicy, team::Symbol)
 
@@ -67,7 +68,7 @@ function TemporalDifferencePlayer(TPolicy::Type, team::Symbol, master_state_to_v
 
     process = MarkovRewardProcess(0.5, 0.1, 0.5, 0.5, master_state_to_value, new_state_to_value)
     policy = TPolicy(machine)
-    TemporalDifferencePlayer(Player(team), machine, process, policy, io_config)
+    TemporalDifferencePlayer(Player(team), machine, process, policy, io_config, nothing)
 end
 
 function Base.deepcopy(player::MutatedEmpathRobotPlayer)
@@ -81,7 +82,8 @@ function Base.deepcopy(player::TemporalDifferencePlayer)
         player.machine, 
         player.process, 
         player.policy, 
-        player.io_config
+        player.io_config,
+        deepcopy(player.current_state)
     )
 end
 

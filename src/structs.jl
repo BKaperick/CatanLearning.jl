@@ -7,11 +7,61 @@ struct Tournament
     mutation_rule::Symbol
 end
 
+abstract type AbstractActionSet end
+abstract type AbstractAction end
+mutable struct Action <: AbstractAction
+    args::Tuple
+    name::Symbol
+    func!::Function
+    win_proba::Union{Nothing, Float64}
+    features::Vector
+end
+mutable struct SampledAction <: AbstractAction
+    args::Tuple
+    name::Symbol
+    func!::Function
+    real_func!::Function
+    win_proba::Union{Nothing, Float64}
+    features::Vector
+end
+
+
+mutable struct ActionSet{T<:AbstractAction} <: AbstractActionSet
+    name::Symbol
+    actions::Vector{T}
+end
+
+function Action(name::Symbol, func!::Function, args...) 
+    println("Adding action $args ($(typeof(args)))")
+    Action(args, name, func!, nothing, [])
+end
+function Action(name::Symbol, win_proba::Float64, func!::Function, args::Tuple) 
+    Action(args, name, func!, win_proba, [])
+end
+function SampledAction(name::Symbol, sampling_func!::Function, func!::Function, args...) 
+    println("Adding action $args ($(typeof(args)))")
+    SampledAction(args, name, sampling_func!, func!, nothing, [])
+end
+ActionSet(name::Symbol) = ActionSet(name, Vector{AbstractAction}([]))
+function ActionSet{T}(name::Symbol) where {T<:AbstractAction}
+    ActionSet(name, Vector{T}([])) 
+end
+function ActionSet(action::Action)
+    return ActionSet{Action}(:Unnamed, [action]) 
+end
+#ActionSet{T}(name::Symbol) = ActionSet{T}(name, [], nothing)
+
 mutable struct MarkovState
     # hash of game state to be used to track state value
     key::UInt
     features::Dict{Symbol, Float64}
     reward::Union{Nothing, Float64}
+end
+mutable struct MarkovTransition
+    #win_proba::Float64
+    #victory_ponts::Int8
+    states::Vector{MarkovState}
+    action_set::AbstractActionSet
 end
 
 abstract type MarkovPolicy end
@@ -79,3 +129,4 @@ end
 
 IoConfig(features_file) = IoConfig("$(DATA_DIR)/model.jls", features_file, "$(DATA_DIR)/state_values.csv")
 IoConfig() = IoConfig("$(DATA_DIR)/features.csv")
+

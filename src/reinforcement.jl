@@ -27,8 +27,11 @@ function update_state_value(process, state_key, new_value)
 end
 
 
-function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::MaxRewardMarkovPolicy, state)
+function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::MaxRewardMarkovPolicy, state::MarkovState)
     return get_combined_reward(process, policy.machine, state) 
+end
+function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::MaxRewardMarkovPolicy, transition::MarkovTransition)
+    return get_combined_reward(process, policy.machine, transition) 
 end
 function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::MaxValueMarkovPolicy, state)
     return query_state_value(process, state.key) 
@@ -37,6 +40,11 @@ function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::Max
     return get_combined_reward(process, policy.machine, state) + query_state_value(process, state.key) 
 end
 
+function get_combined_reward(process::MarkovRewardProcess, machine::Machine, transition::MarkovTransition)
+    # Get average reward from this transition
+    reward = sum([get_combined_reward(process, machine, s) for s in transition.states]) / length(transition.states)
+    return reward
+end
 function get_combined_reward(process::MarkovRewardProcess, machine::Machine, state)
     #value = query_state_value(state.key)
     model_proba = predict_model(machine, state.features)
@@ -59,9 +67,9 @@ end
 
 Default implementation simply chooses the next state to maximize the `get_state_optimizing_quantity`.
 """
-function sample_from_policy(process::MarkovRewardProcess, policy::MarkovPolicy, current_state, reachable_states)
-    rewards = [get_state_optimizing_quantity(process, policy, s) for s in reachable_states]
-    return argmax(rewards), reachable_states[argmax(rewards)]
+function sample_from_policy(process::MarkovRewardProcess, policy::MarkovPolicy, current_state, transitions::Vector{MarkovTransition})
+    rewards = [get_state_optimizing_quantity(process, policy, t) for t in transitions]
+    return maximum(rewards), argmax(rewards), transitions[argmax(rewards)]
 end
 
 """
@@ -75,18 +83,28 @@ end
 
 """
     `temporal_difference_step!(process::MarkovRewardProcess, policy::MarkovPolicy, current_state::MarkovState, state_to_value::Dict{UInt64, Float64}, reachable_states::Vector{MarkovState})`
-
+next_quantity
 Performs one step of tabular temporal difference (0)
 """
-function temporal_difference_step!(process::MarkovRewardProcess, policy::MaxRewardMarkovPolicy, current_state::MarkovState, reachable_states::Vector{MarkovState})
+function temporal_difference_step!(process::MarkovRewardProcess, 
+        policy::MaxRewardMarkovPolicy, current_state::MarkovState, 
+        reachable_transitions::Vector{MarkovTransition})
     
     # sample from policy to get next state
-    index, next_state = sample_from_policy(process, policy, current_state, reachable_states)
+    next_quantity, index, next_state = sample_from_policy(process, policy, current_state, 
+                                           reachable_transitions)
     
+    return next_quantity, index, next_state
+end
+
+function finish_temporal_difference_step!(process::MarkovRewardProcess, 
+        current_state::MarkovState, next_state::MarkovState)
     # Update current state value
     current_value = query_state_value(process, current_state.key)
+
     next_value = query_state_value(process, next_state.key)
-    new_current_value = get_new_current_value(process, current_value, next_state, next_value)
+    new_current_value = get_new_current_value(process, current_value, next_state, 
+                                              next_value)
     update_state_value(process, current_state.key, new_current_value)
     return index, next_state, next_state.reward
 end

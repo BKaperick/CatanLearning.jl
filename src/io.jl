@@ -17,16 +17,19 @@ end
 # Feature writing utils
 #
 
-function read_values_file(values_file::String)::Dict{UInt64, Float64}
+function read_values_file(values_file::String, max_lines = nothing)::Dict{UInt64, Float64}
     println("reading values file...")
     if ~isfile(values_file)
         io = open(values_file, "w")
         close(io)
     end
     out = Dict{UInt64, Float64}() 
-    data = split(read(values_file, String), "\n")
+    #data = split(read(values_file, String), "\n")
     key_collisions = 0
-    for line in data
+    for (i,line) in enumerate(readlines(values_file))#, String))
+        if line == max_lines
+            break
+        end
         if occursin(",", line)
             (key,value) = split(line, ",")
             parsed_key = parse(UInt64, key)

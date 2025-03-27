@@ -1,11 +1,11 @@
 include("../learning/feature_computation.jl")
 include("../learning/production_model.jl")
-import Catan: choose_next_action, choose_place_robber
 using Catan: GameApi, BoardApi, PlayerApi, random_sample_resources, get_random_resource,
              construct_city, construct_settlement, construct_road,
              do_play_devcard, propose_trade_goods, do_robber_move_theft,
             get_admissible_theft_victims, choose_road_location
 
+using Catan: choose_next_action, choose_place_robber, do_post_action_step
 
 function get_estimated_resources(board::Board, players::Vector{PlayerPublicView}, target::PlayerPublicView)::Dict{Symbol, Int}
     return Dict([(r,1) for r in Catan.RESOURCES])
@@ -33,48 +33,6 @@ function get_estimated_remaining_devcards(board::Board, players::Vector{PlayerPu
 end
 
 
-abstract type AbstractActionSet end
-abstract type AbstractAction end
-mutable struct Action <: AbstractAction
-    args::Tuple
-    name::Symbol
-    func!::Function
-    win_proba::Union{Nothing, Float64}
-    features::Vector
-end
-mutable struct SampledAction <: AbstractAction
-    args::Tuple
-    name::Symbol
-    func!::Function
-    real_func!::Function
-    win_proba::Union{Nothing, Float64}
-    features::Vector
-end
-
-
-mutable struct ActionSet{T<:AbstractAction} <: AbstractActionSet
-    name::Symbol
-    actions::Vector{T}
-    aggregated_win_proba::Union{Nothing, Float64}
-end
-
-function Action(name::Symbol, func!::Function, args...) 
-    println("Adding action $args ($(typeof(args)))")
-    Action(args, name, func!, nothing, [])
-end
-function Action(name::Symbol, win_proba::Float64, func!::Function, args::Tuple) 
-    Action(args, name, func!, win_proba, [])
-end
-function SampledAction(name::Symbol, sampling_func!::Function, func!::Function, args...) 
-    println("Adding action $args ($(typeof(args)))")
-    SampledAction(args, name, sampling_func!, func!, nothing, [])
-end
-ActionSet(name::Symbol) = ActionSet(name, Vector{AbstractAction}([]), nothing)
-function ActionSet{T}(name::Symbol) where {T<:AbstractAction}
-ActionSet(name, Vector{T}([]), nothing) 
-end
-#ActionSet{T}(name::Symbol) = ActionSet{T}(name, [], nothing)
-
 action_types = Dict([
     :ConstructSettlement => :Deterministic,
     :ConstructCity => :Stochastic,
@@ -82,7 +40,7 @@ action_types = Dict([
 ])
 
 
-function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, player::Player, actions::Set{Symbol})::Vector{ActionSet}
+function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, player::Player, actions::Set{Symbol})::Vector{AbstractActionSet}
     main_action_set = ActionSet(:Deterministic)
     action_sets = Vector{AbstractActionSet}([main_action_set])
     
@@ -179,8 +137,10 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
 end
 
 function Catan.choose_road_location(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Vector{Tuple{Int, Int}}})::Union{Nothing,Vector{Tuple{Int, Int}}}
-    args, action = choose_next_action(board, players, player, Set([:ConstructRoad]))
-    println("chose road: $args")
+    x = Catan.choose_next_action(board, players, player, Set([:ConstructRoad]))
+    #actions = Set([:ConstructRoad])
+    #x = Catan.choose_next_action(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, actions::Set{Symbol})
+    (args, action) = x
     return args
 end
 
@@ -212,15 +172,21 @@ helper function for all the machine-learning players.
 function get_action_with_features(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, actions::Set{Symbol})::Action
     action_sets = get_legal_action_sets(board, players, player.player, actions)
     best_actions = ActionSet(:SecondRound)
+    analyze_actions!(board, players, player, action_sets)
+    for (i,set) in enumerate(action_sets)
+        @assert all([a.win_proba != nothing for a in set.actions])
+        push!(best_actions.actions, aggregate(set))
+    end
+    return aggregate(best_actions)
+end
+
+function analyze_actions!(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, action_sets::Vector{AbstractActionSet})
     for (i,set) in enumerate(action_sets)
         println("Analyzing set: $(typeof(set)) :: $(set.name)")
         for action in set.actions
             analyze_action!(action, board, players, player)
         end
-        @assert all([a.win_proba != nothing for a in set.actions])
-        push!(best_actions.actions, aggregate(set))
     end
-    return aggregate(best_actions)
 end
 
 """
@@ -259,7 +225,8 @@ Gathers all legal actions, and chooses the one that most increases the player's
 probability of victory, based on his `player.machine` model.  If no action 
 increases the probability of victory, then do nothing.
 """
-function choose_next_action(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, actions::Set{Symbol})
+function Catan.choose_next_action(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, actions::Set{Symbol})::Tuple
+    print("choosing action")
     best_action_type = nothing
     best_action_proba = -1
     best_action_index = 1
@@ -279,9 +246,9 @@ function choose_next_action(board::Board, players::Vector{PlayerPublicView}, pla
     if best_action.win_proba > current_win_proba
         @info "And his chance of winning will go to $(best_action.proba) with this next move"
         
-        return best_action.args, best_action.func!
+        return (best_action.args, best_action.func!)
     end
-    return nothing, nothing
+    return (nothing, nothing)
 end
 
 function save_parameters_after_game_end(file::IO, board::Board, players::Vector{PlayerType}, player::PlayerType, winner_team::Union{Nothing, Symbol})

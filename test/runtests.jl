@@ -139,7 +139,7 @@ This tests that the value estimations behave as expected.  Each feature in `feat
 So this test applies one-at-a-time perturbations to the features, checking that the value changes in the correct direction.
 """
 function test_feature_perturbations(features, features_increasing_good, max_perturbation = 3)
-    state_to_value = read_values_file("$MAIN_DATA_DIR/state_values.csv")
+    state_to_value = read_values_file("$MAIN_DATA_DIR/state_values.csv", 100)
     
     feature_vec = generate_realistic_features(features)
     feature_values = [f[2] for f in feature_vec]
@@ -215,6 +215,7 @@ end
 function run_tests(neverend = false)
     test_player_implementation(Catan.DefaultRobotPlayer)
     test_player_implementation(MutatedEmpathRobotPlayer)
+    test_player_implementation(TemporalDifferencePlayer)
     test_compute_features()
     test_evolving_robot_game(neverend)
     (fails_m, fails_r, fails_v) = test_feature_perturbations(features, features_increasing_good)
@@ -230,5 +231,8 @@ function run_tests(neverend = false)
     println("value fails with +1 perturbation: $(fails_v[1])")
     """
 end
-
-run_tests()
+if length(ARGS) > 1
+    run_tests(ARGS[1])
+else
+    run_tests()
+end
