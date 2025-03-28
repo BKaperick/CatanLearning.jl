@@ -7,6 +7,11 @@ struct Tournament
     mutation_rule::Symbol
 end
 
+mutable struct PreAction
+    name::Symbol
+    admissible_args::Set{Tuple}
+end
+
 abstract type AbstractActionSet end
 abstract type AbstractAction end
 mutable struct Action <: AbstractAction
@@ -32,14 +37,12 @@ mutable struct ActionSet{T<:AbstractAction} <: AbstractActionSet
 end
 
 function Action(name::Symbol, func!::Function, args...) 
-    println("Adding action $args ($(typeof(args)))")
     Action(args, name, func!, nothing, [])
 end
 function Action(name::Symbol, win_proba::Float64, func!::Function, args::Tuple) 
     Action(args, name, func!, win_proba, [])
 end
 function SampledAction(name::Symbol, sampling_func!::Function, func!::Function, args...) 
-    println("Adding action $args ($(typeof(args)))")
     SampledAction(args, name, sampling_func!, func!, nothing, [])
 end
 ActionSet(name::Symbol) = ActionSet(name, Vector{AbstractAction}([]))

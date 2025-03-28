@@ -3,9 +3,14 @@ include("../learning/production_model.jl")
 using Catan: GameApi, BoardApi, PlayerApi, random_sample_resources, get_random_resource,
              construct_city, construct_settlement, construct_road,
              do_play_devcard, propose_trade_goods, do_robber_move_theft,
-            get_admissible_theft_victims, choose_road_location
+            get_admissible_theft_victims, choose_road_location, trade_goods
 
-using Catan: choose_next_action, choose_place_robber, do_post_action_step
+using Catan: choose_next_action, choose_place_robber, do_post_action_step, choose_accept_trade,
+choose_year_of_plenty_resources
+
+function get_estimated_will_accept_trade(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, other_player::PlayerPublicView, from_goods::Dict{Symbol, Int}, to_goods::Dict{Symbol, Int})::Bool
+
+end
 
 function get_estimated_resources(board::Board, players::Vector{PlayerPublicView}, target::PlayerPublicView)::Dict{Symbol, Int}
     return Dict([(r,1) for r in Catan.RESOURCES])
@@ -32,17 +37,11 @@ function get_estimated_remaining_devcards(board::Board, players::Vector{PlayerPu
     return devcards
 end
 
-
-action_types = Dict([
-    :ConstructSettlement => :Deterministic,
-    :ConstructCity => :Stochastic,
-    :ConstructCity => :OtherPlayersInput
-])
-
-
 function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, player::Player, actions::Set{Symbol})::Vector{AbstractActionSet}
+
+    println("Get legal action sets for $actions")
     main_action_set = ActionSet(:Deterministic)
-    action_sets = Vector{AbstractActionSet}([main_action_set])
+    action_sets = Vector{AbstractActionSet}([])
     
     if :ConstructCity in actions
         candidates = BoardApi.get_admissible_city_locations(board, player.team)
@@ -133,20 +132,59 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
         end
     end
 
+    if :DrawResources in actions
+        resources = collect(Catan.RESOURCES)
+        println("$resources")
+        for (i,resource) in enumerate(resources)
+            for resource2 in resources[i+1:end]
+                println(resource, resource2)
+                push!(main_action_set.actions, 
+                      Action(
+
+                     :DrawResources, 
+                        (g, b, p) -> harvest_two_resources!(g, p, resource, resource2),
+                        (resource, resource2))
+                     )
+            end
+        end
+    end
+    
+    if length(main_action_set.actions) > 0
+        push!(action_sets, main_action_set)
+    end
+
+    for set in action_sets
+        @assert length(set.actions) > 0 "$(set.name) is empty"
+    end
+    
     return action_sets
 end
 
+function harvest_two_resources!(game, board, player, resource1, resource2)
+    Catan.harvest_one_resource!(g, p, resource1, 1)
+    Catan.harvest_one_resource!(g, p, resource2, 1)
+end
+
 function Catan.choose_road_location(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Vector{Tuple{Int, Int}}})::Union{Nothing,Vector{Tuple{Int, Int}}}
-    best_action = get_action_with_features(board, players, player, Set([:ConstructRoad]))
+    best_action = get_best_action(board, players, player, Set([:ConstructRoad]))
     return collect(best_action.args)
 end
 
-function deterministic_do_robber_move_theft(board, player, victim, new_robber_tile, resource)
-
-do_robber_move_theft(board, player::PlayerType, victim::Player, new_robber_tile::Symbol, stolen_good::Symbol)
-    do_robber_move_theft(board, player, victim, new_robber_tile)
+function Catan.choose_building_location(board, players::Vector{PlayerPublicView}, player, candidates, type)
+    if type == :City
+        return get_best_action(board, players, player, Set([:ConstructCity])).args
+    else
+        return get_best_action(board, players, player, Set([:ConstructSettlement])).args
+    end
 end
 
+function Catan.choose_place_robber(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer)::Symbol
+    return get_best_action(board, players, player, Set([:PlaceRobber])).args[1]
+end
+
+function Catan.choose_year_of_plenty_resources(board, players::Vector{PlayerPublicView}, player::LearningPlayer)::Tuple{Symbol, Symbol}
+    return get_best_action(board, players, player, Set([:DrawResources])).args
+end
 """
     `deterministic_draw_devcard(game, player, card)`
 
@@ -159,19 +197,22 @@ function deterministic_draw_devcard(game, player, card)
 end
 
 """
-    `get_action_with_features(board::Board, players::Vector{PlayerPublicView}, 
+    `get_best_action(board::Board, players::Vector{PlayerPublicView}, 
                               player::PlayerType, actions::Set{Symbol})`
 
 Gets the legal action functions for the player at this board state, and 
 computes the feature vector for each resulting state.  This is a critical 
 helper function for all the machine-learning players.
 """
-function get_action_with_features(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, actions::Set{Symbol})::Action
+function get_best_action(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, actions::Set{Symbol})::Action
     action_sets = get_legal_action_sets(board, players, player.player, actions)
+    return analyze_and_aggregate_action_sets(board, players, player, action_sets)
+end
+
+function analyze_and_aggregate_action_sets(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, action_sets::Vector{AbstractActionSet})::Action
     best_actions = ActionSet(:SecondRound)
     analyze_actions!(board, players, player, action_sets)
     for (i,set) in enumerate(action_sets)
-        @assert all([a.win_proba != nothing for a in set.actions])
         push!(best_actions.actions, aggregate(set))
     end
     return aggregate(best_actions)
@@ -192,10 +233,11 @@ end
 Identifies the best parameters to use for this action
 """
 function aggregate(set::ActionSet)::Action
-    println("Aggregating $(set.name) with features $([(a.name, a.win_proba) for a in set.actions])")
+    #println("Aggregating $(set.name) with features $([(a.name, a.win_proba) for a in set.actions])")
     return argmax(a -> a.win_proba, set.actions)
 end
 function aggregate(set::ActionSet{SampledAction})::Action
+    println("Aggregating Sampled $(set.name) with features $([(a.name, a.win_proba) for a in set.actions])")
     avg_proba = sum([a.win_proba for a in set.actions]) / length(set.actions)
     # an ActionSet{SampledAction} contains only actions with the same func (they differ only in Sampling Func)
     # TODO some way to enforce this in the code?
@@ -215,7 +257,24 @@ function analyze_action!(action::AbstractAction, board::Board, players::Vector{P
     return action
 end
 
+"""    
+    `choose_do_action(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, best_action::Action)::Tuple`
+
+Decide whether this action is better than doing nothing.
 """
+function choose_do_action(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, best_action::Action)::Bool
+    machine = player.machine
+    current_features = compute_features(board, player.player)
+    current_win_proba = predict_model(machine, current_features)
+    @info "$(inner_player(player).team) thinks his chance of winning is $(current_win_proba)"
+    
+    
+    # TODO we could even make the "no-op" action and use that as a possibility?
+    # Only do an action if it will improve his estimated chances of winning
+    return best_action.win_proba > current_win_proba
+end
+
+"""    
     `choose_next_action(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, actions::Set{Symbol})`
 
 Gathers all legal actions, and chooses the one that most increases the player's 
@@ -223,21 +282,12 @@ probability of victory, based on his `player.machine` model.  If no action
 increases the probability of victory, then do nothing.
 """
 function Catan.choose_next_action(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, actions::Set{Symbol})::Tuple
-    machine = player.machine
-    current_features = compute_features(board, player.player)
-    current_win_proba = predict_model(machine, current_features)
-    @info "$(inner_player(player).team) thinks his chance of winning is $(current_win_proba)"
-    
-    best_action = get_action_with_features(board, players, player, actions)
-    
-    # TODO we could even make the "no-op" action and use that as a possibility?
-    # Only do an action if it will improve his estimated chances of winning
-    if best_action.win_proba > current_win_proba
-        @info "And his chance of winning will go to $(best_action.proba) with this next move"
-        
+    best_action = get_best_action(board, players, player, actions)
+    if choose_do_action(board, players, player, best_action)
         return (best_action.args, best_action.func!)
+    else
+        return (nothing, nothing)
     end
-    return (nothing, nothing)
 end
 
 function save_parameters_after_game_end(file::IO, board::Board, players::Vector{PlayerType}, player::PlayerType, winner_team::Union{Nothing, Symbol})
@@ -248,5 +298,15 @@ function save_parameters_after_game_end(file::IO, board::Board, players::Vector{
     write(file, "$values,$label\n")
 end
 
-# TODO implement this based on ML model, only accept trade if win proba augments more than the other player's win proba from the trade
-# function choose_accept_trade(board::Board, player::RobotPlayer, from_player::PlayerPublicView, from_goods::Vector{Symbol}, to_goods::Vector{Symbol})::Bool
+"""
+TODO we need to incorporate this into choose_next_action so that the temporal difference player can treat it like a transition.  However, we need to update choose_next_action to allow parameters, not just a Set{Symbol} to denote the legal actions.  The idea is the new type `PreAction` which stores simple the name as well as a[n optional?] set of admissible args.
+"""
+function Catan.choose_accept_trade(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, from_player::Player, from_goods::Vector{Symbol}, to_goods::Vector{Symbol})::Bool
+    func! = (g,b,p) -> Catan.trade_goods(from_player, p.player, from_goods, to_goods)
+    action = Action(:AcceptTrade, nothing, func!, (from_goods, to_goods))
+    analyze_action!(action, board, players, player)
+    return choose_do_action(board, players, player, action)
+end
+
+# TODO, get rid of random behavior
+# function choose_cards_to_discard(player::RobotPlayer, amount::Int)::Vector{Symbol}

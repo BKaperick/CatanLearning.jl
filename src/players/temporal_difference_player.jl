@@ -56,7 +56,6 @@ function Catan.choose_next_action(board::Board, players::Vector{PlayerPublicView
     action_sets = get_legal_action_sets(board, players, player.player, actions)
     analyze_actions!(board, players, player, action_sets)
     reachable_transitions = get_transitions(action_sets)::Vector{MarkovTransition}
-    #actions_and_features = get_action_with_features(board, players, player, actions)
 
     # TODO we just return the best reachable state based on the underlying model,
     # but we need to think about how temporal_difference_player should take probabilistic actions

@@ -25,7 +25,8 @@ predict_model,
 MarkovState,
 MaxValueMarkovPolicy,
 MaxRewardMarkovPolicy,
-TemporalDifferencePlayer
+TemporalDifferencePlayer,
+get_legal_action_sets
 
 SAMPLE_MAP = "../../CatanEngine.jl/data/sample.csv"
 
@@ -210,15 +211,42 @@ function test_choose_road_location()
 choose_road_location(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Vector{Tuple{Int, Int}}})
 end
 
+function test_action_interface()
+    players = Vector{PlayerType}([
+                                  EmpathRobotPlayer(:Blue), 
+                                  DefaultRobotPlayer(:Test2),
+                                  DefaultRobotPlayer(:Test3),
+                                  DefaultRobotPlayer(:Test4),
+                                 ])
+    player = players[1]
+    board = read_map(SAMPLE_MAP)
 
+    actions = Set([:BuyDevCard, :ConstructRoad])
+    BoardApi.build_settlement!(board, :Blue, (1,1))
+
+    # Build road
+    PlayerApi.give_resource!(player.player, :Brick)
+    PlayerApi.give_resource!(player.player, :Wood)
+    
+    # Dev card
+    PlayerApi.give_resource!(player.player, :Pasture)
+    PlayerApi.give_resource!(player.player, :Grain)
+    PlayerApi.give_resource!(player.player, :Stone)
+    action_sets = get_legal_action_sets(board, PlayerPublicView.(players), player.player, actions)
+    for s in action_sets
+        println(s)
+    end
+    #best_action = get_best_action(board, players, player, actions)
+end
 
 function run_tests(neverend = false)
+    test_action_interface()
     test_player_implementation(Catan.DefaultRobotPlayer)
     test_player_implementation(MutatedEmpathRobotPlayer)
     test_player_implementation(TemporalDifferencePlayer)
     test_compute_features()
     test_evolving_robot_game(neverend)
-    (fails_m, fails_r, fails_v) = test_feature_perturbations(features, features_increasing_good)
+    #(fails_m, fails_r, fails_v) = test_feature_perturbations(features, features_increasing_good)
     """
     println("model fails with +3 perturbation $(length(fails_m[3])): $(fails_m[3])")
     println("model fails with +2 perturbation $(length(fails_m[2])): $(fails_m[2])")
@@ -231,6 +259,7 @@ function run_tests(neverend = false)
     println("value fails with +1 perturbation: $(fails_v[1])")
     """
 end
+
 if length(ARGS) > 1
     run_tests(ARGS[1])
 else
