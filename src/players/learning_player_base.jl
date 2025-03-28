@@ -137,11 +137,8 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
 end
 
 function Catan.choose_road_location(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Vector{Tuple{Int, Int}}})::Union{Nothing,Vector{Tuple{Int, Int}}}
-    x = Catan.choose_next_action(board, players, player, Set([:ConstructRoad]))
-    #actions = Set([:ConstructRoad])
-    #x = Catan.choose_next_action(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, actions::Set{Symbol})
-    (args, action) = x
-    return args
+    best_action = get_action_with_features(board, players, player, Set([:ConstructRoad]))
+    return collect(best_action.args)
 end
 
 function deterministic_do_robber_move_theft(board, player, victim, new_robber_tile, resource)
@@ -226,19 +223,11 @@ probability of victory, based on his `player.machine` model.  If no action
 increases the probability of victory, then do nothing.
 """
 function Catan.choose_next_action(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, actions::Set{Symbol})::Tuple
-    print("choosing action")
-    best_action_type = nothing
-    best_action_proba = -1
-    best_action_index = 1
-    best_args = nothing
-    #machine = ml_machine(player)
     machine = player.machine
-    #current_features = compute_features(board, inner_player(player))
     current_features = compute_features(board, player.player)
     current_win_proba = predict_model(machine, current_features)
-    # @info "$(inner_player(player).team) thinks his chance of winning is $(current_win_proba)"
+    @info "$(inner_player(player).team) thinks his chance of winning is $(current_win_proba)"
     
-    #best_action, reachable_states = get_action_with_features(board, players, player, actions)
     best_action = get_action_with_features(board, players, player, actions)
     
     # TODO we could even make the "no-op" action and use that as a possibility?
