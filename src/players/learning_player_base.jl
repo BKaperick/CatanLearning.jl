@@ -290,12 +290,12 @@ function Catan.choose_next_action(board::Board, players::Vector{PlayerPublicView
     end
 end
 
-function save_parameters_after_game_end(file::IO, board::Board, players::Vector{PlayerType}, player::PlayerType, winner_team::Union{Nothing, Symbol})
-    features = compute_features(board, player.player)
+function save_parameters_after_game_end(file::IO, game::Game, board::Board, players::Vector{PlayerType}, player::PlayerType, winner_team::Union{Nothing, Symbol})
+    features = compute_features(game, board, player.player)
     # For now, we just use a binary label to say who won
-    label = get_csv_friendly(player.player.team == winner_team)
+    # label = get_csv_friendly(player.player.team == winner_team)
     values = join([get_csv_friendly(f[2]) for f in features], ",")
-    write(file, "$values,$label\n")
+    write(file, "$values\n")
 end
 
 """

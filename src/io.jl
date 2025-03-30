@@ -4,11 +4,11 @@ function Catan.do_post_game_action(board::Board, players::Vector{PlayerType}, wi
     return
 end
 """
-function Catan.do_post_game_action(board::Board, players::Vector{PlayerType}, player::Catan.DefaultRobotPlayer, winner::Union{PlayerType, Nothing})
-    return write_features_file(board::Board, players, player, winner)
+function Catan.do_post_game_action(game::Game, board::Board, players::Vector{PlayerType}, player::Catan.DefaultRobotPlayer, winner::Union{PlayerType, Nothing})
+    return write_features_file(game::Game, board::Board, players, player, winner)
 end
 
-function do_post_game_action(board::Board, players::Vector{PlayerType}, player::TemporalDifferencePlayer, winner::Union{PlayerType, Nothing})
+function do_post_game_action(game::Game, board::Board, players::Vector{PlayerType}, player::TemporalDifferencePlayer, winner::Union{PlayerType, Nothing})
     println("writing values")
     return write_values_file(players, player)
 end
@@ -71,20 +71,20 @@ function write_values_file(values_file::String, state_to_value)
     close(file)
 end
 
-function write_features_file(board::Board, players, player::PlayerType, winner::Union{PlayerType, Nothing}) 
+function write_features_file(game::Game, board::Board, players, player::PlayerType, winner::Union{PlayerType, Nothing}) 
     file = open(FEATURES_FILE, "a")
-    _write_feature_file_header(file, board, player)
+    _write_feature_file_header(file, game, board, player)
     if winner == nothing
-        save_parameters_after_game_end(file, board, players, player, nothing)
+        save_parameters_after_game_end(file, game, board, players, player, nothing)
     else
-        save_parameters_after_game_end(file, board, players, player, winner.player.team)
+        save_parameters_after_game_end(file, game, board, players, player, winner.player.team)
     end
     close(file)
 
 end
 
-function _write_feature_file_header(file::IO, board::Board, player::PlayerType)
-    features = compute_features(board, player.player)
+function _write_feature_file_header(file::IO, game::Game, board::Board, player::PlayerType)
+    features = compute_features(game, board, player.player)
     header = join([get_csv_friendly(f[1]) for f in features], ",")
     label = get_csv_friendly("WonGame")
     if filesize(FEATURES_FILE) == 0

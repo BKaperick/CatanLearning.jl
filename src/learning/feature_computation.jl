@@ -83,16 +83,28 @@ compute_count_port_stone = (board, player) -> get_resource_port_count(board, pla
 register_feature(:PortGrain, Int8, 0, 1)
 compute_count_port_grain = (board, player) -> get_resource_port_count(board, player.team, :Grain)
 
-register_feature(:CountWood, Int8, 0, 20)
+register_feature(:CountHandWood, Int8, 0, 20)
 compute_count_hand_wood = (board, player) -> get_resource_hand_count(player, :Brick)
-register_feature(:CountBrick, Int8, 0, 20)
+register_feature(:CountHandBrick, Int8, 0, 20)
 compute_count_hand_brick = (board, player) -> get_resource_hand_count(player, :Brick)
-register_feature(:CountPasture, Int8, 0, 20)
+register_feature(:CountHandPasture, Int8, 0, 20)
 compute_count_hand_pasture = (board, player) -> get_resource_hand_count(player, :Pasture)
-register_feature(:CountStone, Int8, 0, 20)
+register_feature(:CountHandStone, Int8, 0, 20)
 compute_count_hand_stone = (board, player) -> get_resource_hand_count(player, :Stone)
-register_feature(:CountGrain, Int8, 0, 20)
+register_feature(:CountHandGrain, Int8, 0, 20)
 compute_count_hand_grain = (board, player) -> get_resource_hand_count(player, :Grain)
+
+register_feature(:CountTotalWood, Int8, 0, 20)
+compute_count_total_wood = (board, player) -> get_resource_total_count(board, player, :Brick)
+register_feature(:CountTotalBrick, Int8, 0, 20)
+compute_count_total_brick = (board, player) -> get_resource_total_count(board, player, :Brick)
+register_feature(:CountTotalPasture, Int8, 0, 20)
+compute_count_total_pasture = (board, player) -> get_resource_total_count(board, player, :Pasture)
+register_feature(:CountTotalStone, Int8, 0, 20)
+compute_count_total_stone = (board, player) -> get_resource_total_count(board, player, :Stone)
+register_feature(:CountTotalGrain, Int8, 0, 20)
+compute_count_total_grain = (board, player) -> get_resource_total_count(board, player, :Grain)
+
 
 register_feature(:CountDevCardsKnight, Int8, 0, Catan.DEVCARD_COUNTS[:Knight])
 compute_count_devcards_owned_knight = (board, player) -> get_devcards_owned_count(player, :Knight)
@@ -112,9 +124,12 @@ register_feature(:CountDevCardsVictoryPoint, Int8, 0, Catan.DEVCARD_COUNTS[:Vict
 compute_has_largest_army
 register_feature(:CountVictoryPoint, Int8, 0, 10)
 compute_count_victory_points = (board, player) -> Catan.GameRunner.get_total_vp_count(board, player)
-#compute_is_not_loss = (board, player) -> 
+register_feature(:WonGame, Bool, 0, 1)
+compute_won_game = (board, player) -> Catan.GameRunner.get_total_vp_count(board, player) >= 10
+register_feature(:HasMostPoints, Bool, 0, 1)
+compute_has_most_points = (game, board, player) -> get_has_most_points(game, board, player)
 
-function compute_features(board, player)::Vector{Pair{Symbol, Float64}}
+function compute_features(game, board, player::Player)::Vector{Pair{Symbol, Float64}}
     return [
         :CountSettlement => compute_count_settlement(board, player),
         :CountCity => compute_count_city(board, player),
@@ -136,6 +151,13 @@ function compute_features(board, player)::Vector{Pair{Symbol, Float64}}
         :CountHandPasture => compute_count_hand_pasture(board, player),
         :CountHandStone => compute_count_hand_stone(board, player),
         :CountHandGrain => compute_count_hand_grain(board, player),
+        
+        :CountTotalWood => compute_count_total_wood(board, player),
+        :CountTotalBrick => compute_count_total_brick(board, player),
+        :CountTotalPasture => compute_count_total_pasture(board, player),
+        :CountTotalStone => compute_count_total_stone(board, player),
+        :CountTotalGrain => compute_count_total_grain(board, player),
+        
         :CountDevCardsKnight => compute_count_devcards_owned_knight(board, player),
         :CountDevCardsMonopoly => compute_count_devcards_owned_monopoly(board, player),
         :CountDevCardsYearOfPlenty => compute_count_devcards_owned_year_of_plenty(board, player),
@@ -145,8 +167,9 @@ function compute_features(board, player)::Vector{Pair{Symbol, Float64}}
         :HasLargestArmy => compute_has_largest_army(board, player),
         :HasLongestRoad => compute_has_longest_road(board, player),
 
-        :CountVictoryPoint => compute_count_victory_points(board, player)
-        # :IsNotLoss => compute_is_not_loss(board, player)
+        :CountVictoryPoint => compute_count_victory_points(board, player),
+        :HasMostPoints => compute_has_most_points(game, board, player),
+        :WonGame => compute_won_game(board, player)
        ]
 end
 
@@ -199,6 +222,42 @@ function get_resource_hand_count(player, resource)::Int
     return haskey(player.resources, resource) ? player.resources[resource] : 0
 end
 
+"""
+    `get_resource_total_count(board, player, resource)::Int`
+
+Get the count of all resources in hand as well as all the resources already spent
+"""
+function get_resource_total_count(board, player, resource)::Int
+    hand_count = get_resource_hand_count(player, resource)
+    building_count = 0
+    for b in board.buildings
+        if b.team == player.team && haskey(Catan.COSTS[b.type], resource)
+            building_count += Catan.COSTS[b.type][resource]
+        end
+    end
+
+    road_count = 0
+    for b in board.roads
+        if b.team == player.team && haskey(Catan.COSTS[:Road], resource)
+            building_count += Catan.COSTS[:Road][resource]
+        end
+    end
+    
+    devcard_count = 0
+    for c in player.devcards
+        if haskey(Catan.COSTS[:DevelopmentCard], resource)
+            devcard_count += Catan.COSTS[:DevelopmentCard][resource]
+        end
+    end
+    for c in player.devcards_used
+        if haskey(Catan.COSTS[:DevelopmentCard], resource)
+            devcard_count += Catan.COSTS[:DevelopmentCard][resource]
+        end
+    end
+    
+    return hand_count + building_count + road_count + devcard_count        
+end
+
 function get_resource_port_count(board, team, resource)::Int
     count = 0
     for (c,p) in board.coord_to_port
@@ -224,6 +283,15 @@ function get_devcards_owned_count(player, devcard)::Int
     return count
 end
 
+function get_has_most_points(game, board, player::Player)::Bool
+    points = Catan.GameRunner.get_total_vp_count(board, player)
+    for p in game.players
+        if Catan.GameRunner.get_total_vp_count(board, p.player) > points
+            return false
+        end
+    end
+    return true
+end
 function predict_model(machine::Machine, board::Board, player::PlayerType)
     features = [x for x in compute_features(board, player.player)]
     return predict_model(machine, features)
