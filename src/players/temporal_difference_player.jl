@@ -1,6 +1,3 @@
-include("../learning/feature_computation.jl")
-include("../learning/production_model.jl")
-include("learning_player_base.jl")
 include("../reinforcement.jl")
 using Catan: do_post_action_step, choose_next_action
 

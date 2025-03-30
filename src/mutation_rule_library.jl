@@ -1,4 +1,4 @@
-include("helpers.jl")
+#include("helpers.jl")
 
 apply_mutation_rule! = Dict([
     :Sequential => (tm, w) -> sequential_assign_new_mutations!(tm, w),

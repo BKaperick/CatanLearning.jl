@@ -10,8 +10,8 @@ using MLJScikitLearnInterface
 using MLJ
 using Plots
 
-logger = ConsoleLogger(stderr, Logging.Debug)
-global_logger(logger)
+#logger = ConsoleLogger(stderr, Logging.Debug)
+#global_logger(logger)
 
 
 # Read in data

@@ -2,6 +2,14 @@ module CatanLearning
 using Logging
 using Profile
 using BenchmarkTools
+
+
+# Suppress all normal logs
+logger = ConsoleLogger(stderr, Logging.Warn)
+old = global_logger(logger)
+@warn "old logger $old"
+@warn "new logger $logger"
+
 #using Catan
 import Catan
 import Catan: Player, PlayerPublicView, PlayerType, RobotPlayer, DefaultRobotPlayer, Game, Board
@@ -14,6 +22,9 @@ include("players/structs.jl")
 include("helpers.jl")
 include("mutation_rule_library.jl")
 include("evolution.jl")
+
+include("learning/feature_computation.jl")
+
 include("players/learning_player_base.jl")
 include("players/mutated_robot_player.jl")
 include("players/temporal_difference_player.jl")
@@ -21,13 +32,10 @@ include("io.jl")
 
 include("tournaments.jl")
 
-
-
-# Suppress all normal logs
-logger = ConsoleLogger(stderr, Logging.Warn)
-global_logger(logger)
 SAVE_GAME_TO_FILE = false
 #SAVEFILEIO = open(SAVEFILE, "a")
+
+global_logger(NullLogger())
 
 
 function run(T::MutatedEmpathRobotPlayer)
@@ -40,6 +48,7 @@ function run(T::MutatedEmpathRobotPlayer)
     run(player_constructors)
 end
 function run(T::Type)
+    global_logger(NullLogger())
     player_constructors = Dict([
         :Blue => (mutation) -> T(:Blue), 
         :Green => (mutation) -> T(:Green), 
@@ -103,7 +112,8 @@ function run(player_constructors::Dict)
         #run_tournament(tourney, player_constructors)
         #@profile run_tournament(tourney, player_constructors); Profile.print(noisefloor = 2.0, combine = true)
         #@btime run_tournament($tourney, $player_constructors)
-        println(@benchmark run_tournament($tourney, $player_constructors))
+        #println(@benchmark run_tournament($tourney, $player_constructors))
+        run_tournament($tourney, $player_constructors)
     end
 end
 
@@ -125,4 +135,12 @@ function run_benchmark(player_type)
     #@benchmark do_tournament_one_game!($winners, $players, $map_file)
 end
 
+logger = ConsoleLogger(stderr, Logging.Warn)
+old = global_logger(logger)
+
+if length(ARGS) > 0
+    FEATURES_FILE = "features_$(ARGS[1]).csv"
+    println("Setting global features file to $FEATURES_FILE")
+    run(Catan.DefaultRobotPlayer)
+end
 end

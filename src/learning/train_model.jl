@@ -9,10 +9,10 @@ using MLJScikitLearnInterface
 #df = DataFrame("../../features.csv")
 using Logging
 
-logger = ConsoleLogger(stderr, Logging.Debug)
+#logger = ConsoleLogger(stderr, Logging.Debug)
 #logger = ConsoleLogger(stderr, Logging.Info)
 #logger = ConsoleLogger(stderr, Logging.LogLevel(5000))
-global_logger(logger)
+#global_logger(logger)
 
 features_csv = "./data/features.csv"
 

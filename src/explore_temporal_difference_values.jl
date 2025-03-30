@@ -5,7 +5,7 @@ import Catan
 
 include("structs.jl")
 include("constants.jl")
-include("helpers.jl")
+#include("helpers.jl")
 include("players/structs.jl")
 include("players/temporal_difference_player.jl")
 
