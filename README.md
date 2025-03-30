@@ -46,3 +46,8 @@ Value succeeds on all.
 
 Interesting (and slightly suspicious) that only two fail on each of RF model and the state Reward, and that it's not the same problematic features.
 
+
+# Benchmarks
+Player type | mean game time
+-|-
+Catan.DefaultRobotPlayer | 332 ms

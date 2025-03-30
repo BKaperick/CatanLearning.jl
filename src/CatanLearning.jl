@@ -1,5 +1,7 @@
 module CatanLearning
 using Logging
+using Profile
+using BenchmarkTools
 #using Catan
 import Catan
 import Catan: Player, PlayerPublicView, PlayerType, RobotPlayer, DefaultRobotPlayer, Game, Board
@@ -92,13 +94,35 @@ function run(player_constructors::Dict)
     # Number of maps to generate
     # Number of epochs (1 epoch is M*N games) to run
     #tourney = Tournament(2, 2, 2, :Sequential)
-    tourney = Tournament(10000, 100, 1, :Sequential)
+    tourney = Tournament(100, 1000, 1, :Sequential)
     #tourney = Tournament(20,8,20, :FiftyPercentWinnerStays)
     #tourney = Tournament(5,4,10, :SixtyPercentWinnerStays)
     if any([typeof(c(Dict())) <: MutatedEmpathRobotPlayer for (t,c) in collect(player_constructors)])
         run_mutating_tournament(tourney, player_constructors)
     else
-        run_tournament(tourney, player_constructors)
+        #run_tournament(tourney, player_constructors)
+        #@profile run_tournament(tourney, player_constructors); Profile.print(noisefloor = 2.0, combine = true)
+        #@btime run_tournament($tourney, $player_constructors)
+        println(@benchmark run_tournament($tourney, $player_constructors))
     end
 end
+
+#run_benchmark() => run_benchmark(Catan.DefaultRobotPlayer)
+function run_benchmark(player_type)
+    map_file = "./data/benchmark_map.csv"
+    map = Catan.generate_random_map(map_file)
+    team_to_player = Dict([
+        :Blue => player_type(:Blue), 
+        :Green => player_type(:Green), 
+        :Cyan => player_type(:Cyan), 
+        :Yellow => player_type(:Yellow)
+    ])
+    teams = collect(keys(team_to_player))
+    players = collect(values(team_to_player))
+     
+    winners = init_winners(teams)
+    do_tournament_one_game!(winners, players, map_file)
+    #@benchmark do_tournament_one_game!($winners, $players, $map_file)
+end
+
 end

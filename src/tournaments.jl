@@ -7,15 +7,18 @@ function do_tournament_one_epoch(tourney, teams, map_file, player_constructors::
         map = Catan.generate_random_map(map_file)
         for i=1:tourney.games_per_map
             players = [player_constructors[t](team_to_mutation[t]) for t in teams]
-            game = Game(players)
-            do_tournament_one_game(tourney, i, j, winners, game, map_file)
+            winner = do_tournament_one_game!(winners, players, map_file)
+            if winner != nothing
+                println("Game $((j - 1)*tourney.games_per_map + i) / $(tourney.maps_per_epoch * tourney.games_per_map): $(winner.player.team)")
+                println("winner: $(winner.player.team)")
+            end
         end
     end
-    print(winners)
     order_winners(winners)
 end
 
-function do_tournament_one_game(tourney, i, j, winners, game, map_file)
+function do_tournament_one_game!(winners, players, map_file)
+    game = Game(players)
     println("starting game $(game.unique_id)")
     _,winner = Catan.run(game, map_file)
 
@@ -25,10 +28,6 @@ function do_tournament_one_game(tourney, i, j, winners, game, map_file)
     end
     winners[w] += 1
 
-    if winner != nothing
-        println("Game $((j - 1)*tourney.games_per_map + i) / $(tourney.maps_per_epoch * tourney.games_per_map): $(winner.player.team)")
-        println("winner: $(winner.player.team)")
-    end
     return winner
 end
 
@@ -63,7 +62,7 @@ function run_tournament(tourney, player_constructors)
     winners = init_winners(teams)
     for k=1:tourney.epochs
         epoch_winners = do_tournament_one_epoch(tourney, teams, map_file, player_constructors)
-        println(epoch_winners)
+        #println(epoch_winners)
         for (w,n) in collect(epoch_winners)
             winners[w] += n
         end
