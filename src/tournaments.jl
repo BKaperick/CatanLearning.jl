@@ -8,9 +8,12 @@ function do_tournament_one_epoch(tourney, teams, map_file, player_constructors::
         for i=1:tourney.games_per_map
             players = [player_constructors[t](team_to_mutation[t]) for t in teams]
             winner = do_tournament_one_game!(winners, players, map_file)
-            println("Game $((j - 1)*tourney.games_per_map + i) / $(tourney.maps_per_epoch * tourney.games_per_map)")
-            if winner != nothing
-                println("winner: $(winner.player.team)")
+            g_num = (j - 1)*tourney.games_per_map + i
+            if g_num % 10 == 0
+                println("Game $(g_num) / $(tourney.maps_per_epoch * tourney.games_per_map)")
+                #if winner != nothing
+                #    println("winner: $(winner.player.team)")
+                #end
             end
         end
     end
