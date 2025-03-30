@@ -113,7 +113,7 @@ function run(player_constructors::Dict)
         #@profile run_tournament(tourney, player_constructors); Profile.print(noisefloor = 2.0, combine = true)
         #@btime run_tournament($tourney, $player_constructors)
         #println(@benchmark run_tournament($tourney, $player_constructors))
-        run_tournament($tourney, $player_constructors)
+        run_tournament(tourney, player_constructors)
     end
 end
 
