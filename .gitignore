@@ -5,3 +5,4 @@ features*.csv
 test/data/*
 .CondaPkg
 .CondaPkg/*
+src/learning/.ipynb_checkpoints/
