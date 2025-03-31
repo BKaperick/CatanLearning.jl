@@ -5,12 +5,10 @@ using Catan: GameApi, BoardApi, PlayerApi, random_sample_resources, get_random_r
              do_play_devcard, propose_trade_goods, do_robber_move_theft,
             get_admissible_theft_victims, choose_road_location, trade_goods
 
-using Catan: choose_next_action, choose_place_robber, do_post_action_step, choose_accept_trade,
-choose_year_of_plenty_resources
-
-function get_estimated_will_accept_trade(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, other_player::PlayerPublicView, from_goods::Dict{Symbol, Int}, to_goods::Dict{Symbol, Int})::Bool
-
-end
+using Catan: choose_next_action, choose_who_to_trade_with,
+             choose_place_robber, do_post_action_step, 
+             choose_accept_trade, choose_year_of_plenty_resources,
+             choose_one_resource_to_discard
 
 function get_estimated_resources(board::Board, players::Vector{PlayerPublicView}, target::PlayerPublicView)::Dict{Symbol, Int}
     return Dict([(r,1) for r in Catan.RESOURCES])
@@ -148,6 +146,18 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
             end
         end
     end
+    if :LoseResource in actions
+        resources = collect(keys(player.resources))
+        for (i,resource) in enumerate(resources)
+            println(resource, resource2)
+            push!(main_action_set.actions, 
+                Action(:LoseResource, 
+                       (g, b, p) -> Catan.PlayerApi.take_resource(p, resource),
+                       resource
+                      )
+                )
+        end
+    end
     
     if length(main_action_set.actions) > 0
         push!(action_sets, main_action_set)
@@ -185,6 +195,11 @@ end
 function Catan.choose_year_of_plenty_resources(board, players::Vector{PlayerPublicView}, player::LearningPlayer)::Tuple{Symbol, Symbol}
     return get_best_action(board, players, player, Set([:DrawResources])).args
 end
+
+function Catan.choose_one_resource_to_discard(player::LearningPlayer)::Symbol
+    return get_best_action(board, players, player, Set([:LoseResource])).args[1]
+end
+
 """
     `deterministic_draw_devcard(game, player, card)`
 
@@ -303,10 +318,17 @@ TODO we need to incorporate this into choose_next_action so that the temporal di
 """
 function Catan.choose_accept_trade(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, from_player::Player, from_goods::Vector{Symbol}, to_goods::Vector{Symbol})::Bool
     func! = (g,b,p) -> Catan.trade_goods(from_player, p.player, from_goods, to_goods)
-    action = Action(:AcceptTrade, nothing, func!, (from_goods, to_goods))
+    action = Action(:AcceptTrade, func!, from_goods, to_goods)
     analyze_action!(action, board, players, player)
     return choose_do_action(board, players, player, action)
 end
 
-# TODO, get rid of random behavior
-# function choose_cards_to_discard(player::RobotPlayer, amount::Int)::Vector{Symbol}
+"""
+    `Catan.choose_who_to_trade_with(board::Board, player::LearningPlayer, players::Vector{PlayerPublicView})::Symbol`
+
+Use public model (stored in `player.player.machine_public`) to choose a trading partner as the weakest among the options
+"""
+function Catan.choose_who_to_trade_with(board::Board, player::LearningPlayer, players::Vector{PlayerPublicView})::Symbol
+    win_probas = [predict_public_model(player.machine, board, other_player) for other_player in players]
+    return minimum(p -> analyze_state_for_other_player(board, player, other_player), players).team
+end

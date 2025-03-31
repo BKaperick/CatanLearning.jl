@@ -105,6 +105,14 @@ compute_count_total_stone = (board, player) -> get_resource_total_count(board, p
 register_feature(:CountTotalGrain, Int8, 0, 20)
 compute_count_total_grain = (board, player) -> get_resource_total_count(board, player, :Grain)
 
+register_feature(:CountDevCardsUsedKnight, Int8, 0, Catan.DEVCARD_COUNTS[:Knight])
+compute_count_devcards_used_knight = (board, player) -> get_devcards_used_count(player, :Knight)
+register_feature(:CountDevCardsUsedMonopoly, Int8, 0, Catan.DEVCARD_COUNTS[:Monopoly])
+compute_count_devcards_used_monopoly = (board, player) -> get_devcards_used_count(player, :Monopoly)
+register_feature(:CountDevCardsUsedYearOfPlenty, Int8, 0, Catan.DEVCARD_COUNTS[:YearOfPlenty])
+compute_count_devcards_used_year_of_plenty = (board, player) -> get_devcards_used_count(player, :YearOfPlenty)
+register_feature(:CountDevCardsUsedRoadBuilding, Int8, 0, Catan.DEVCARD_COUNTS[:RoadBuilding])
+compute_count_devcards_used_road_building = (board, player) -> get_devcards_used_count(player, :RoadBuilding)
 
 register_feature(:CountDevCardsKnight, Int8, 0, Catan.DEVCARD_COUNTS[:Knight])
 compute_count_devcards_owned_knight = (board, player) -> get_devcards_owned_count(player, :Knight)
@@ -124,12 +132,20 @@ register_feature(:CountDevCardsVictoryPoint, Int8, 0, Catan.DEVCARD_COUNTS[:Vict
 compute_has_largest_army
 register_feature(:CountVictoryPoint, Int8, 0, 10)
 compute_count_victory_points = (board, player) -> Catan.GameRunner.get_total_vp_count(board, player)
-register_feature(:WonGame, Bool, 0, 1)
+register_feature(:CountVisibleVictoryPoint, Int8, 0, 10)
+compute_count_public_victory_points = (board, player) -> Catan.BoardApi.get_public_vp_count(board, player.team)
+register_feature(:WonGame, Bool, 0, 1
 compute_won_game = (board, player) -> Catan.GameRunner.get_total_vp_count(board, player) >= 10
 register_feature(:HasMostPoints, Bool, 0, 1)
 compute_has_most_points = (game, board, player) -> get_has_most_points(game, board, player)
 
-function compute_features(game, board, player::Player)::Vector{Pair{Symbol, Float64}}
+"""
+    `compute_features(board, player::Player)::Vector{Pair{Symbol, Float64}}`
+
+Compute features from public info, and used for inference.  Note, this *cannot* include `Game`, because that
+would leak private info about other players.
+"""
+function compute_features(board, player::Player)::Vector{Pair{Symbol, Float64}}
     return [
         :CountSettlement => compute_count_settlement(board, player),
         :CountCity => compute_count_city(board, player),
@@ -163,10 +179,54 @@ function compute_features(game, board, player::Player)::Vector{Pair{Symbol, Floa
         :CountDevCardsYearOfPlenty => compute_count_devcards_owned_year_of_plenty(board, player),
         :CountDevCardsRoadBuilding => compute_count_devcards_owned_road_building(board, player),
         :CountDevCardsVictoryPoint => compute_count_devcards_owned_victory_point(board, player),
-
         :HasLargestArmy => compute_has_largest_army(board, player),
         :HasLongestRoad => compute_has_longest_road(board, player),
+        :CountVictoryPoint => compute_count_victory_points(board, player)
+       ]
+end
 
+function compute_public_features(board, player::PlayerPublicView)::Vector{Pair{Symbol, Float64}}
+    return [
+        :CountSettlement => compute_count_settlement(board, player),
+        :CountCity => compute_count_city(board, player),
+        :CountRoad => compute_count_road(board, player),
+
+        :SumWoodDiceWeight => compute_sum_wood_dice_weight(board, player),
+        :SumBrickDiceWeight => compute_sum_brick_dice_weight(board, player),
+        :SumPastureDiceWeight => compute_sum_pasture_dice_weight(board, player),
+        :SumStoneDiceWeight => compute_sum_stone_dice_weight(board, player),
+        :SumGrainDiceWeight => compute_sum_grain_dice_weight(board, player),
+        :CountPortWood => compute_count_port_wood(board, player),
+        :CountPortBrick => compute_count_port_brick(board, player),
+        :CountPortPasture => compute_count_port_pasture(board, player),
+        :CountPortStone => compute_count_port_stone(board, player),
+        :CountPortGrain => compute_count_port_grain(board, player),
+
+        #:CountHandWood => compute_count_hand_wood(board, player),
+        #:CountHandBrick => compute_count_hand_brick(board, player),
+        #:CountHandPasture => compute_count_hand_pasture(board, player),
+        #:CountHandStone => compute_count_hand_stone(board, player),
+        #:CountHandGrain => compute_count_hand_grain(board, player),
+        
+        #:CountTotalWood => compute_count_total_wood(board, player),
+        #:CountTotalBrick => compute_count_total_brick(board, player),
+        #:CountTotalPasture => compute_count_total_pasture(board, player),
+        #:CountTotalStone => compute_count_total_stone(board, player),
+        #:CountTotalGrain => compute_count_total_grain(board, player),
+        
+        :CountDevCardsUsedKnight => compute_count_devcards_used_knight(board, player),
+        :CountDevCardsUsedMonopoly => compute_count_devcards_used_monopoly(board, player),
+        :CountDevCardsUsedYearOfPlenty => compute_count_devcards_used_year_of_plenty(board, player),
+        :CountDevCardsUsedRoadBuilding => compute_count_devcards_used_road_building(board, player),
+        :HasLargestArmy => compute_has_largest_army(board, player),
+        :HasLongestRoad => compute_has_longest_road(board, player),
+        :CountVisibleVictoryPoint => compute_count_public_victory_points(board, player)
+       ]
+end
+
+function compute_features_and_labels(game, board, player::Player)::Vector{Pair{Symbol, Float64}}
+    return vcat(compute_features(board, player),
+    [
         :CountVictoryPoint => compute_count_victory_points(board, player),
         :HasMostPoints => compute_has_most_points(game, board, player),
         :WonGame => compute_won_game(board, player)
@@ -275,6 +335,12 @@ function get_devcards_owned_count(player, devcard)::Int
             count += cnt
         end
     end
+    count += get_devcards_used(player, devcard)
+    return count
+end
+
+function get_devcards_used_count(player, devcard)::Int
+    count = 0
     for (card,cnt) in player.devcards_used
         if card == devcard
             count += cnt
@@ -292,6 +358,24 @@ function get_has_most_points(game, board, player::Player)::Bool
     end
     return true
 end
+
+"""
+    `predict_public_model(machine::Machine, board::Board, player::PlayerPublicView)`
+
+Eventually, train a simple model that uses publicly-available info (defined in `compute_public_features`)
+and use that.  For now, we just do a linear scaling of public VP count 
+"""
+function predict_public_model(machine::Nothing, board::Board, player::PlayerPublicView)
+    features = [x for x in compute_public_features(board, player)]
+    return compute_count_victory_points(board, player) / 10
+    #return predict_model(machine, features)
+end
+
+function predict_public_model(machine::Machine, board::Board, player::PlayerPublicView)
+    features = [x for x in compute_public_features(board, player)]
+    return predict_model(machine, features)
+end
+
 function predict_model(machine::Machine, board::Board, player::PlayerType)
     features = [x for x in compute_features(board, player.player)]
     return predict_model(machine, features)
