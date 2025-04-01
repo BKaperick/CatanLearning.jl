@@ -7,7 +7,7 @@ using Catan: GameApi, BoardApi, PlayerApi, random_sample_resources, get_random_r
 
 using Catan: choose_next_action, choose_who_to_trade_with,
              choose_place_robber, do_post_action_step, 
-             choose_accept_trade, choose_year_of_plenty_resources,
+             choose_accept_trade, choose_resource_to_draw,
              choose_one_resource_to_discard
 
 function get_estimated_resources(board::Board, players::Vector{PlayerPublicView}, target::PlayerPublicView)::Dict{Symbol, Int}
@@ -121,38 +121,37 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
                                                                    b, g.players, 
                                                                    p, victim, 
                                                                    candidate_tile, 
-                                                                   resource), 
+                                                                   r), 
                                  (g, b, p) -> do_robber_move_theft(b, p, victim, candidate_tile),
                                  victim, candidate_tile))
                 end
                 push!(action_sets, action_set)
             end
+            if length(candidate_victims) == 0
+                push!(main_action_set.actions, 
+                      Action(:PlaceRobber, 
+                             (g, b, p) -> do_robber_move_theft(b, g.players, p, nothing, candidate_tile, nothing), 
+                             nothing, candidate_tile))
+            end
         end
     end
-
-    if :DrawResources in actions
-        resources = collect(Catan.RESOURCES)
-        println("$resources")
+    
+    if :GainResource in actions
+        resources = collect(keys(player.resources))
         for (i,resource) in enumerate(resources)
-            for resource2 in resources[i+1:end]
-                println(resource, resource2)
-                push!(main_action_set.actions, 
-                      Action(
-
-                     :DrawResources, 
-                        (g, b, p) -> harvest_two_resources!(g, p, resource, resource2),
-                        (resource, resource2))
-                     )
-            end
+            push!(main_action_set.actions, 
+                Action(:GainResource, 
+                       (g, b, p) -> Catan.harvest_one_resource!(g, p.player, resource, 1),
+                       resource, 1
+                      ))
         end
     end
     if :LoseResource in actions
         resources = collect(keys(player.resources))
         for (i,resource) in enumerate(resources)
-            println(resource, resource2)
             push!(main_action_set.actions, 
                 Action(:LoseResource, 
-                       (g, b, p) -> Catan.PlayerApi.take_resource(p, resource),
+                       (g, b, p) -> Catan.PlayerApi.take_resource!(p.player, resource),
                        resource
                       )
                 )
@@ -170,11 +169,6 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
     return action_sets
 end
 
-function harvest_two_resources!(game, board, player, resource1, resource2)
-    Catan.harvest_one_resource!(g, p, resource1, 1)
-    Catan.harvest_one_resource!(g, p, resource2, 1)
-end
-
 function Catan.choose_road_location(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Vector{Tuple{Int, Int}}})::Union{Nothing,Vector{Tuple{Int, Int}}}
     best_action = get_best_action(board, players, player, Set([:ConstructRoad]))
     return collect(best_action.args)
@@ -189,15 +183,15 @@ function Catan.choose_building_location(board, players::Vector{PlayerPublicView}
 end
 
 function Catan.choose_place_robber(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer)::Symbol
-    return get_best_action(board, players, player, Set([:PlaceRobber])).args[1]
+    return get_best_action(board, players, player, Set([:PlaceRobber])).args[2]
 end
 
-function Catan.choose_year_of_plenty_resources(board, players::Vector{PlayerPublicView}, player::LearningPlayer)::Tuple{Symbol, Symbol}
-    return get_best_action(board, players, player, Set([:DrawResources])).args
+function Catan.choose_resource_to_draw(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer)::Symbol
+    return get_best_action(board, players, player, Set([:GainResource])).args[1]
 end
 
-function Catan.choose_one_resource_to_discard(player::LearningPlayer)::Symbol
-    return get_best_action(board, players, player, Set([:LoseResource])).args[1]
+function Catan.choose_one_resource_to_discard(board::Board, player::LearningPlayer)::Symbol
+    return get_best_action(board, Vector{PlayerPublicView}([]), player, Set([:LoseResource])).args[1]
 end
 
 """
@@ -306,9 +300,7 @@ function Catan.choose_next_action(board::Board, players::Vector{PlayerPublicView
 end
 
 function save_parameters_after_game_end(file::IO, game::Game, board::Board, players::Vector{PlayerType}, player::PlayerType, winner_team::Union{Nothing, Symbol})
-    features = compute_features(game, board, player.player)
-    # For now, we just use a binary label to say who won
-    # label = get_csv_friendly(player.player.team == winner_team)
+    features = compute_features_and_labels(game, board, player.player)
     values = join([get_csv_friendly(f[2]) for f in features], ",")
     write(file, "$values\n")
 end
@@ -329,6 +321,8 @@ end
 Use public model (stored in `player.player.machine_public`) to choose a trading partner as the weakest among the options
 """
 function Catan.choose_who_to_trade_with(board::Board, player::LearningPlayer, players::Vector{PlayerPublicView})::Symbol
-    win_probas = [predict_public_model(player.machine, board, other_player) for other_player in players]
-    return minimum(p -> analyze_state_for_other_player(board, player, other_player), players).team
+    return argmin(p -> predict_public_model(player.machine_public, board, p), players).team
 end
+
+#function Catan.choose_monopoly_resource(board::Board, players::Vector{PlayerPublicView}, player::RobotPlayer)::Symbol
+#end

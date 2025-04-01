@@ -134,7 +134,7 @@ register_feature(:CountVictoryPoint, Int8, 0, 10)
 compute_count_victory_points = (board, player) -> Catan.GameRunner.get_total_vp_count(board, player)
 register_feature(:CountVisibleVictoryPoint, Int8, 0, 10)
 compute_count_public_victory_points = (board, player) -> Catan.BoardApi.get_public_vp_count(board, player.team)
-register_feature(:WonGame, Bool, 0, 1
+register_feature(:WonGame, Bool, 0, 1)
 compute_won_game = (board, player) -> Catan.GameRunner.get_total_vp_count(board, player) >= 10
 register_feature(:HasMostPoints, Bool, 0, 1)
 compute_has_most_points = (game, board, player) -> get_has_most_points(game, board, player)
@@ -230,7 +230,7 @@ function compute_features_and_labels(game, board, player::Player)::Vector{Pair{S
         :CountVictoryPoint => compute_count_victory_points(board, player),
         :HasMostPoints => compute_has_most_points(game, board, player),
         :WonGame => compute_won_game(board, player)
-       ]
+       ])
 end
 
 function get_building_count(board, building_type, team)
@@ -335,7 +335,7 @@ function get_devcards_owned_count(player, devcard)::Int
             count += cnt
         end
     end
-    count += get_devcards_used(player, devcard)
+    count += get_devcards_used_count(player, devcard)
     return count
 end
 
@@ -367,7 +367,7 @@ and use that.  For now, we just do a linear scaling of public VP count
 """
 function predict_public_model(machine::Nothing, board::Board, player::PlayerPublicView)
     features = [x for x in compute_public_features(board, player)]
-    return compute_count_victory_points(board, player) / 10
+    return compute_count_public_victory_points(board, player) / 10
     #return predict_model(machine, features)
 end
 

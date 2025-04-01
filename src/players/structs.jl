@@ -41,6 +41,7 @@ function MutatedEmpathRobotPlayer(team::Symbol, mutation::Dict, io_config::IoCon
     MutatedEmpathRobotPlayer(
     Player(team), 
     try_load_model_from_csv(get_tree(), io_config.model, io_config.features), 
+    nothing,
     mutation,
     io_config)
 end

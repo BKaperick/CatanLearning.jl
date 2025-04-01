@@ -7,8 +7,6 @@ using BenchmarkTools
 # Suppress all normal logs
 logger = ConsoleLogger(stderr, Logging.Warn)
 old = global_logger(logger)
-@warn "old logger $old"
-@warn "new logger $logger"
 
 #using Catan
 import Catan
@@ -18,6 +16,7 @@ import Catan: Player, PlayerPublicView, PlayerType, RobotPlayer, DefaultRobotPla
 #include("../apis/player_api.jl")
 include("constants.jl")
 include("structs.jl")
+include("learning/production_model.jl")
 include("players/structs.jl")
 include("helpers.jl")
 include("mutation_rule_library.jl")
@@ -139,8 +138,10 @@ logger = ConsoleLogger(stderr, Logging.Warn)
 old = global_logger(logger)
 
 if length(ARGS) > 0
-    FEATURES_FILE = "features_$(ARGS[1]).csv"
+    global FEATURES_FILE = "features_$(ARGS[1]).csv"
     println("Setting global features file to $FEATURES_FILE")
     run(Catan.DefaultRobotPlayer)
+else
+    global FEATURES_FILE = "features_$(rand(1:100_000)).csv"
 end
 end

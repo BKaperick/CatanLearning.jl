@@ -5,6 +5,11 @@ using DataFrames
 import DataFramesMeta as DFM
 using DelimitedFiles
 
+function create_new_model(label, features_file)
+    tree = get_tree()
+    serialize_model_from_csv_features(tree, label, features_file)
+end
+
 function load_tree_model()
     @load RandomForestClassifier pkg=BetaML verbosity=0
 end
@@ -28,25 +33,26 @@ function load_model_from_csv(model_file_name)::Machine
     return machine(model_file_name)
 end
 
-function train_model_from_csv(tree, csv_name="$(@__DIR__)../../features.csv")
+function train_model_from_csv(tree, label::Symbol, csv_name="$(@__DIR__)../../features.csv")
     println("training from csv")
     # Load data
     data, header = readdlm(csv_name, ',', header=true)
     df = DataFrame(data, vec(header))
-    coerce!(df, :WonGame => Multiclass{2})
-    df = DFM.@transform(df, :WonGame)
+    coerce!(df, label => Multiclass{2})
+    select!(df, Not([:WonGame, :CountVictoryPoint]))
+    df = DFM.@transform(df, :HasMostPoints)
     df, df_test = partition(df, 0.7, rng=123)
     
     # Fit model machine to data
-    y, X = unpack(df, ==(:WonGame));
+    y, X = unpack(df, ==(label));
     mach = machine(tree, X, y)
     Base.invokelatest(fit!, mach)
 
     return mach
 end
 
-function serialize_model_from_csv_features(tree, csv_name)
-    mach = train_model_from_csv(tree, csv_name)
+function serialize_model_from_csv_features(tree, label, csv_name)
+    mach = train_model_from_csv(tree, label, csv_name)
     MLJ.save("$(DATA_DIR)/model.jls", mach)
     return mach
 end
