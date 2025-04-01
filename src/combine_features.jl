@@ -24,9 +24,13 @@ for file in csv_files
 end
 
 combined_df = DataFrame()
+df = DataFrame()
 for file in csv_files
     println(file)
     df = CSV.read(joinpath(folder_path, file), DataFrame)
+    if "CountVictoryPoint_1" in names(df)
+        select!(df, Not([:CountVictoryPoint_1]));
+    end
     append!(combined_df, df)
 end
 

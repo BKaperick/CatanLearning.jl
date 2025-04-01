@@ -77,6 +77,17 @@ function run_validation()
     run(player_constructors)
 end
 
+function run_validation_ml()
+    global_logger(logger)
+    player_constructors = Dict([
+        :Blue => (mutation) -> EmpathRobotPlayer(:Blue), 
+        :Green => (mutation) -> Catan.DefaultRobotPlayer(:Green), 
+        :Cyan => (mutation) -> Catan.DefaultRobotPlayer(:Cyan), 
+        :Yellow => (mutation) -> Catan.DefaultRobotPlayer(:Yellow)
+    ])
+    run(player_constructors)
+end
+
 function run_explore()
 
     master_state_to_value = read_values_file(IoConfig().values)::Dict{UInt64, Float64}
@@ -102,7 +113,7 @@ function run(player_constructors::Dict)
     # Number of maps to generate
     # Number of epochs (1 epoch is M*N games) to run
     #tourney = Tournament(2, 2, 2, :Sequential)
-    tourney = Tournament(100, 1000, 1, :Sequential)
+    tourney = Tournament(100, 2, 1, :Sequential)
     #tourney = Tournament(20,8,20, :FiftyPercentWinnerStays)
     #tourney = Tournament(5,4,10, :SixtyPercentWinnerStays)
     if any([typeof(c(Dict())) <: MutatedEmpathRobotPlayer for (t,c) in collect(player_constructors)])
@@ -130,8 +141,8 @@ function run_benchmark(player_type)
     players = collect(values(team_to_player))
      
     winners = init_winners(teams)
-    do_tournament_one_game!(winners, players, map_file)
-    #@benchmark do_tournament_one_game!($winners, $players, $map_file)
+    #do_tournament_one_game!(winners, players, map_file)
+    @benchmark do_tournament_one_game!($winners, $players, $map_file)
 end
 
 logger = ConsoleLogger(stderr, Logging.Warn)

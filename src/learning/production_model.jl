@@ -39,6 +39,7 @@ function train_model_from_csv(tree, label::Symbol, csv_name="$(@__DIR__)../../fe
     data, header = readdlm(csv_name, ',', header=true)
     df = DataFrame(data, vec(header))
     coerce!(df, label => Multiclass{2})
+    # Don't use label columns in training
     select!(df, Not([:WonGame, :CountVictoryPoint]))
     df = DFM.@transform(df, :HasMostPoints)
     df, df_test = partition(df, 0.7, rng=123)

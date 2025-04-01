@@ -37,7 +37,6 @@ end
 
 function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, player::Player, actions::Set{Symbol})::Vector{AbstractActionSet}
 
-    println("Get legal action sets for $actions")
     main_action_set = ActionSet(:Deterministic)
     action_sets = Vector{AbstractActionSet}([])
     
@@ -48,6 +47,7 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
         end
     end
     if :ConstructSettlement in actions
+        # TODO doesnt work on first turn
         candidates = BoardApi.get_admissible_settlement_locations(board, player.team)
         for coord in candidates
             push!(main_action_set.actions, Action(:ConstructSettlement, (g, b, p) -> construct_settlement(b, p.player, coord), coord))
@@ -113,7 +113,7 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
                 # Here, we have one ActionSet per set of parameters
                 action_set = ActionSet{SampledAction}(:PlaceRobber)
                 resources = get_estimated_resources(board, players, victim)
-                for r in resources
+                for r in keys(resources)
                     push!(action_set.actions, 
                           SampledAction(
                                  Symbol("$(r)"), 
@@ -220,16 +220,26 @@ end
 
 function analyze_and_aggregate_action_sets(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, action_sets::Vector{AbstractActionSet})::Action
     best_actions = ActionSet(:SecondRound)
+
+    # Enriches the inner actions with `win_proba` and `features` properties
     analyze_actions!(board, players, player, action_sets)
     for (i,set) in enumerate(action_sets)
+
+        # Aggregate chooses the best action from each set, and pushes it into the best_actions set
         push!(best_actions.actions, aggregate(set))
     end
+
+    if length(best_actions.actions) == 0
+        println("No actions to choose for best round: $action_sets")
+        #@warn "No actions to choose for best round:" # $action_sets"
+    end
+
+    # Aggregate chooses the best action from the `best_actions` set
     return aggregate(best_actions)
 end
 
 function analyze_actions!(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, action_sets::Vector{AbstractActionSet})
     for (i,set) in enumerate(action_sets)
-        println("Analyzing set: $(typeof(set)) :: $(set.name)")
         for action in set.actions
             analyze_action!(action, board, players, player)
         end
@@ -242,11 +252,9 @@ end
 Identifies the best parameters to use for this action
 """
 function aggregate(set::ActionSet)::Action
-    #println("Aggregating $(set.name) with features $([(a.name, a.win_proba) for a in set.actions])")
     return argmax(a -> a.win_proba, set.actions)
 end
 function aggregate(set::ActionSet{SampledAction})::Action
-    println("Aggregating Sampled $(set.name) with features $([(a.name, a.win_proba) for a in set.actions])")
     avg_proba = sum([a.win_proba for a in set.actions]) / length(set.actions)
     # an ActionSet{SampledAction} contains only actions with the same func (they differ only in Sampling Func)
     # TODO some way to enforce this in the code?
@@ -275,7 +283,7 @@ function choose_do_action(board::Board, players::Vector{PlayerPublicView}, playe
     machine = player.machine
     current_features = compute_features(board, player.player)
     current_win_proba = predict_model(machine, current_features)
-    @info "$(inner_player(player).team) thinks his chance of winning is $(current_win_proba)"
+    @info "$(player.player.team) thinks his chance of winning is $(current_win_proba)"
     
     
     # TODO we could even make the "no-op" action and use that as a possibility?

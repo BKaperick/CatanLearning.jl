@@ -242,6 +242,7 @@ end
 function run_tests(neverend = false)
     test_action_interface()
     test_player_implementation(Catan.DefaultRobotPlayer)
+    test_player_implementation(EmpathRobotPlayer)
     test_player_implementation(MutatedEmpathRobotPlayer)
     test_player_implementation(TemporalDifferencePlayer)
     test_compute_features()

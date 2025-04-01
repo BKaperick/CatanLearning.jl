@@ -51,3 +51,8 @@ Interesting (and slightly suspicious) that only two fail on each of RF model and
 Player type | mean game time
 -|-
 Catan.DefaultRobotPlayer | 332 ms
+
+# Useful scripts
+From `CatanLearning.jl/` directory:
+`$julia --project -e "using CatanLearning; CatanLearning.create_new_model(:HasMostPoints, \"./data/features.csv\")"`
+will train a model using all the data in `./data/features.csv` with the label column `:HasMostPoints`.

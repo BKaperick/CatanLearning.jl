@@ -227,7 +227,7 @@ end
 function compute_features_and_labels(game, board, player::Player)::Vector{Pair{Symbol, Float64}}
     return vcat(compute_features(board, player),
     [
-        :CountVictoryPoint => compute_count_victory_points(board, player),
+        # :CountVictoryPoint => compute_count_victory_points(board, player),
         :HasMostPoints => compute_has_most_points(game, board, player),
         :WonGame => compute_won_game(board, player)
        ])
