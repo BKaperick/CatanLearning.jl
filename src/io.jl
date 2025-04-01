@@ -1,9 +1,6 @@
-"""
-function Catan.do_post_game_action(board::Board, players::Vector{PlayerType}, winner::Nothing)
-    println("in CL version 1")
-    return
+function Catan.do_post_game_action(game::Game, board::Board, players::Vector{PlayerType}, player::EmpathRobotPlayer, winner::Union{PlayerType, Nothing})
+    Catan.BoardApi.print_board(board)
 end
-"""
 function Catan.do_post_game_action(game::Game, board::Board, players::Vector{PlayerType}, player::Catan.DefaultRobotPlayer, winner::Union{PlayerType, Nothing})
     return write_features_file(game::Game, board::Board, players, player, winner)
 end

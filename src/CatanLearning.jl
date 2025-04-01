@@ -34,7 +34,7 @@ include("tournaments.jl")
 SAVE_GAME_TO_FILE = false
 #SAVEFILEIO = open(SAVEFILE, "a")
 
-global_logger(NullLogger())
+#global_logger(NullLogger())
 
 
 function run(T::MutatedEmpathRobotPlayer)
@@ -47,7 +47,8 @@ function run(T::MutatedEmpathRobotPlayer)
     run(player_constructors)
 end
 function run(T::Type)
-    global_logger(NullLogger())
+    #global_logger(logger)
+    #global_logger()
     player_constructors = Dict([
         :Blue => (mutation) -> T(:Blue), 
         :Green => (mutation) -> T(:Green), 
@@ -113,7 +114,7 @@ function run(player_constructors::Dict)
     # Number of maps to generate
     # Number of epochs (1 epoch is M*N games) to run
     #tourney = Tournament(2, 2, 2, :Sequential)
-    tourney = Tournament(100, 2, 1, :Sequential)
+    tourney = Tournament(1, 1, 1, :Sequential)
     #tourney = Tournament(20,8,20, :FiftyPercentWinnerStays)
     #tourney = Tournament(5,4,10, :SixtyPercentWinnerStays)
     if any([typeof(c(Dict())) <: MutatedEmpathRobotPlayer for (t,c) in collect(player_constructors)])
@@ -129,6 +130,7 @@ end
 
 #run_benchmark() => run_benchmark(Catan.DefaultRobotPlayer)
 function run_benchmark(player_type)
+    #global_logger(logger)
     map_file = "./data/benchmark_map.csv"
     map = Catan.generate_random_map(map_file)
     team_to_player = Dict([
