@@ -1,8 +1,10 @@
 data/state_values.csv
 data/features.csv
 data/old_features.csv
+data/benchmark_map.csv
 features*.csv
 test/data/*
 .CondaPkg
 .CondaPkg/*
 src/learning/.ipynb_checkpoints/
+
