@@ -42,43 +42,44 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
 
     actions = Dict([(p.name, p.admissible_args) for p in pre_actions])
     
-    if haskey(actions, :ConstructCity)
-        candidates = actions[:ConstructCity]
-        for coord in candidates
-            push!(main_action_set.actions, Action(:ConstructCity, (g, b, p) -> construct_city(g, b, p.player, coord), coord))
-        end
-    end
-    if haskey(actions, :ConstructSettlement)
-        candidates = actions[:ConstructSettlement]
-        for coord in candidates
-            push!(main_action_set.actions, Action(:ConstructSettlement, (g, b, p) -> construct_settlement(g, b, p.player, coord), coord))
-        end
-    end
-    if haskey(actions, :ConstructRoad)
-        candidates = actions[:ConstructRoad]
-        for coord in candidates
-            push!(main_action_set.actions, Action(:ConstructRoad, (g, b, p) -> construct_road(g, b, p.player, coord[1], coord[2]), coord[1], coord[2]))
+    # Deterministic PreActions are all quite easy to handle
+    for (action, candidates) in actions
+        for args in candidates
+            func! = nothing
+            if action == :ConstructCity
+                func! = (g, b, p) -> construct_city(g, b, p.player, args)
+            elseif action == :ConstructSettlement
+                func! = (g, b, p) -> construct_settlement(g, b, p.player, args)
+            elseif action == :ConstructRoad
+                func! = (g, b, p) -> construct_road(g, b, p.player, args...)
+            elseif action == :PlayDevCard
+                func! = (g, b, p) -> do_play_devcard(g, b, g.players, p, args)
+            elseif action == :GainResource
+                func! = (g, b, p) -> Catan.harvest_one_resource!(b, p.player, args, 1)
+            elseif action == :LoseResource
+                func! = (g, b, p) -> Catan.PlayerApi.take_resource!(p.player, args)
+
+            # This is because `PreAction` currently doesn't have any way to represent an 
+            # action passing in candidates, and *then* sampling
+            elseif action == :PlaceRobber
+                break
+            else
+                @assert false "Found unexpected action $action while handling deterministic actions"
+            end
+            push!(main_action_set.actions, Action(action, func!, args))
         end
     end
 
     if haskey(actions, :BuyDevCard)
-        #candidates = actions[:ConstructRoad]
         action_set = ActionSet{SampledAction}(:BuyDevCard)
         estimated_remaining_devcards = get_estimated_remaining_devcards(board, players, player)
         sampled_devcards = Catan.random_sample_resources(estimated_remaining_devcards, 5, true)
         for card in sampled_devcards 
             push!(action_set.actions, SampledAction(:BuyDevCard, 
-                                             (g, b, p) -> deterministic_draw_devcard(g, p, card),
+                                             (g, b, p) -> deterministic_draw_devcard(g, b, p, card),
                                              (g, b, p) -> Catan.draw_devcard(g, p.player)))
         end
         push!(action_sets, action_set)
-    end
-
-    if haskey(actions, :PlayDevCard)
-        candidates = actions[:PlayDevCard]
-        for card in candidates
-            push!(main_action_set.actions, Action(:PlayDevCard, (g, b, p) -> do_play_devcard(g, b, g.players, p, card), card))
-        end
     end
     
     # TODO: this is leaking info from other players, since `propose_trade_goods` 
@@ -106,7 +107,7 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
     if haskey(actions, :PlaceRobber)
         candidates = actions[:PlaceRobber]
         # Get candidates
-        for candidate_tile = candidates #BoardApi.get_admissible_robber_tiles(board)
+        for candidate_tile = candidates
             candidate_victims = get_admissible_theft_victims(board, players, player, candidate_tile)
             for victim in candidate_victims
                 
@@ -136,30 +137,6 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
         end
     end
     
-    if haskey(actions, :GainResource)
-        #TODO reactivate when resources are moved to board
-        #resources = actions[:GainResource]
-        resources = collect(Catan.RESOURCES)
-        for (i,resource) in enumerate(resources)
-            push!(main_action_set.actions, 
-                Action(:GainResource, 
-                       (g, b, p) -> Catan.harvest_one_resource!(g, p.player, resource, 1),
-                       resource, 1
-                      ))
-        end
-    end
-    if haskey(actions, :LoseResource)
-        resources = actions[:LoseResource]
-        for (i,resource) in enumerate(resources)
-            push!(main_action_set.actions, 
-                Action(:LoseResource, 
-                       (g, b, p) -> Catan.PlayerApi.take_resource!(p.player, resource),
-                       resource
-                      )
-                )
-        end
-    end
-    
     if length(main_action_set.actions) > 0
         push!(action_sets, main_action_set)
     end
@@ -174,7 +151,7 @@ end
 function Catan.choose_road_location(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Vector{Tuple{Int, Int}}})::Union{Nothing,Vector{Tuple{Int, Int}}}
     cand_args = Set([Tuple(t) for t in candidates])
     best_action = get_best_action(board, players, player, Set([PreAction(:ConstructRoad, cand_args)]))
-    return collect(best_action.args)
+    return collect(best_action.args[1])
 end
 
 function Catan.choose_building_location(board, players::Vector{PlayerPublicView}, player, candidates, type)
@@ -190,7 +167,8 @@ function Catan.choose_place_robber(board::Board, players::Vector{PlayerPublicVie
 end
 
 function Catan.choose_resource_to_draw(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer)::Symbol
-    return get_best_action(board, players, player, Set([PreAction(:GainResource)])).args[1]
+    resources = collect(keys(Dict((k,v) for (k,v) in board.resources if v > 0)))
+    return get_best_action(board, players, player, Set([PreAction(:GainResource, resources)])).args[1]
 end
 
 function Catan.choose_one_resource_to_discard(board::Board, player::LearningPlayer)::Symbol
@@ -198,13 +176,14 @@ function Catan.choose_one_resource_to_discard(board::Board, player::LearningPlay
 end
 
 """
-    `deterministic_draw_devcard(game, player, card)`
+    `deterministic_draw_devcard(game, board, player, card)`
 
 Equivalent to `Catan.draw_devcard`, but we pass an explicit card choice, since we're sampling from our estimated
 card counts, rather than leaking info from the main one during the hypothetical games.
 """
-function deterministic_draw_devcard(game, player, card)
+function deterministic_draw_devcard(game, board, player, card)
     GameApi._draw_devcard(game, card)
+    BoardApi.pay_construction!(board, :DevelopmentCard)
     PlayerApi.buy_devcard(player.player, card)
 end
 

@@ -79,7 +79,7 @@ function run_validation()
 end
 
 function run_validation_ml()
-    global_logger(NullLogger())
+    #global_logger(NullLogger())
     #global_logger(logger)
     player_constructors = Dict([
         :Blue => (mutation) -> EmpathRobotPlayer(:Blue), 
