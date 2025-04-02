@@ -73,7 +73,7 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
     end
 
     if haskey(actions, :DoNothing)
-        push!(main_action_set.actions, Action(action, (g,b,p) -> (), ()))
+        push!(main_action_set.actions, Action(:DoNothing, (g,b,p) -> (), ()))
     end
     if haskey(actions, :BuyDevCard)
         action_set = ActionSet{SampledAction}(:BuyDevCard)
@@ -115,7 +115,7 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
         for candidate_tile = candidates
             candidate_victims = get_admissible_theft_victims(board, players, player, candidate_tile)
             for victim in candidate_victims
-                
+                victim_team = victim.team    
                 # Here, we have one ActionSet per set of parameters
                 action_set = ActionSet{SampledAction}(:PlaceRobber)
                 resources = get_estimated_resources(board, players, victim)
@@ -125,10 +125,10 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
                                  Symbol("$(r)"), 
                                  (g, b, p) -> do_robber_move_theft(
                                                                    b, g.players, 
-                                                                   p, victim, 
+                                                                   p, victim.team, 
                                                                    candidate_tile, 
                                                                    r), 
-                                 (g, b, p) -> do_robber_move_theft(b, p, victim, candidate_tile),
+                                 (g, b, p) -> do_robber_move_theft(b, p, victim.team, candidate_tile),
                                  victim, candidate_tile))
                 end
                 push!(action_sets, action_set)
@@ -263,9 +263,9 @@ function analyze_action!(action::AbstractAction, board::Board, players::Vector{P
     
     # Look ahead an additional `MAX_DEPTH` turns
 
-    MAX_DEPTH = 1
+    MAX_DEPTH = 0
     if depth < MAX_DEPTH
-        next_legal_actions = Catan.get_legal_actions(hypoth_game, hypoth_board, hypoth_player)
+        next_legal_actions = Catan.get_legal_actions(hypoth_game, hypoth_board, hypoth_player.player)
         action.win_proba = get_best_action(hypoth_board, players, hypoth_player, next_legal_actions, depth + 1).win_proba
     else
         # TODO Temporal difference algo does this later, so we don't want to double compute

@@ -51,7 +51,7 @@ function Catan.choose_next_action(board::Board, players::Vector{PlayerPublicView
     # TODO we have already computed win_proba, so we could pass it here and then 
     # we wouldn't need to worry in reinforcement-learning code about it
     action_sets = get_legal_action_sets(board, players, player.player, actions)
-    analyze_actions!(board, players, player, action_sets)
+    analyze_actions!(board, players, player, action_sets, 0)
     reachable_transitions = get_transitions(action_sets)::Vector{MarkovTransition}
 
     # TODO we just return the best reachable state based on the underlying model,
