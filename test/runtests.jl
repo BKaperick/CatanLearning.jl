@@ -221,7 +221,8 @@ function test_action_interface()
     player = players[1]
     board = read_map(SAMPLE_MAP)
 
-    actions = Set([:BuyDevCard, :ConstructRoad])
+    admissible_roads = BoardApi.get_admissible_road_locations(board, player.player.team)
+    actions = Set([PreAction(:BuyDevCard), PreAction(:ConstructRoad, admissible_roads)])
     BoardApi.build_settlement!(board, :Blue, (1,1))
 
     # Build road
@@ -248,7 +249,7 @@ function run_tests(neverend = false)
     test_compute_features()
     test_evolving_robot_game(neverend)
     #(fails_m, fails_r, fails_v) = test_feature_perturbations(features, features_increasing_good)
-    """
+    #=
     println("model fails with +3 perturbation $(length(fails_m[3])): $(fails_m[3])")
     println("model fails with +2 perturbation $(length(fails_m[2])): $(fails_m[2])")
     println("model fails with +1 perturbation $(length(fails_m[1])): $(fails_m[1])")
@@ -258,7 +259,7 @@ function run_tests(neverend = false)
     println("value fails with +3 perturbation: $(fails_v[3])")
     println("value fails with +2 perturbation: $(fails_v[2])")
     println("value fails with +1 perturbation: $(fails_v[1])")
-    """
+    =#
 end
 
 if length(ARGS) > 1

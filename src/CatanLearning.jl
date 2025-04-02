@@ -79,7 +79,8 @@ function run_validation()
 end
 
 function run_validation_ml()
-    global_logger(logger)
+    global_logger(NullLogger())
+    #global_logger(logger)
     player_constructors = Dict([
         :Blue => (mutation) -> EmpathRobotPlayer(:Blue), 
         :Green => (mutation) -> Catan.DefaultRobotPlayer(:Green), 
@@ -114,7 +115,7 @@ function run(player_constructors::Dict)
     # Number of maps to generate
     # Number of epochs (1 epoch is M*N games) to run
     #tourney = Tournament(2, 2, 2, :Sequential)
-    tourney = Tournament(1, 1, 1, :Sequential)
+    tourney = Tournament(100, 10000, 1, :Sequential)
     #tourney = Tournament(20,8,20, :FiftyPercentWinnerStays)
     #tourney = Tournament(5,4,10, :SixtyPercentWinnerStays)
     if any([typeof(c(Dict())) <: MutatedEmpathRobotPlayer for (t,c) in collect(player_constructors)])
@@ -151,6 +152,7 @@ logger = ConsoleLogger(stderr, Logging.Warn)
 old = global_logger(logger)
 
 if length(ARGS) > 0
+    global_logger(NullLogger())
     global FEATURES_FILE = "features_$(ARGS[1]).csv"
     println("Setting global features file to $FEATURES_FILE")
     run(Catan.DefaultRobotPlayer)

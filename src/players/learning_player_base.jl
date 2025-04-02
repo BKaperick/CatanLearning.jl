@@ -1,6 +1,6 @@
 #include("../learning/feature_computation.jl")
 #include("../learning/production_model.jl")
-using Catan: GameApi, BoardApi, PlayerApi, random_sample_resources, get_random_resource,
+using Catan: GameApi, BoardApi, PlayerApi, PreAction, random_sample_resources, get_random_resource,
              construct_city, construct_settlement, construct_road,
              do_play_devcard, propose_trade_goods, do_robber_move_theft,
             get_admissible_theft_victims, choose_road_location, trade_goods
@@ -76,10 +76,8 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
 
     if haskey(actions, :PlayDevCard)
         candidates = actions[:PlayDevCard]
-        for (card,cnt) in devcards
-            if card != :VictoryPoint
-                push!(main_action_set.actions, Action(:PlayDevCard, (g, b, p) -> do_play_devcard(g, b, g.players, p, card), card))
-            end
+        for card in candidates
+            push!(main_action_set.actions, Action(:PlayDevCard, (g, b, p) -> do_play_devcard(g, b, g.players, p, card), card))
         end
     end
     
@@ -139,7 +137,9 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
     end
     
     if haskey(actions, :GainResource)
-        resources = actions[:GainResource]
+        #TODO reactivate when resources are moved to board
+        #resources = actions[:GainResource]
+        resources = collect(Catan.RESOURCES)
         for (i,resource) in enumerate(resources)
             push!(main_action_set.actions, 
                 Action(:GainResource, 
@@ -150,140 +150,6 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
     end
     if haskey(actions, :LoseResource)
         resources = actions[:LoseResource]
-        for (i,resource) in enumerate(resources)
-            push!(main_action_set.actions, 
-                Action(:LoseResource, 
-                       (g, b, p) -> Catan.PlayerApi.take_resource!(p.player, resource),
-                       resource
-                      )
-                )
-        end
-    end
-    
-    if length(main_action_set.actions) > 0
-        push!(action_sets, main_action_set)
-    end
-
-    for set in action_sets
-        @assert length(set.actions) > 0 "$(set.name) is empty"
-    end
-    
-    return action_sets
-end
-
-function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, player::Player, actions::Set{Symbol})::Vector{AbstractActionSet}
-
-    main_action_set = ActionSet(:Deterministic)
-    action_sets = Vector{AbstractActionSet}([])
-    
-    if :ConstructCity in actions
-        candidates = BoardApi.get_admissible_city_locations(board, player.team)
-        for coord in candidates
-            push!(main_action_set.actions, Action(:ConstructCity, (g, b, p) -> construct_city(g, b, p.player, coord), coord))
-        end
-    end
-    if :ConstructSettlement in actions
-        # TODO doesnt work on first turn
-        candidates = BoardApi.get_admissible_settlement_locations(board, player.team)
-        for coord in candidates
-            push!(main_action_set.actions, Action(:ConstructSettlement, (g, b, p) -> construct_settlement(g, b, p.player, coord), coord))
-        end
-    end
-    if :ConstructRoad in actions
-        candidates = BoardApi.get_admissible_road_locations(board, player.team)
-        for coord in candidates
-            push!(main_action_set.actions, Action(:ConstructRoad, (g, b, p) -> construct_road(g, b, p.player, coord[1], coord[2]), coord[1], coord[2]))
-        end
-    end
-
-    if :BuyDevCard in actions
-        action_set = ActionSet{SampledAction}(:BuyDevCard)
-        estimated_remaining_devcards = get_estimated_remaining_devcards(board, players, player)
-        sampled_devcards = Catan.random_sample_resources(estimated_remaining_devcards, 5, true)
-        for card in sampled_devcards 
-            push!(action_set.actions, SampledAction(:BuyDevCard, 
-                                             (g, b, p) -> deterministic_draw_devcard(g, p, card),
-                                             (g, b, p) -> Catan.draw_devcard(g, p.player)))
-        end
-        push!(action_sets, action_set)
-    end
-
-    if :PlayDevCard in actions
-        devcards = PlayerApi.get_admissible_devcards(player)
-        for (card,cnt) in devcards
-            # TODO how do we stop them playing devcards first turn they get them?  Is this correctly handled in get_admissible call?
-            if card != :VictoryPoint
-                push!(main_action_set.actions, Action(:PlayDevCard, (g, b, p) -> do_play_devcard(g, b, g.players, p, card), card))
-            end
-        end
-    end
-    
-    # TODO: this is leaking info from other players, since `propose_trade_goods` 
-    # asks the other user if they would accept the offered trade, so the player 
-    # can check if the trade would be accepted before deciding to do it.
-    if :ProposeTrade in actions
-        #action_set = ActionSet{Action}(:ProposeTrade)
-        sampled = random_sample_resources(player.resources, 1)
-        rand_resource_from = [sampled...]
-        rand_resource_to = [get_random_resource()]
-        while rand_resource_to[1] == rand_resource_from[1]
-            rand_resource_to = [get_random_resource()]
-        end
-        push!(main_action_set.actions, 
-              Action(
-                     :ProposeTrade, 
-                     (g, b, p) -> propose_trade_goods(
-                                                      b, g.players, p, 
-                                                      rand_resource_from, 
-                                                      rand_resource_to), 
-                     rand_resource_from, rand_resource_to))
-        #push!(action_sets, action_set)
-    end
-
-    if :PlaceRobber in actions
-        # Get candidates
-        for candidate_tile = BoardApi.get_admissible_robber_tiles(board)
-            candidate_victims = get_admissible_theft_victims(board, players, player, candidate_tile)
-            for victim in candidate_victims
-                
-                # Here, we have one ActionSet per set of parameters
-                action_set = ActionSet{SampledAction}(:PlaceRobber)
-                resources = get_estimated_resources(board, players, victim)
-                for r in keys(resources)
-                    push!(action_set.actions, 
-                          SampledAction(
-                                 Symbol("$(r)"), 
-                                 (g, b, p) -> do_robber_move_theft(
-                                                                   b, g.players, 
-                                                                   p, victim, 
-                                                                   candidate_tile, 
-                                                                   r), 
-                                 (g, b, p) -> do_robber_move_theft(b, p, victim, candidate_tile),
-                                 victim, candidate_tile))
-                end
-                push!(action_sets, action_set)
-            end
-            if length(candidate_victims) == 0
-                push!(main_action_set.actions, 
-                      Action(:PlaceRobber, 
-                             (g, b, p) -> do_robber_move_theft(b, g.players, p, nothing, candidate_tile, nothing), 
-                             nothing, candidate_tile))
-            end
-        end
-    end
-    
-    if :GainResource in actions
-        resources = collect(keys(player.resources))
-        for (i,resource) in enumerate(resources)
-            push!(main_action_set.actions, 
-                Action(:GainResource, 
-                       (g, b, p) -> Catan.harvest_one_resource!(g, p.player, resource, 1),
-                       resource, 1
-                      ))
-        end
-    end
-    if :LoseResource in actions
-        resources = collect(keys(player.resources))
         for (i,resource) in enumerate(resources)
             push!(main_action_set.actions, 
                 Action(:LoseResource, 
@@ -319,16 +185,16 @@ function Catan.choose_building_location(board, players::Vector{PlayerPublicView}
     end
 end
 
-function Catan.choose_place_robber(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer)::Symbol
-    return get_best_action(board, players, player, Set([:PlaceRobber])).args[2]
+function Catan.choose_place_robber(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, candidate_tiles::Vector{Symbol})::Symbol
+    return get_best_action(board, players, player, Set([PreAction(:PlaceRobber, candidate_tiles)])).args[2]
 end
 
 function Catan.choose_resource_to_draw(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer)::Symbol
-    return get_best_action(board, players, player, Set([:GainResource])).args[1]
+    return get_best_action(board, players, player, Set([PreAction(:GainResource)])).args[1]
 end
 
 function Catan.choose_one_resource_to_discard(board::Board, player::LearningPlayer)::Symbol
-    return get_best_action(board, Vector{PlayerPublicView}([]), player, Set([:LoseResource])).args[1]
+    return get_best_action(board, Vector{PlayerPublicView}([]), player, Set([PreAction(:LoseResource, collect(keys(player.player.resources)))])).args[1]
 end
 
 """
@@ -399,6 +265,7 @@ function aggregate(set::ActionSet{SampledAction})::Action
     args = set.actions[1].args
     return Action(set.name, avg_proba, func!, args)
 end
+
 function analyze_action!(action::AbstractAction, board::Board, players::Vector{PlayerPublicView}, player::PlayerType)
     hypoth_board = deepcopy(board)
     hypoth_player = deepcopy(player)
@@ -435,7 +302,7 @@ Gathers all legal actions, and chooses the one that most increases the player's
 probability of victory, based on his `player.machine` model.  If no action 
 increases the probability of victory, then do nothing.
 """
-function Catan.choose_next_action(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, actions::Set{Symbol})::Tuple
+function Catan.choose_next_action(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, actions::Set{PreAction})::Tuple
     best_action = get_best_action(board, players, player, actions)
     if choose_do_action(board, players, player, best_action)
         return (best_action.args, best_action.func!)

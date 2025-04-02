@@ -7,11 +7,6 @@ struct Tournament
     mutation_rule::Symbol
 end
 
-mutable struct PreAction
-    name::Symbol
-    admissible_args::Set{Tuple}
-end
-
 abstract type AbstractActionSet end
 abstract type AbstractAction end
 mutable struct Action <: AbstractAction
