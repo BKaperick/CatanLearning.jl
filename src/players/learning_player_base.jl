@@ -58,7 +58,9 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
                 func! = (g, b, p) -> Catan.harvest_one_resource!(b, p.player, args, 1)
             elseif action == :LoseResource
                 func! = (g, b, p) -> Catan.PlayerApi.take_resource!(p.player, args)
-
+            elseif action == :AcceptTrade
+                func! = (g, b, p) -> Catan.trade_goods(args[1], p.player, args[2:end]...)
+            
             # This is because `PreAction` currently doesn't have any way to represent an 
             # action passing in candidates, and *then* sampling
             elseif action == :PlaceRobber
@@ -70,6 +72,9 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
         end
     end
 
+    if haskey(actions, :DoNothing)
+        push!(main_action_set.actions, Action(action, (g,b,p) -> (), ()))
+    end
     if haskey(actions, :BuyDevCard)
         action_set = ActionSet{SampledAction}(:BuyDevCard)
         estimated_remaining_devcards = get_estimated_remaining_devcards(board, players, player)
@@ -172,7 +177,8 @@ function Catan.choose_resource_to_draw(board::Board, players::Vector{PlayerPubli
 end
 
 function Catan.choose_one_resource_to_discard(board::Board, player::LearningPlayer)::Symbol
-    return get_best_action(board, Vector{PlayerPublicView}([]), player, Set([PreAction(:LoseResource, collect(keys(player.player.resources)))])).args[1]
+    resources = [r for (r,v) in player.player.resources if v > 0]
+    return get_best_action(board, Vector{PlayerPublicView}([]), player, Set([PreAction(:LoseResource, resources)])).args[1]
 end
 
 """
@@ -258,23 +264,6 @@ function analyze_action!(action::AbstractAction, board::Board, players::Vector{P
 end
 
 """    
-    `choose_do_action(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, best_action::Action)::Tuple`
-
-Decide whether this action is better than doing nothing.
-"""
-function choose_do_action(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, best_action::Action)::Bool
-    machine = player.machine
-    current_features = compute_features(board, player.player)
-    current_win_proba = predict_model(machine, current_features)
-    @info "$(player.player.team) thinks his chance of winning is $(current_win_proba)"
-    
-    
-    # TODO we could even make the "no-op" action and use that as a possibility?
-    # Only do an action if it will improve his estimated chances of winning
-    return best_action.win_proba > current_win_proba
-end
-
-"""    
     `choose_next_action(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, actions::Set{Symbol})`
 
 Gathers all legal actions, and chooses the one that most increases the player's 
@@ -283,11 +272,7 @@ increases the probability of victory, then do nothing.
 """
 function Catan.choose_next_action(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, actions::Set{PreAction})::Tuple
     best_action = get_best_action(board, players, player, actions)
-    if choose_do_action(board, players, player, best_action)
-        return (best_action.args, best_action.func!)
-    else
-        return (nothing, nothing)
-    end
+    return (best_action.args, best_action.func!)
 end
 
 function save_parameters_after_game_end(file::IO, game::Game, board::Board, players::Vector{PlayerType}, player::PlayerType, winner_team::Union{Nothing, Symbol})
@@ -296,14 +281,10 @@ function save_parameters_after_game_end(file::IO, game::Game, board::Board, play
     write(file, "$values\n")
 end
 
-"""
-TODO we need to incorporate this into choose_next_action so that the temporal difference player can treat it like a transition.  However, we need to update choose_next_action to allow parameters, not just a Set{Symbol} to denote the legal actions.  The idea is the new type `PreAction` which stores simple the name as well as a[n optional?] set of admissible args.
-"""
 function Catan.choose_accept_trade(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, from_player::Player, from_goods::Vector{Symbol}, to_goods::Vector{Symbol})::Bool
-    func! = (g,b,p) -> Catan.trade_goods(from_player, p.player, from_goods, to_goods)
-    action = Action(:AcceptTrade, func!, from_goods, to_goods)
-    analyze_action!(action, board, players, player)
-    return choose_do_action(board, players, player, action)
+    actions = Set([PreAction(:DoNothing), PreAction(:AcceptTrade, (from_player, from_goods, to_goods))])
+    best_action = get_best_action(board, players, player, actions)
+    return best_action.args !== nothing
 end
 
 """
