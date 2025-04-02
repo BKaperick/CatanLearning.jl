@@ -201,16 +201,16 @@ Gets the legal action functions for the player at this board state, and
 computes the feature vector for each resulting state.  This is a critical 
 helper function for all the machine-learning players.
 """
-function get_best_action(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, actions::Set)::Action
+function get_best_action(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, actions::Set, depth::Int=0)::Action
     action_sets = get_legal_action_sets(board, players, player.player, actions)
-    return analyze_and_aggregate_action_sets(board, players, player, action_sets)
+    return analyze_and_aggregate_action_sets(board, players, player, action_sets, depth)
 end
 
-function analyze_and_aggregate_action_sets(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, action_sets::Vector{AbstractActionSet})::Action
+function analyze_and_aggregate_action_sets(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, action_sets::Vector{AbstractActionSet}, depth::Int)::Action
     best_actions = ActionSet(:SecondRound)
 
     # Enriches the inner actions with `win_proba` and `features` properties
-    analyze_actions!(board, players, player, action_sets)
+    analyze_actions!(board, players, player, action_sets, depth)
     for (i,set) in enumerate(action_sets)
 
         # Aggregate chooses the best action from each set, and pushes it into the best_actions set
@@ -226,10 +226,10 @@ function analyze_and_aggregate_action_sets(board::Board, players::Vector{PlayerP
     return aggregate(best_actions)
 end
 
-function analyze_actions!(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, action_sets::Vector{AbstractActionSet})
+function analyze_actions!(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, action_sets::Vector{AbstractActionSet}, depth::Int)
     for (i,set) in enumerate(action_sets)
         for action in set.actions
-            analyze_action!(action, board, players, player)
+            analyze_action!(action, board, players, player, depth)
         end
     end
 end
@@ -251,15 +251,28 @@ function aggregate(set::ActionSet{SampledAction})::Action
     return Action(set.name, avg_proba, func!, args)
 end
 
-function analyze_action!(action::AbstractAction, board::Board, players::Vector{PlayerPublicView}, player::PlayerType)
+
+function analyze_action!(action::AbstractAction, board::Board, players::Vector{PlayerPublicView}, player::PlayerType, depth::Int)
     hypoth_board = deepcopy(board)
     hypoth_player = deepcopy(player)
     hypoth_game = Game([DefaultRobotPlayer(p.team) for p in players])
+    
     action.func!(hypoth_game, hypoth_board, hypoth_player)
     action.features = compute_features(hypoth_board, hypoth_player.player)
+
     
-    # TODO Temporal difference algo does this later, so we don't want to double compute
-    action.win_proba = predict_model(player.machine, action.features)
+    # Look ahead an additional `MAX_DEPTH` turns
+
+    MAX_DEPTH = 1
+    if depth < MAX_DEPTH
+        next_legal_actions = Catan.get_legal_actions(hypoth_game, hypoth_board, hypoth_player)
+        action.win_proba = get_best_action(hypoth_board, players, hypoth_player, next_legal_actions, depth + 1).win_proba
+    else
+        # TODO Temporal difference algo does this later, so we don't want to double compute
+        action.win_proba = predict_model(player.machine, action.features)
+    end
+
+
     return action
 end
 
