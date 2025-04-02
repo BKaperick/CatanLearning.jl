@@ -47,13 +47,13 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
         for args in candidates
             func! = nothing
             if action == :ConstructCity
-                func! = (g, b, p) -> construct_city(g, b, p.player, args)
+                func! = (g, b, p) -> construct_city(b, p.player, args)
             elseif action == :ConstructSettlement
-                func! = (g, b, p) -> construct_settlement(g, b, p.player, args)
+                func! = (g, b, p) -> construct_settlement(b, p.player, args)
             elseif action == :ConstructRoad
-                func! = (g, b, p) -> construct_road(g, b, p.player, args...)
+                func! = (g, b, p) -> construct_road(b, p.player, args...)
             elseif action == :PlayDevCard
-                func! = (g, b, p) -> do_play_devcard(g, b, g.players, p, args)
+                func! = (g, b, p) -> do_play_devcard(b, g.players, p, args)
             elseif action == :GainResource
                 func! = (g, b, p) -> Catan.harvest_one_resource!(b, p.player, args, 1)
             elseif action == :LoseResource
