@@ -49,13 +49,15 @@ end
 
 # Helper functions start with `get_`, and feature computers take (board, player) and start with `compute_`.
 
-register_feature(:SettlementCount,Int8,0,5)
+register_feature(:CountSettlement,Int8,0,5)
 compute_count_settlement = (board, player) -> get_building_count(board, :Settlement, player.team)
+register_feature(:CountTotalSettlement,Int8,0,9)
+compute_count_total_settlement = (board, player) -> get_building_count(board, :Settlement, player.team) + get_building_count(board, :City, player.team)
 
-register_feature(:CityCount, Int8, 0, 4)
+register_feature(:CountCity, Int8, 0, 4)
 compute_count_city = (board, player) -> get_building_count(board, :City, player.team)
 
-register_feature(:RoadCount, Int8, 0, 14)
+register_feature(:CountRoad, Int8, 0, 14)
 compute_count_road = (board, player) -> get_road_count(board, player.team)
 
 register_feature(:MaxRoadLength, Int8, 0, 14)
@@ -148,6 +150,7 @@ would leak private info about other players.
 function compute_features(board, player::Player)::Vector{Pair{Symbol, Float64}}
     return [
         :CountSettlement => compute_count_settlement(board, player),
+        :CountTotalSettlement => compute_count_total_settlement(board, player),
         :CountCity => compute_count_city(board, player),
         :CountRoad => compute_count_road(board, player),
 
@@ -188,6 +191,7 @@ end
 function compute_public_features(board, player::PlayerPublicView)::Vector{Pair{Symbol, Float64}}
     return [
         :CountSettlement => compute_count_settlement(board, player),
+        :CountTotalSettlement => compute_count_total_settlement(board, player),
         :CountCity => compute_count_city(board, player),
         :CountRoad => compute_count_road(board, player),
 
