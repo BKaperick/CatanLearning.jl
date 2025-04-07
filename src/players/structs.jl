@@ -4,16 +4,6 @@ import DataFramesMeta as DFM
 import Base: deepcopy,hash
 using DelimitedFiles
 
-function get_tree()
-    Tree = load_tree_model()
-    tree = Base.invokelatest(Tree,
-        max_depth = 6,
-        min_gain = 0.0,
-        min_records = 2,
-        max_features = 0,
-        splitting_criterion = BetaML.Utils.gini)
-end
-
 abstract type LearningPlayer <: RobotPlayer
 end
 
@@ -40,7 +30,7 @@ MutatedEmpathRobotPlayer(team::Symbol, mutation::Dict, features_file_name::Strin
 function MutatedEmpathRobotPlayer(team::Symbol, mutation::Dict, io_config::IoConfig) 
     MutatedEmpathRobotPlayer(
     Player(team), 
-    try_load_model_from_csv(get_tree(), io_config.model, io_config.features), 
+    try_load_model_from_csv(io_config),
     nothing,
     mutation,
     io_config)
@@ -67,8 +57,7 @@ TemporalDifferencePlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float
 
 function TemporalDifferencePlayer(TPolicy::Type, team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64})
     io_config = IoConfig()
-    tree = get_tree()
-    machine = try_load_model_from_csv(tree, io_config.model, io_config.features)
+    machine = try_load_model_from_csv(io_config)
     machine_public = nothing
 
     process = MarkovRewardProcess(0.5, 0.1, 0.5, 0.5, master_state_to_value, new_state_to_value)
@@ -98,7 +87,7 @@ function EmpathRobotPlayer(team::Symbol, features_file_name::String)
     io_config = IoConfig(features_file_name)
     EmpathRobotPlayer(
         Player(team), 
-        try_load_model_from_csv(get_tree(), io_config.model, io_config.features),
+        try_load_model_from_csv(io_config),
         nothing
     )
 end

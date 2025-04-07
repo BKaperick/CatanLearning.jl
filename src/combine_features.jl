@@ -1,7 +1,7 @@
 using CSV
 using DataFrames
 
-folder_path = "features"
+folder_path = "new_features"
 
 csv_files = readdir(folder_path)
 
@@ -24,15 +24,24 @@ for file in csv_files
 end
 
 combined_df = DataFrame()
-df = DataFrame()
+old_df = DataFrame()
+
 for file in csv_files
     println(file)
     df = CSV.read(joinpath(folder_path, file), DataFrame)
+    if ("CountTotalSettlement" in names(df))
+        append!(old_df, df)
+        println("Skipping $file")
+        continue
+    end
     if "CountVictoryPoint_1" in names(df)
         select!(df, Not([:CountVictoryPoint_1]));
     end
     append!(combined_df, df)
 end
+#transform!(combined_df, [:CountSettlement, :CountCity] => (a,b) -> a+b => :CountTotalSettlement)
+combined_df[!, :CountTotalSettlement] = combined_df[!, :CountSettlement] .+ combined_df[!, :CountCity]
+append!(combined_df, old_df)
 
 # Write the combined DataFrame to a new CSV file
-CSV.write("data/features.csv", combined_df)
+CSV.write("data/new_features.csv", combined_df)

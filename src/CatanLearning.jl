@@ -11,7 +11,10 @@ old = global_logger(logger)
 
 #using Catan
 import Catan
-import Catan: Player, PlayerPublicView, PlayerType, RobotPlayer, DefaultRobotPlayer, Game, Board
+import Catan: Player, PlayerPublicView, PlayerType, RobotPlayer, DefaultRobotPlayer, Game, Board, player_configs
+
+Catan.reset_configs("Configuration.toml", joinpath(@__DIR__, ".."))
+
 
 #include("../main.jl")
 #include("../apis/player_api.jl")

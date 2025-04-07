@@ -125,6 +125,7 @@ struct IoConfig
     values::String
 end
 
-IoConfig(features_file) = IoConfig("$(DATA_DIR)/model.jls", features_file, "$(DATA_DIR)/state_values.csv")
-IoConfig() = IoConfig("$(DATA_DIR)/features.csv")
+IoConfig() = IoConfig(player_configs)
+IoConfig(player_configs::Dict) = IoConfig(player_configs["MODEL"], player_configs["FEATURES"], player_configs["STATE_VALUES"])
+IoConfig(features_file::String) = IoConfig(player_configs["MODEL"], features_file, player_configs["STATE_VALUES"])
 
