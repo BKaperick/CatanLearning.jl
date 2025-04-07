@@ -12,7 +12,8 @@ test_player_implementation,
 setup_players,
 setup_and_do_robot_game,
 test_automated_game,
-SAVEFILE
+SAVEFILE,
+SAMPLE_MAP
 
 using CatanLearning:
     compute_features,
@@ -28,7 +29,8 @@ MaxRewardMarkovPolicy,
 TemporalDifferencePlayer,
 get_legal_action_sets
 
-SAMPLE_MAP = "../../CatanEngine.jl/data/sample.csv"
+#SAMPLE_MAP = "../../CatanEngine.jl/data/sample.csv"
+Catan.reset_test_data_dirs(@__DIR__)
 
 function test_evolving_robot_game(neverend)
     team_and_playertype = [
@@ -234,9 +236,6 @@ function test_action_interface()
     PlayerApi.give_resource!(player.player, :Grain)
     PlayerApi.give_resource!(player.player, :Stone)
     action_sets = get_legal_action_sets(board, PlayerPublicView.(players), player.player, actions)
-    for s in action_sets
-        println(s)
-    end
     #best_action = get_best_action(board, players, player, actions)
 end
 

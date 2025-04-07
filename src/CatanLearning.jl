@@ -5,7 +5,8 @@ using BenchmarkTools
 
 
 # Suppress all normal logs
-logger = ConsoleLogger(stderr, Logging.Warn)
+#logger = ConsoleLogger(stderr, Logging.Warn)
+logger = ConsoleLogger(stderr, Logging.Info)
 old = global_logger(logger)
 
 #using Catan
@@ -80,7 +81,7 @@ end
 
 function run_validation_ml()
     #global_logger(NullLogger())
-    #global_logger(logger)
+    global_logger(logger)
     player_constructors = Dict([
         :Blue => (mutation) -> EmpathRobotPlayer(:Blue), 
         :Green => (mutation) -> Catan.DefaultRobotPlayer(:Green), 
@@ -131,7 +132,7 @@ end
 
 #run_benchmark() => run_benchmark(Catan.DefaultRobotPlayer)
 function run_benchmark(player_type)
-    #global_logger(logger)
+    global_logger(NullLogger())
     map_file = "./data/benchmark_map.csv"
     map = Catan.generate_random_map(map_file)
     team_to_player = Dict([
@@ -145,7 +146,7 @@ function run_benchmark(player_type)
      
     winners = init_winners(teams)
     #do_tournament_one_game!(winners, players, map_file)
-    @benchmark do_tournament_one_game!($winners, $players, $map_file)
+    return @benchmark do_tournament_one_game!($winners, $players, $map_file)
 end
 
 logger = ConsoleLogger(stderr, Logging.Warn)
