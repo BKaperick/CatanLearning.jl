@@ -395,8 +395,10 @@ function predict_model(machine::Machine, features::Vector{Pair{Symbol, Float64}}
 
     # Returns the win probability (proba weight on category for label `1` indicating win)
     #return mode.(pred) #pdf(pred[1], 1)
-    return convert(Int64, pred[1])
-    #return pdf(pred[1], 1)
+    #return convert(Int64, pred[1])
+    #println(pred)
+    #println("Returning $(pdf(pred[1], 1))")
+    return pdf(pred[1], 1)
 end
 
 function _predict_model_feature_vec(machine::Machine, feature_vals::Vector{T}, header::Vector{String}) where T <: Number

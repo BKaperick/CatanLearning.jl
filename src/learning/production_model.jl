@@ -33,7 +33,7 @@ function try_load_model_from_csv(tree, model_file_name, features_file_name)::Mac
         return load_model_from_csv(model_file_name)
     end
     @info "Not found, let's try to train a new model from features in $features_file_name"
-    return serialize_model_from_csv_features(tree, features_file_name)
+    return serialize_model_from_csv_features(tree, features_file_name, model_file_name)
 end
 function load_model_from_csv(model_file_name)::Machine
     return machine(model_file_name)
@@ -62,15 +62,15 @@ function train_model_from_csv(tree, features_csv)
     y, X = unpack(df_train, ==(:WonGame));
     y_test, X_test = unpack(df_test, ==(:WonGame));
 
-
-    thresholded_tree = MLJ.BinaryThresholdPredictor(model=tree, threshold=0.5)
+    thresholded_tree = tree
+    #thresholded_tree = MLJ.BinaryThresholdPredictor(model=tree, threshold=0.5)
     ranges = [
-        range(thresholded_tree, :threshold, lower=0.1, upper=0.9),
-        range(thresholded_tree, :(model.min_purity_increase), lower=0.0, upper=0.9),
-        range(thresholded_tree, :(model.min_samples_leaf), lower=4, upper=10),
-        range(thresholded_tree, :(model.min_samples_split), lower=2, upper=8),
-        #range(thresholded_tree, :(model.partial_sampling), lower=0.5, upper=0.9),
-        range(thresholded_tree, :(model.n_trees), lower=5, upper=20)
+        #range(thresholded_tree, :threshold, lower=0.1, upper=0.9),
+        range(thresholded_tree, :(min_purity_increase), lower=0.0, upper=0.9),
+        range(thresholded_tree, :(min_samples_leaf), lower=4, upper=10),
+        range(thresholded_tree, :(min_samples_split), lower=2, upper=8),
+        #range(thresholded_tree, :(partial_sampling), lower=0.5, upper=0.9),
+        range(thresholded_tree, :(n_trees), lower=5, upper=20)
     ]
 
     tuned_tree = TunedModel(

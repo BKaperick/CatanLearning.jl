@@ -9,7 +9,7 @@ MAX_TURNS = 500
 
 [GameSettings]
 [PlayerSettings]
-MODEL = "./src/learning/model20250407.jls"
+MODEL = "./data/model.jls"
 FEATURES = "./data/features.csv"
 STATE_VALUES = "./data/state_values.csv"
 [PlayerSettings.blue]
