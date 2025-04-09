@@ -21,11 +21,10 @@ mutable struct MutatedEmpathRobotPlayer <: LearningPlayer
     io_config::IoConfig
 end
 
-MutatedEmpathRobotPlayer(team::Symbol) = MutatedEmpathRobotPlayer(
-    team, Dict{Symbol, AbstractFloat}(), IoConfig())
+MutatedEmpathRobotPlayer(team::Symbol, player_configs::Dict) = MutatedEmpathRobotPlayer(
+    team, Dict{Symbol, AbstractFloat}(), player_configs)
 
-MutatedEmpathRobotPlayer(team::Symbol, mutation::Dict) = MutatedEmpathRobotPlayer(team, mutation, IoConfig())
-MutatedEmpathRobotPlayer(team::Symbol, mutation::Dict, features_file_name::String) = MutatedEmpathRobotPlayer(team, IoConfig(features_file_name), mutation)
+MutatedEmpathRobotPlayer(team::Symbol, mutation::Dict, player_configs::Dict) = MutatedEmpathRobotPlayer(team, mutation, IoConfig(player_configs))
 
 function MutatedEmpathRobotPlayer(team::Symbol, mutation::Dict, io_config::IoConfig) 
     MutatedEmpathRobotPlayer(
@@ -46,17 +45,17 @@ mutable struct TemporalDifferencePlayer <: LearningPlayer
     current_state::Union{Nothing, MarkovState}
 end
 
-function TemporalDifferencePlayer(TPolicy::Type, team::Symbol)
-    io_config = IoConfig()
+function TemporalDifferencePlayer(TPolicy::Type, team::Symbol, player_configs::Dict)
+    io_config = IoConfig(player_configs)
     state_to_value = read_values_file(io_config.values)
-    return TemporalDifferencePlayer(TPolicy, team, state_to_value, Dict{UInt64, Float64}())
+    return TemporalDifferencePlayer(TPolicy, team, state_to_value, Dict{UInt64, Float64}(), player_configs)
 end
-TemporalDifferencePlayer(team::Symbol) = TemporalDifferencePlayer(MaxRewardMarkovPolicy, team::Symbol)
+TemporalDifferencePlayer(team::Symbol, player_configs::Dict) = TemporalDifferencePlayer(MaxRewardMarkovPolicy, team::Symbol, player_configs)
 
-TemporalDifferencePlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}) = TemporalDifferencePlayer(MaxRewardMarkovPolicy, team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64})
+TemporalDifferencePlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}) = TemporalDifferencePlayer(MaxRewardMarkovPolicy, team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, player_configs)
 
-function TemporalDifferencePlayer(TPolicy::Type, team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64})
-    io_config = IoConfig()
+function TemporalDifferencePlayer(TPolicy::Type, team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, player_configs)
+    io_config = IoConfig(player_configs)
     machine = try_load_model_from_csv(io_config)
     machine_public = nothing
 
@@ -82,9 +81,10 @@ function Base.deepcopy(player::TemporalDifferencePlayer)
     )
 end
 
-EmpathRobotPlayer(team::Symbol) = EmpathRobotPlayer(team, IoConfig().features)
-function EmpathRobotPlayer(team::Symbol, features_file_name::String) 
-    io_config = IoConfig(features_file_name)
+#EmpathRobotPlayer(team::Symbol, player_configs::Dict) = EmpathRobotPlayer(team, IoConfig(player_configs).features)
+#EmpathRobotPlayer(team::Symbol) = EmpathRobotPlayer(team, player_configs)
+function EmpathRobotPlayer(team::Symbol, player_configs::Dict) 
+    io_config = IoConfig(player_configs)
     EmpathRobotPlayer(
         Player(team), 
         try_load_model_from_csv(io_config),

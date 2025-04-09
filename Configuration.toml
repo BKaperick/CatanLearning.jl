@@ -1,10 +1,9 @@
-[UserSettings]
 DATA_DIR = "./data"
 SAVE_GAME_TO_FILE = false
 SAVE_FILE = "./data/savefile.txt"
 LOG_OUTPUT = "stderr"
 LOG_LEVEL = "Logging.Warn"
-PRINT_BOARD = false
+PRINT_BOARD = true
 MAX_TURNS = 500
 
 [GameSettings]

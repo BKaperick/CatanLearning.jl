@@ -21,7 +21,6 @@ teams = [
 logger = ConsoleLogger(stderr, Logging.Warn)
 global_logger(logger)
 SAVE_GAME_TO_FILE = false
-#SAVEFILEIO = open(SAVEFILE, "a")
 
 map_file = "$(Catan.DATA_DIR)/_temp_map_file.csv"
 winners = Dict{Union{Symbol, Nothing}, Int}([(k,0) for k in teams])
@@ -34,7 +33,7 @@ tourney = Tournament(10,2000,1, :Sequential)
 #tourney = Tournament(20,8,20, :FiftyPercentWinnerStays)
 #tourney = Tournament(5,4,10, :SixtyPercentWinnerStays)
 
-master_state_to_value = read_values_file(IoConfig().values)::Dict{UInt64, Float64}
+master_state_to_value = read_values_file(player_configs["STATE_VALUES"])::Dict{UInt64, Float64}
 new_state_to_value = Dict{UInt64, Float64}()
 start_length = length(master_state_to_value)
 println("starting states known: $(start_length)")
@@ -78,5 +77,5 @@ for k=1:tourney.epochs
 
 end
 
-return write_values_file(IoConfig().values, master_state_to_value)
+return write_values_file(player_configs["STATE_VALUES"], master_state_to_value)
 println(winners)

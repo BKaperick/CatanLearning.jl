@@ -11,10 +11,12 @@ old = global_logger(logger)
 
 #using Catan
 import Catan
-import Catan: Player, PlayerPublicView, PlayerType, RobotPlayer, DefaultRobotPlayer, Game, Board, player_configs
+import Catan: Player, PlayerPublicView, PlayerType, RobotPlayer, DefaultRobotPlayer, Game, Board, configs, player_configs, logger
 
-Catan.reset_configs("Configuration.toml", joinpath(@__DIR__, ".."))
-
+println("DIR: $(@__DIR__)")
+#global (configs, player_configs, logger) = Catan.reset_configs(joinpath(@__DIR__, "../Configuration.toml"))
+Catan.parse_configs("Configuration.toml")
+println("player configs in CL: $player_configs")
 
 #include("../main.jl")
 #include("../apis/player_api.jl")
@@ -35,10 +37,7 @@ include("io.jl")
 
 include("tournaments.jl")
 
-SAVE_GAME_TO_FILE = false
-#SAVEFILEIO = open(SAVEFILE, "a")
-
-#global_logger(NullLogger())
+Catan.configs["SAVE_GAME_TO_FILE"] = false
 
 
 function run(T::MutatedEmpathRobotPlayer)
@@ -66,7 +65,8 @@ function run()
     run(MutatedEmpathRobotPlayer)
 end
 function run_validation()
-    master_state_to_value = read_values_file(IoConfig().values)::Dict{UInt64, Float64}
+    global (configs, player_configs, logger) = Catan.parse_configs("Configuration.toml")
+    master_state_to_value = read_values_file(player_configs["STATE_VALUES"])::Dict{UInt64, Float64}
     new_state_to_value = Dict{UInt64, Float64}()
     player_constructors = Dict([
         :Blue => (mutation) -> TemporalDifferencePlayer(
@@ -96,7 +96,7 @@ end
 
 function run_explore()
 
-    master_state_to_value = read_values_file(IoConfig().values)::Dict{UInt64, Float64}
+    master_state_to_value = read_values_file(player_configs["STATE_VALUES"])::Dict{UInt64, Float64}
     new_state_to_value = Dict{UInt64, Float64}()
     player_maker = team -> ((mutation) -> TemporalDifferencePlayer(
                                     MaxRewardPlusValueMarkovPolicy, 

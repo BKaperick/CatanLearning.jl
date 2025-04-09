@@ -1,4 +1,5 @@
 using MLJ
+import Catan: player_configs
 
 struct Tournament
     games_per_map::Int
@@ -125,7 +126,10 @@ struct IoConfig
     values::String
 end
 
-IoConfig() = IoConfig(player_configs)
-IoConfig(player_configs::Dict) = IoConfig(player_configs["MODEL"], player_configs["FEATURES"], player_configs["STATE_VALUES"])
-IoConfig(features_file::String) = IoConfig(player_configs["MODEL"], features_file, player_configs["STATE_VALUES"])
+#IoConfig() = IoConfig(player_configs)
+function IoConfig(player_configs::Dict) 
+    println("pc loaded: $player_configs")
+    IoConfig(player_configs["MODEL"], player_configs["FEATURES"], player_configs["STATE_VALUES"])
+end
+#IoConfig(features_file::String) = IoConfig(player_configs["MODEL"], features_file, player_configs["STATE_VALUES"])
 
