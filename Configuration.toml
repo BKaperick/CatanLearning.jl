@@ -1,10 +1,16 @@
 DATA_DIR = "./data"
 SAVE_GAME_TO_FILE = false
 SAVE_FILE = "./data/savefile.txt"
-LOG_OUTPUT = "stderr"
-LOG_LEVEL = "Logging.Warn"
+LOG_OUTPUT = "./log_debug.txt"
+LOG_LEVEL = "Logging.Debug"
 PRINT_BOARD = true
 MAX_TURNS = 500
+
+[Tournament]
+GAMES_PER_MAP = 100
+MAPS_PER_EPOCH = 2
+# Number of epochs (1 epoch is M*N games) to run
+NUM_EPOCHS = 1
 
 [GameSettings]
 [PlayerSettings]

@@ -1,5 +1,5 @@
 using MLJ
-import Catan: player_configs
+#import Catan: player_configs
 
 struct Tournament
     games_per_map::Int
@@ -7,6 +7,9 @@ struct Tournament
     epochs::Int
     mutation_rule::Symbol
 end
+
+Tournament(configs::Dict, mutation_rule::Symbol) = Tournament(configs["Tournament"]["GAMES_PER_MAP"], configs["Tournament"]["MAPS_PER_EPOCH"], configs["Tournament"]["NUM_EPOCHS"], mutation_rule)
+
 
 abstract type AbstractActionSet end
 abstract type AbstractAction end
@@ -119,17 +122,3 @@ mutable struct MarkovRewardProcess <: AbstractMarkovRewardProcess
     state_to_value::Dict{UInt64, Float64}
     new_state_to_value::Dict{UInt64, Float64}
 end
-
-struct IoConfig
-    model::String
-    features::String
-    values::String
-end
-
-#IoConfig() = IoConfig(player_configs)
-function IoConfig(player_configs::Dict) 
-    println("pc loaded: $player_configs")
-    IoConfig(player_configs["MODEL"], player_configs["FEATURES"], player_configs["STATE_VALUES"])
-end
-#IoConfig(features_file::String) = IoConfig(player_configs["MODEL"], features_file, player_configs["STATE_VALUES"])
-

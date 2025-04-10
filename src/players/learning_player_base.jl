@@ -256,10 +256,11 @@ function analyze_action!(action::AbstractAction, board::Board, players::Vector{P
     hypoth_board = deepcopy(board)
     hypoth_player = deepcopy(player)
     hypoth_game = Game([DefaultRobotPlayer(p.team) for p in players])
-    
+    @debug "Entering hypoth game $(hypoth_game.unique_id)"
     action.func!(hypoth_game, hypoth_board, hypoth_player)
     action.features = compute_features(hypoth_board, hypoth_player.player)
 
+    @debug "Leaving hypoth game $(hypoth_game.unique_id)"
     
     # Look ahead an additional `MAX_DEPTH` turns
 

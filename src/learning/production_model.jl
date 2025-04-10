@@ -17,8 +17,8 @@ function load_tree_model()
     Base.invokelatest(Tree)
 end
 
-function try_load_model_from_csv(io_config::IoConfig)::Machine
-    try_load_model_from_csv(load_tree_model(), io_config.model,  io_config.features)
+function try_load_model_from_csv(player_configs::Dict)::Machine
+    try_load_model_from_csv(load_tree_model(), player_configs["MODEL"],  player_configs["FEATURES"])
 end
 """
     try_load_model_from_csv(tree, model_file_name, features_file_name)

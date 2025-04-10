@@ -1,13 +1,13 @@
-function do_tournament_one_epoch(tourney, teams, map_file, player_constructors::Dict)
-    do_tournament_one_epoch(tourney, teams, map_file, player_constructors, Dict([(t,Dict()) for t in teams]))
+function do_tournament_one_epoch(tourney, teams, configs, player_constructors::Dict)
+    do_tournament_one_epoch(tourney, teams, configs, player_constructors, Dict([(t,Dict()) for t in teams]))
 end
-function do_tournament_one_epoch(tourney, teams, map_file, player_constructors::Dict, team_to_mutation::Dict)
+function do_tournament_one_epoch(tourney, teams, configs, player_constructors::Dict, team_to_mutation::Dict)
     winners = init_winners(teams)
     for j=1:tourney.maps_per_epoch
-        map = Catan.generate_random_map(map_file)
+        map = Catan.generate_random_map(configs["MAP_FILE"])
         for i=1:tourney.games_per_map
             players = [player_constructors[t](team_to_mutation[t]) for t in teams]
-            winner = do_tournament_one_game!(winners, players, map_file)
+            winner = do_tournament_one_game!(winners, players, configs)
             g_num = (j - 1)*tourney.games_per_map + i
             if winner != nothing
                 println("winner: $(winner.player.team)")
@@ -22,10 +22,10 @@ function do_tournament_one_epoch(tourney, teams, map_file, player_constructors::
     order_winners(winners)
 end
 
-function do_tournament_one_game!(winners, players, map_file)
-    game = Game(players)
+function do_tournament_one_game!(winners, players, configs)
+    game = Game(players, configs)
     #println("starting game $(game.unique_id)")
-    _,winner = Catan.run(game, map_file)
+    _,winner = Catan.run(game)
 
     w = winner
     if winner != nothing
@@ -43,12 +43,12 @@ function init_winners(teams)
     return winners
 end
 
-function run_mutating_tournament(tourney, player_constructors)
+function run_mutating_tournament(tourney, player_constructors, configs)
     teams = collect(keys(player_constructors))
     team_to_mutation = Dict([(t, Dict()) for t in teams])
-    map_file = "$(Catan.DATA_DIR)/_temp_map_file.csv"
+    configs["MAP_FILE"] = "$(configs["DATA_DIR"])/_temp_map_file.csv"
     for k=1:tourney.epochs
-        ordered_winners = do_tournament_one_epoch(tourney, teams, map_file, player_constructors, team_to_mutation)
+        ordered_winners = do_tournament_one_epoch(tourney, teams, configs, player_constructors, team_to_mutation)
         println(ordered_winners)
         
         # Don't assign new mutations on the last one so we can see the results
@@ -62,12 +62,12 @@ function run_mutating_tournament(tourney, player_constructors)
     end
 end
 
-function run_tournament(tourney, player_constructors)
+function run_tournament(tourney, player_constructors, configs)
     teams = collect(keys(player_constructors))
-    map_file = "$(Catan.DATA_DIR)/_temp_map_file.csv"
+    configs["MAP_FILE"] = "$(configs["DATA_DIR"])/_temp_map_file.csv"
     winners = init_winners(teams)
     for k=1:tourney.epochs
-        epoch_winners = do_tournament_one_epoch(tourney, teams, map_file, player_constructors)
+        epoch_winners = do_tournament_one_epoch(tourney, teams, configs, player_constructors)
         #println(epoch_winners)
         for (w,n) in collect(epoch_winners)
             winners[w] += n
