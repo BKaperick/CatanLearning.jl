@@ -118,12 +118,24 @@ function run_explore()
     run(player_constructors, configs)
 end
 
+function run(create_players::Function, configs)
+    tourney = Tournament(configs, :Sequential)
+    run_tournament(tourney, create_players, configs)
+end
+function run(player_schemas::Vector, configs)
+    tourney = Tournament(configs, :Sequential)
+    run_tournament(tourney, player_schemas, configs)
+end
+
 function run(player_constructors::Dict, configs)
     tourney = Tournament(configs, :Sequential)
     if any([typeof(c(Dict())) <: MutatedEmpathRobotPlayer for (t,c) in collect(player_constructors)])
         run_mutating_tournament(tourney, player_constructors, configs)
     else
-        run_tournament(tourney, player_constructors, configs)
+        player_configs = configs["PlayerSettings"]
+        create_players_pre = [eval(Meta.parse("() -> $(p[1])($(p[2]), player_configs)")) for p in player_constructors]
+        create_players = () -> [p() for p in create_players_pre]
+        run_tournament(tourney, create_players, configs)
     end
 end
 
@@ -150,7 +162,7 @@ end
 
 logger = ConsoleLogger(stderr, Logging.Warn)
 old = global_logger(logger)
-
+#=
 if length(ARGS) > 0
     global_logger(NullLogger())
     global FEATURES_FILE = "features_$(ARGS[1]).csv"
@@ -159,4 +171,5 @@ if length(ARGS) > 0
 else
     global FEATURES_FILE = "features_$(rand(1:100_000)).csv"
 end
+=#
 end

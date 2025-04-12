@@ -8,7 +8,10 @@ struct Tournament
     mutation_rule::Symbol
 end
 
-Tournament(configs::Dict, mutation_rule::Symbol) = Tournament(configs["Tournament"]["GAMES_PER_MAP"], configs["Tournament"]["MAPS_PER_EPOCH"], configs["Tournament"]["NUM_EPOCHS"], mutation_rule)
+function Tournament(configs::Dict, mutation_rule::Symbol) 
+    println("$(configs["Tournament"]) $mutation_rule")
+    Tournament(configs["Tournament"]["GAMES_PER_MAP"], configs["Tournament"]["MAPS_PER_EPOCH"], configs["Tournament"]["NUM_EPOCHS"], mutation_rule)
+end
 
 
 abstract type AbstractActionSet end

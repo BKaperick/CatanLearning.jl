@@ -1,8 +1,8 @@
 function Catan.do_post_game_action(game::Game, board::Board, players::Vector{PlayerType}, player::EmpathRobotPlayer, winner::Union{PlayerType, Nothing})
-    Catan.BoardApi.print_board(board)
+    return write_features_file(game::Game, board::Board, players, player, winner)
 end
 function Catan.do_post_game_action(game::Game, board::Board, players::Vector{PlayerType}, player::Catan.DefaultRobotPlayer, winner::Union{PlayerType, Nothing})
-    return write_features_file(game::Game, board::Board, players, player, winner)
+    Catan.BoardApi.print_board(board)
 end
 
 function do_post_game_action(game::Game, board::Board, players::Vector{PlayerType}, player::TemporalDifferencePlayer, winner::Union{PlayerType, Nothing})
@@ -69,7 +69,7 @@ function write_values_file(values_file::String, state_to_value)
 end
 
 function write_features_file(game::Game, board::Board, players, player::PlayerType, winner::Union{PlayerType, Nothing}) 
-    file = open(FEATURES_FILE, "a")
+    file = open(game.configs["PlayerSettings"]["FEATURES"], "a")
     _write_feature_file_header(file, game, board, player)
     if winner == nothing
         save_parameters_after_game_end(file, game, board, players, player, nothing)

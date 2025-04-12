@@ -255,11 +255,11 @@ end
 function analyze_action!(action::AbstractAction, board::Board, players::Vector{PlayerPublicView}, player::PlayerType, depth::Int)
     hypoth_board = deepcopy(board)
     hypoth_player = deepcopy(player)
-    hypoth_game = Game([DefaultRobotPlayer(p.team) for p in players])
+    hypoth_game = Game([DefaultRobotPlayer(p.team) for p in players], board.configs)
     @debug "Entering hypoth game $(hypoth_game.unique_id)"
     action.func!(hypoth_game, hypoth_board, hypoth_player)
     action.features = compute_features(hypoth_board, hypoth_player.player)
-
+    
     @debug "Leaving hypoth game $(hypoth_game.unique_id)"
     
     # Look ahead an additional `MAX_DEPTH` turns

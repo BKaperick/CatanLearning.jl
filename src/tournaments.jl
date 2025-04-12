@@ -2,11 +2,21 @@ function do_tournament_one_epoch(tourney, teams, configs, player_constructors::D
     do_tournament_one_epoch(tourney, teams, configs, player_constructors, Dict([(t,Dict()) for t in teams]))
 end
 function do_tournament_one_epoch(tourney, teams, configs, player_constructors::Dict, team_to_mutation::Dict)
+    create_players = () -> [player_constructors[t](team_to_mutation[t]) for t in teams]
+end
+function do_tournament_one_epoch(tourney, teams, configs, players_schema::Vector)
+    #player_configs = configs["PlayerSettings"]
+    players = Catan.get_known_players()
+    println(players)
+    f = () -> [players[p[1]](Symbol(p[2]), configs) for p in players_schema]
+    do_tournament_one_epoch(tourney, teams, configs, f)
+end
+function do_tournament_one_epoch(tourney, teams, configs, create_players::Function)
     winners = init_winners(teams)
     for j=1:tourney.maps_per_epoch
         map = Catan.generate_random_map(configs["MAP_FILE"])
         for i=1:tourney.games_per_map
-            players = [player_constructors[t](team_to_mutation[t]) for t in teams]
+            players = create_players()
             winner = do_tournament_one_game!(winners, players, configs)
             g_num = (j - 1)*tourney.games_per_map + i
             if winner != nothing
@@ -44,7 +54,7 @@ function init_winners(teams)
 end
 
 function run_mutating_tournament(tourney, player_constructors, configs)
-    teams = collect(keys(player_constructors))
+    teams = configs["TEAMS"]
     team_to_mutation = Dict([(t, Dict()) for t in teams])
     configs["MAP_FILE"] = "$(configs["DATA_DIR"])/_temp_map_file.csv"
     for k=1:tourney.epochs
@@ -62,12 +72,25 @@ function run_mutating_tournament(tourney, player_constructors, configs)
     end
 end
 
-function run_tournament(tourney, player_constructors, configs)
-    teams = collect(keys(player_constructors))
+function run_tournament(tourney, player_schemas::Vector, configs)
+    println(player_schemas[1])
+    teams = [Symbol(t) for t in configs["TEAMS"]]
     configs["MAP_FILE"] = "$(configs["DATA_DIR"])/_temp_map_file.csv"
     winners = init_winners(teams)
     for k=1:tourney.epochs
-        epoch_winners = do_tournament_one_epoch(tourney, teams, configs, player_constructors)
+        epoch_winners = do_tournament_one_epoch(tourney, teams, configs, player_schemas)
+        #println(epoch_winners)
+        for (w,n) in collect(epoch_winners)
+            winners[w] += n
+        end
+    end
+end
+function run_tournament(tourney, create_players::Function, configs)
+    teams = [Symbol(t) for t in configs["TEAMS"]]
+    configs["MAP_FILE"] = "$(configs["DATA_DIR"])/_temp_map_file.csv"
+    winners = init_winners(teams)
+    for k=1:tourney.epochs
+        epoch_winners = do_tournament_one_epoch(tourney, teams, configs, create_players)
         #println(epoch_winners)
         for (w,n) in collect(epoch_winners)
             winners[w] += n

@@ -92,3 +92,5 @@ end
 inner_player(player::EmpathRobotPlayer)::Player = p -> p.player
 inner_player(player::MutatedEmpathRobotPlayer)::Player = p -> p.player
 inner_player(player::TemporalDifferencePlayer)::Player = p -> p.player
+
+Catan.add_player_to_register("EmpathRobotPlayer", (t,c) -> EmpathRobotPlayer(t,c))
