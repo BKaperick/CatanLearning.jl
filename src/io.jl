@@ -83,7 +83,7 @@ end
 function _write_feature_file_header(file::IO, game::Game, board::Board, player::PlayerType)
     features = compute_features_and_labels(game, board, player.player)
     header = join([get_csv_friendly(f[1]) for f in features], ",")
-    if filesize(FEATURES_FILE) == 0
+    if filesize(game.configs["PlayerSettings"]["FEATURES"]) == 0
         write(file, "$header\n")
     end
 end

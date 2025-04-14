@@ -12,3 +12,4 @@ MAX_TURNS = 500
 MODEL = "./data/model.jls"
 FEATURES = "./data/features.csv"
 STATE_VALUES = "./data/state_values.csv"
+SEARCH_DEPTH = 1

@@ -5,12 +5,13 @@ function do_tournament_one_epoch(tourney, teams, configs, player_constructors::D
     create_players = () -> [player_constructors[t](team_to_mutation[t]) for t in teams]
 end
 function do_tournament_one_epoch(tourney, teams, configs, players_schema::Vector)
-    #player_configs = configs["PlayerSettings"]
     players = Catan.get_known_players()
     println(players)
+
     f = () -> [players[p[1]](Symbol(p[2]), configs) for p in players_schema]
     do_tournament_one_epoch(tourney, teams, configs, f)
 end
+
 function do_tournament_one_epoch(tourney, teams, configs, create_players::Function)
     winners = init_winners(teams)
     for j=1:tourney.maps_per_epoch

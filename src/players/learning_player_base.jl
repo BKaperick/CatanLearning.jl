@@ -3,7 +3,7 @@
 using Catan: GameApi, BoardApi, PlayerApi, PreAction, random_sample_resources, get_random_resource,
              construct_city, construct_settlement, construct_road,
              do_play_devcard, propose_trade_goods, do_robber_move_theft,
-            get_admissible_theft_victims, choose_road_location, trade_goods
+            get_admissible_theft_victims, choose_road_location, trade_goods, choose_building_location
 
 using Catan: choose_next_action, choose_who_to_trade_with,
              choose_place_robber, do_post_action_step, 
@@ -60,6 +60,8 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
                 func! = (g, b, p) -> Catan.PlayerApi.take_resource!(p.player, args)
             elseif action == :AcceptTrade
                 func! = (g, b, p) -> Catan.trade_goods(args[1], p.player, args[2:end]...)
+            #elseif action == :DoNothing
+            #    func! = (g,b,p) -> ()
             
             # This is because `PreAction` currently doesn't have any way to represent an 
             # action passing in candidates, and *then* sampling
@@ -73,7 +75,7 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
     end
 
     if haskey(actions, :DoNothing)
-        push!(main_action_set.actions, Action(:DoNothing, (g,b,p) -> (), ()))
+        push!(main_action_set.actions, Action(:DoNothing, Returns(nothing), ()))
     end
     if haskey(actions, :BuyDevCard)
         action_set = ActionSet{SampledAction}(:BuyDevCard)
@@ -159,11 +161,12 @@ function Catan.choose_road_location(board::Board, players::Vector{PlayerPublicVi
     return collect(best_action.args[1])
 end
 
-function Catan.choose_building_location(board, players::Vector{PlayerPublicView}, player, candidates, type)
-    if type == :City
-        return get_best_action(board, players, player, Set([PreAction(:ConstructCity, candidates)])).args
+function Catan.choose_building_location(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Tuple{Int, Int}}, building_type::Symbol)::Union{Nothing,Tuple{Int,Int}}
+    @debug "learning player has $candidates as choices to build"
+    if building_type == :City
+        return get_best_action(board, players, player, Set([PreAction(:ConstructCity, candidates)])).args[1]
     else
-        return get_best_action(board, players, player, Set([PreAction(:ConstructSettlement, candidates)])).args
+        return get_best_action(board, players, player, Set([PreAction(:ConstructSettlement, candidates)])).args[1]
     end
 end
 
@@ -201,7 +204,7 @@ Gets the legal action functions for the player at this board state, and
 computes the feature vector for each resulting state.  This is a critical 
 helper function for all the machine-learning players.
 """
-function get_best_action(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, actions::Set, depth::Int=0)::Action
+function get_best_action(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, actions::Set, depth::Int=1)::Action
     action_sets = get_legal_action_sets(board, players, player.player, actions)
     return analyze_and_aggregate_action_sets(board, players, player, action_sets, depth)
 end
@@ -212,15 +215,10 @@ function analyze_and_aggregate_action_sets(board::Board, players::Vector{PlayerP
     # Enriches the inner actions with `win_proba` and `features` properties
     analyze_actions!(board, players, player, action_sets, depth)
     for (i,set) in enumerate(action_sets)
-
         # Aggregate chooses the best action from each set, and pushes it into the best_actions set
         push!(best_actions.actions, aggregate(set))
     end
-
-    if length(best_actions.actions) == 0
-        println("No actions to choose for best round: $action_sets")
-        #@warn "No actions to choose for best round:" # $action_sets"
-    end
+    @debug "$(player.player.team) is now choosing among $(join([a.name for a in best_actions.actions], ", "))"
 
     # Aggregate chooses the best action from the `best_actions` set
     return aggregate(best_actions)
@@ -228,6 +226,7 @@ end
 
 function analyze_actions!(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, action_sets::Vector{AbstractActionSet}, depth::Int)
     for (i,set) in enumerate(action_sets)
+        @debug "analyzing action set ($(length(set.actions)) actions): \n$(join(["$(a.name)($(a.args))" for a in set.actions], "\n"))"
         for action in set.actions
             analyze_action!(action, board, players, player, depth)
         end
@@ -255,19 +254,23 @@ end
 function analyze_action!(action::AbstractAction, board::Board, players::Vector{PlayerPublicView}, player::PlayerType, depth::Int)
     hypoth_board = deepcopy(board)
     hypoth_player = deepcopy(player)
-    hypoth_game = Game([DefaultRobotPlayer(p.team) for p in players], board.configs)
+    hypoth_game = Game([DefaultRobotPlayer(p.team, board.configs) for p in players], board.configs)
     @debug "Entering hypoth game $(hypoth_game.unique_id)"
+    main_logger = global_logger()
+    global_logger(NullLogger())
     action.func!(hypoth_game, hypoth_board, hypoth_player)
     action.features = compute_features(hypoth_board, hypoth_player.player)
+    global_logger(main_logger)
     
     @debug "Leaving hypoth game $(hypoth_game.unique_id)"
     
     # Look ahead an additional `MAX_DEPTH` turns
-
-    MAX_DEPTH = 0
-    if depth < MAX_DEPTH
+    
+    
+    if depth < player.player.configs["PlayerSettings"]["SEARCH_DEPTH"] 
         next_legal_actions = Catan.get_legal_actions(hypoth_game, hypoth_board, hypoth_player.player)
         action.win_proba = get_best_action(hypoth_board, players, hypoth_player, next_legal_actions, depth + 1).win_proba
+        @debug "after performing $(action.name), there are $(length(next_legal_actions)) possibilities"
     else
         # TODO Temporal difference algo does this later, so we don't want to double compute
         action.win_proba = predict_model(player.machine, action.features)
@@ -285,7 +288,9 @@ probability of victory, based on his `player.machine` model.  If no action
 increases the probability of victory, then do nothing.
 """
 function Catan.choose_next_action(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, actions::Set{PreAction})::Tuple
+    @info "$(player.player.team) considers $(collect(actions))"
     best_action = get_best_action(board, players, player, actions)
+    @info "$(player.player.team) chooses to $(best_action.name) $(best_action.args)"
     return (best_action.args, best_action.func!)
 end
 

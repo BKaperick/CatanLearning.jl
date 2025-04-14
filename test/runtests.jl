@@ -14,7 +14,7 @@ setup_and_do_robot_game,
 test_automated_game,
 configs,
 player_configs,
-logger,
+#logger,
 parse_configs
 
 using CatanLearning:
@@ -41,13 +41,13 @@ function test_evolving_robot_game(neverend, configs)
                           (:green, EmpathRobotPlayer),
                           (:red, MutatedEmpathRobotPlayer)
             ]
-    players = setup_players(team_and_playertype, configs["PlayerSettings"])
+    players = setup_players(team_and_playertype, configs)
     test_automated_game(neverend, players, configs)
 end
 
 function empath_player(configs)
     player = EmpathRobotPlayer(:red)
-    board = read_map(configs["MAP_FILE"])
+    board = read_map(configs)
     p = predict_model(player.machine, board, player)
     return player, board, p
 end
@@ -115,8 +115,8 @@ MAIN_DATA_DIR = "../data/"
 
 function test_compute_features(configs)
     #players = setup_players()
-    player = Catan.DefaultRobotPlayer(:Blue)
-    board = Catan.read_map(configs["MAP_FILE"])
+    player = Catan.DefaultRobotPlayer(:Blue, configs)
+    board = Catan.read_map(configs)
     compute_features(board, player.player)
 end
 
@@ -143,14 +143,14 @@ This tests that the value estimations behave as expected.  Each feature in `feat
 
 So this test applies one-at-a-time perturbations to the features, checking that the value changes in the correct direction.
 """
-function test_feature_perturbations(features, features_increasing_good, player_configs, max_perturbation = 3)
-    state_to_value = read_values_file(player_configs["STATE_VALUES"], 100)
+function test_feature_perturbations(features, features_increasing_good, configs, max_perturbation = 3)
+    state_to_value = read_values_file(configs["PlayerSettings"]["STATE_VALUES"], 100)
     
     feature_vec = generate_realistic_features(features)
     feature_values = [f[2] for f in feature_vec]
 
-    value_player = TemporalDifferencePlayer(MaxValueMarkovPolicy, :Blue, state_to_value, Dict{UInt64, Float64}(), player_configs)
-    reward_player = TemporalDifferencePlayer(MaxRewardMarkovPolicy, :Red, state_to_value, Dict{UInt64, Float64}(), player_configs)
+    value_player = TemporalDifferencePlayer(MaxValueMarkovPolicy, :Blue, state_to_value, Dict{UInt64, Float64}(), configs)
+    reward_player = TemporalDifferencePlayer(MaxRewardMarkovPolicy, :Red, state_to_value, Dict{UInt64, Float64}(), configs)
     
     current_state = MarkovState(feature_vec)
     value = get_state_optimizing_quantity(value_player.process, value_player.policy, current_state)
@@ -210,20 +210,20 @@ function test_choose_road_location(configs)
     player1 = DefaultRobotPlayer(:Test1)
     player2 = DefaultRobotPlayer(:Test2)
     players = Vector{PlayerType}([player1, player2])
-    board = read_map(configs["MAP_FILE"])
+    board = read_map(configs)
     player1 = DefaultRobotPlayer(:Test1)
 choose_road_location(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Vector{Tuple{Int, Int}}})
 end
 
 function test_action_interface(configs)
     players = Vector{PlayerType}([
-                                  EmpathRobotPlayer(:Blue, configs["PlayerSettings"]), 
-                                  DefaultRobotPlayer(:Test2),
-                                  DefaultRobotPlayer(:Test3),
-                                  DefaultRobotPlayer(:Test4),
+                                  EmpathRobotPlayer(:Blue, configs), 
+                                  DefaultRobotPlayer(:Test2, configs),
+                                  DefaultRobotPlayer(:Test3, configs),
+                                  DefaultRobotPlayer(:Test4, configs),
                                  ])
     player = players[1]
-    board = read_map(configs["MAP_FILE"])
+    board = read_map(configs)
 
     admissible_roads = BoardApi.get_admissible_road_locations(board, player.player.team)
     actions = Set([PreAction(:BuyDevCard), PreAction(:ConstructRoad, admissible_roads)])
@@ -250,7 +250,7 @@ function run_tests(neverend = false)
     test_player_implementation(TemporalDifferencePlayer, configs)
     test_compute_features(configs)
     test_evolving_robot_game(neverend, configs)
-    (fails_m, fails_r, fails_v) = test_feature_perturbations(features, features_increasing_good, player_configs)
+    (fails_m, fails_r, fails_v) = test_feature_perturbations(features, features_increasing_good, configs)
     println("model fails with +3 perturbation $(length(fails_m[3])): $(fails_m[3])")
     println("model fails with +2 perturbation $(length(fails_m[2])): $(fails_m[2])")
     println("model fails with +1 perturbation $(length(fails_m[1])): $(fails_m[1])")

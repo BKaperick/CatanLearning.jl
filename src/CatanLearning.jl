@@ -37,6 +37,10 @@ include("io.jl")
 
 include("tournaments.jl")
 
+function __init__()
+    Catan.add_player_to_register("EmpathRobotPlayer", (t,c) -> EmpathRobotPlayer(t,c))
+end
+
 Catan.configs["SAVE_GAME_TO_FILE"] = false
 
 
