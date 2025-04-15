@@ -188,7 +188,7 @@ function compute_features(board, player::Player)::Vector{Pair{Symbol, Float64}}
        ]
 end
 
-function compute_public_features(board, player::PlayerPublicView)::Vector{Pair{Symbol, Float64}}
+function compute_public_features(board, player)::Vector{Pair{Symbol, Float64}}
     return [
         :CountSettlement => compute_count_settlement(board, player),
         :CountTotalSettlement => compute_count_total_settlement(board, player),
@@ -228,13 +228,18 @@ function compute_public_features(board, player::PlayerPublicView)::Vector{Pair{S
        ]
 end
 
-function compute_features_and_labels(game, board, player::Player)::Vector{Pair{Symbol, Float64}}
-    return vcat(compute_features(board, player),
-    [
+function compute_labels(game, board, player::Player)::Vector{Pair{Symbol, Float64}}
+    return [
         # :CountVictoryPoint => compute_count_victory_points(board, player),
         :HasMostPoints => compute_has_most_points(game, board, player),
         :WonGame => compute_won_game(board, player)
-       ])
+       ]
+end
+function compute_features_and_labels(game, board, player::Player)::Vector{Pair{Symbol, Float64}}
+    return vcat(compute_features(board, player), compute_labels(game, board, player))
+end
+function compute_public_features_and_labels(game, board, player::Player)::Vector{Pair{Symbol, Float64}}
+    return vcat(compute_public_features(board, player), compute_labels(game, board, player))
 end
 
 function get_building_count(board, building_type, team)

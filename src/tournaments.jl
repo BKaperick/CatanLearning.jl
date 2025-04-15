@@ -21,9 +21,9 @@ function do_tournament_one_epoch(tourney, teams, configs, create_players::Functi
             winner = do_tournament_one_game!(winners, players, configs)
             g_num = (j - 1)*tourney.games_per_map + i
             if winner != nothing
-                println("winner: $(winner.player.team)")
+                #println("winner: $(winner.player.team)")
             else
-                println("winner: noone")
+                #println("winner: noone")
             end
             if g_num % 10 == 0
                 println("Game $(g_num) / $(tourney.maps_per_epoch * tourney.games_per_map)")

@@ -294,12 +294,6 @@ function Catan.choose_next_action(board::Board, players::Vector{PlayerPublicView
     return (best_action.args, best_action.func!)
 end
 
-function save_parameters_after_game_end(file::IO, game::Game, board::Board, players::Vector{PlayerType}, player::PlayerType, winner_team::Union{Nothing, Symbol})
-    features = compute_features_and_labels(game, board, player.player)
-    values = join([get_csv_friendly(f[2]) for f in features], ",")
-    write(file, "$values\n")
-end
-
 function Catan.choose_accept_trade(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, from_player::Player, from_goods::Vector{Symbol}, to_goods::Vector{Symbol})::Bool
     actions = Set([PreAction(:DoNothing), PreAction(:AcceptTrade, (from_player, from_goods, to_goods))])
     best_action = get_best_action(board, players, player, actions)
