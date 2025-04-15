@@ -140,6 +140,8 @@ register_feature(:WonGame, Bool, 0, 1)
 compute_won_game = (board, player) -> Catan.GameRunner.get_total_vp_count(board, player) >= 10
 register_feature(:HasMostPoints, Bool, 0, 1)
 compute_has_most_points = (game, board, player) -> get_has_most_points(game, board, player)
+register_feature(:NumberOfTurns, Int32, 0, 10_000)
+compute_number_of_turns = (game, board, player) -> game.turn_num
 
 """
     `compute_features(board, player::Player)::Vector{Pair{Symbol, Float64}}`
@@ -232,6 +234,7 @@ function compute_labels(game, board, player::Player)::Vector{Pair{Symbol, Float6
     return [
         # :CountVictoryPoint => compute_count_victory_points(board, player),
         :HasMostPoints => compute_has_most_points(game, board, player),
+        :NumberOfTurns => compute_number_of_turns(game, board, player),
         :WonGame => compute_won_game(board, player)
        ]
 end
