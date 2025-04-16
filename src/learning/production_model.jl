@@ -15,12 +15,12 @@ function load_tree_model()
     return (@load RandomForestClassifier pkg=DecisionTree verbosity=0)()
 end
 
-function try_load_model_from_csv(player_configs::Dict)::Machine
-    try_load_model_from_csv(player_configs["MODEL"],  player_configs["FEATURES"])
+function try_load_model_from_csv(team::Symbol, configs::Dict)::Machine
+    try_load_model_from_csv(get_player_config(configs, team, "MODEL"),  get_player_config(configs, team, "FEATURES"))
 end
 
-function try_load_public_model_from_csv(player_configs::Dict)::Machine
-    try_load_model_from_csv(player_configs["PUBLIC_MODEL"],  player_configs["PUBLIC_FEATURES"])
+function try_load_public_model_from_csv(team::Symbol, configs::Dict)::Machine
+    try_load_model_from_csv(get_player_config(configs, team, "PUBLIC_MODEL"),  get_player_config(configs, team, "PUBLIC_FEATURES"))
 end
 
 """
@@ -43,8 +43,8 @@ function load_model_from_csv(model_file_name)::Machine
     return machine(model_file_name)
 end
 
-train_model_from_csv(tree, player_configs::Dict) = train_model_from_csv(tree, player_configs["FEATURES"])
-train_public_model_from_csv(tree, player_configs::Dict) = train_model_from_csv(tree, player_configs["PUBLIC_FEATURES"])
+#train_model_from_csv(tree, team, configs::Dict) = train_model_from_csv(tree, get_player_config(player_configs["FEATURES"])
+#train_public_model_from_csv(tree, team, configs::Dict) = train_model_from_csv(tree, player_configs["PUBLIC_FEATURES"])
 
 function coerce_feature_types!(df)
     for (name,feat) in CatanLearning.feature_library

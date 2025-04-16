@@ -27,8 +27,8 @@ MutatedEmpathRobotPlayer(team::Symbol, configs::Dict) = MutatedEmpathRobotPlayer
 function MutatedEmpathRobotPlayer(team::Symbol, mutation::Dict, configs::Dict) 
     MutatedEmpathRobotPlayer(
     Player(team, configs), 
-    try_load_model_from_csv(configs["PlayerSettings"]),
-    try_load_public_model_from_csv(configs["PlayerSettings"]),
+    try_load_model_from_csv(team, configs),
+    try_load_public_model_from_csv(team, configs),
     mutation,
     configs)
 end
@@ -44,7 +44,7 @@ mutable struct TemporalDifferencePlayer <: LearningPlayer
 end
 
 function TemporalDifferencePlayer(TPolicy::Type, team::Symbol, configs::Dict)
-    state_to_value = read_values_file(configs["PlayerSettings"]["STATE_VALUES"])
+    state_to_value = read_values_file(get_player_config(configs, "STATE_VALUES", team))
     return TemporalDifferencePlayer(TPolicy, team, state_to_value, Dict{UInt64, Float64}(), configs)
 end
 TemporalDifferencePlayer(team::Symbol, configs::Dict) = TemporalDifferencePlayer(MaxRewardMarkovPolicy, team::Symbol, configs)
@@ -52,8 +52,8 @@ TemporalDifferencePlayer(team::Symbol, configs::Dict) = TemporalDifferencePlayer
 TemporalDifferencePlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}) = TemporalDifferencePlayer(MaxRewardMarkovPolicy, team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, player_configs)
 
 function TemporalDifferencePlayer(TPolicy::Type, team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs)
-    machine = try_load_model_from_csv(configs["PlayerSettings"])
-    machine_public = try_load_public_model_from_csv(configs["PlayerSettings"])
+    machine = try_load_model_from_csv(team, configs)
+    machine_public = try_load_public_model_from_csv(team, configs)
 
     process = MarkovRewardProcess(0.5, 0.1, 0.5, 0.5, master_state_to_value, new_state_to_value)
     policy = TPolicy(machine)
@@ -81,8 +81,8 @@ function EmpathRobotPlayer(team::Symbol, configs::Dict)
     println(configs)
     EmpathRobotPlayer(
         Player(team, configs), 
-        try_load_model_from_csv(configs["PlayerSettings"]),
-        try_load_public_model_from_csv(configs["PlayerSettings"])
+        try_load_model_from_csv(team, configs),
+        try_load_public_model_from_csv(team, configs)
     )
 end
 

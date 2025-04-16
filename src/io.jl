@@ -70,12 +70,12 @@ function write_values_file(values_file::String, state_to_value)
 end
 
 function write_main_features_file(game::Game, board::Board, players, player::PlayerType, winner::Union{PlayerType, Nothing}) 
-    file_name = game.configs["PlayerSettings"]["FEATURES"]
+    file_name = get_player_config(game.configs, "FEATURES", player.player.team)
     _write_features_file(game, board, players, player, winner, file_name)
 end
 
 function write_public_features_file(game::Game, board::Board, players, player::PlayerType, winner::Union{PlayerType, Nothing}) 
-    file_name = game.configs["PlayerSettings"]["PUBLIC_FEATURES"]
+    file_name = get_player_config(game.configs, "PUBLIC_FEATURES", player.player.team)
     _write_features_file(game, board, players, player, winner, file_name)
 end
 

@@ -267,7 +267,7 @@ function analyze_action!(action::AbstractAction, board::Board, players::Vector{P
     # Look ahead an additional `MAX_DEPTH` turns
     
     
-    if depth < player.player.configs["PlayerSettings"]["SEARCH_DEPTH"] 
+    if depth < get_player_config(player, "SEARCH_DEPTH")
         next_legal_actions = Catan.get_legal_actions(hypoth_game, hypoth_board, hypoth_player.player)
         action.win_proba = get_best_action(hypoth_board, players, hypoth_player, next_legal_actions, depth + 1).win_proba
         @debug "after performing $(action.name), there are $(length(next_legal_actions)) possibilities"
@@ -308,6 +308,6 @@ Use public model (stored in `player.player.machine_public`) to choose a trading 
 function Catan.choose_who_to_trade_with(board::Board, player::LearningPlayer, players::Vector{PlayerPublicView})::Symbol
     return argmin(p -> predict_public_model(player.machine_public, board, p), players).team
 end
-
 #function Catan.choose_monopoly_resource(board::Board, players::Vector{PlayerPublicView}, player::RobotPlayer)::Symbol
 #end
+
