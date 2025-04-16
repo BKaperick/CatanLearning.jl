@@ -10,13 +10,13 @@ end
 mutable struct EmpathRobotPlayer <: LearningPlayer 
     player::Player
     machine::Machine
-    machine_public::Union{Nothing, Machine}
+    machine_public::Machine
 end
 
 mutable struct MutatedEmpathRobotPlayer <: LearningPlayer 
     player::Player
     machine::Machine
-    machine_public::Union{Nothing, Machine}
+    machine_public::Machine
     mutation::Dict #{Symbol, AbstractFloat}
     configs::Dict
 end
@@ -28,7 +28,7 @@ function MutatedEmpathRobotPlayer(team::Symbol, mutation::Dict, configs::Dict)
     MutatedEmpathRobotPlayer(
     Player(team, configs), 
     try_load_model_from_csv(configs["PlayerSettings"]),
-    nothing,
+    try_load_public_model_from_csv(configs["PlayerSettings"]),
     mutation,
     configs)
 end
@@ -36,7 +36,7 @@ end
 mutable struct TemporalDifferencePlayer <: LearningPlayer
     player::Player
     machine::Machine
-    machine_public::Union{Nothing, Machine}
+    machine_public::Machine
     process::MarkovRewardProcess
     policy::MarkovPolicy
     configs::Dict
@@ -53,7 +53,7 @@ TemporalDifferencePlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float
 
 function TemporalDifferencePlayer(TPolicy::Type, team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs)
     machine = try_load_model_from_csv(configs["PlayerSettings"])
-    machine_public = nothing
+    machine_public = try_load_public_model_from_csv(configs["PlayerSettings"])
 
     process = MarkovRewardProcess(0.5, 0.1, 0.5, 0.5, master_state_to_value, new_state_to_value)
     policy = TPolicy(machine)

@@ -1,4 +1,3 @@
-DATA_DIR = "./data"
 SAVE_GAME_TO_FILE = false
 SAVE_FILE = "./data/savefile.txt"
 LOG_OUTPUT = "./log_debug.txt"

@@ -12,9 +12,7 @@ function create_new_model(features_file, model_path)
 end
 
 function load_tree_model()
-    #@load RandomForestClassifier pkg=BetaML verbosity=0
-    Tree = @load RandomForestClassifier pkg=DecisionTree verbosity=0
-    Base.invokelatest(Tree)
+    return (@load RandomForestClassifier pkg=DecisionTree verbosity=0)()
 end
 
 function try_load_model_from_csv(player_configs::Dict)::Machine
@@ -76,7 +74,7 @@ function load_typed_features_from_csv(features_csv)
     return df
 end
 
-function train_model_from_csv(tree, features_csv)
+function train_model_from_csv(tree, features_csv; num_tuning_iterations = 100)
     df = load_typed_features_from_csv(features_csv)
     df_train, df_test = partition(df, 0.7, rng=123)
 
@@ -100,7 +98,7 @@ function train_model_from_csv(tree, features_csv)
         resampling=CV(nfolds=6),
         range = ranges,
         measure = MatthewsCorrelation(),
-        n=100
+        n=num_tuning_iterations
     )
     
     tuned_mach = machine(tuned_tree, X, y) |> MLJ.fit!

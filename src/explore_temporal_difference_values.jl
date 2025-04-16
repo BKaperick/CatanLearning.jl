@@ -22,7 +22,7 @@ logger = ConsoleLogger(stderr, Logging.Warn)
 global_logger(logger)
 SAVE_GAME_TO_FILE = false
 
-map_file = "$(Catan.DATA_DIR)/_temp_map_file.csv"
+#map_file = "$(Catan.DATA_DIR)/_temp_map_file.csv"
 winners = Dict{Union{Symbol, Nothing}, Int}([(k,0) for k in teams])
 winners[nothing] = 0
 

@@ -111,8 +111,6 @@ features_increasing_good = Set([
 ])
 
 
-MAIN_DATA_DIR = "../data/"
-
 function test_compute_features(configs)
     #players = setup_players()
     player = Catan.DefaultRobotPlayer(:Blue, configs)

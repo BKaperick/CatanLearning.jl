@@ -375,15 +375,9 @@ end
 """
     `predict_public_model(machine::Machine, board::Board, player::PlayerPublicView)`
 
-Eventually, train a simple model that uses publicly-available info (defined in `compute_public_features`)
-and use that.  For now, we just do a linear scaling of public VP count 
+Either a trained simple model that uses publicly-available info (defined in `compute_public_features`)
+and use that, or we use the naive model, i.e., we just do a linear scaling of public VP count 
 """
-function predict_public_model(machine::Nothing, board::Board, player::PlayerPublicView)
-    features = [x for x in compute_public_features(board, player)]
-    return compute_count_public_victory_points(board, player) / 10
-    #return predict_model(machine, features)
-end
-
 function predict_public_model(machine::Machine, board::Board, player::PlayerPublicView)
     features = [x for x in compute_public_features(board, player)]
     return predict_model(machine, features)
@@ -403,16 +397,11 @@ function predict_model(machine::Machine, features::Vector{Pair{Symbol, Float64}}
     pred = _predict_model_feature_vec(machine, feature_vals, header)
 
     # Returns the win probability (proba weight on category for label `1` indicating win)
-    #return mode.(pred) #pdf(pred[1], 1)
-    #return convert(Int64, pred[1])
-    #println(pred)
-    #println("Returning $(pdf(pred[1], 1))")
     return pdf(pred[1], 1)
 end
 
 function _predict_model_feature_vec(machine::Machine, feature_vals::Vector{T}, header::Vector{String}) where T <: Number
     data = reshape(feature_vals, 1, length(feature_vals))
-    #header = names(machine.data[1])
     df = DataFrame(data, vec(header), makeunique=true)
     return Base.invokelatest(MLJ.predict, machine, df)
 end
