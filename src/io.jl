@@ -89,21 +89,23 @@ function _write_features_file(game::Game, board::Board, players, player::PlayerT
     features = compute_features_and_labels(game, board, player.player)
     header = join([get_csv_friendly(f[1]) for f in features], ",")
     values = join([get_csv_friendly(f[2]) for f in features], ",")
-    _write_feature_file_header(file_name, file, game, board, player, header)
-    write(file, "$values\n")
-    close(file)
-end
-
-function _write_feature_file_header(file_name::String, file::IO, game::Game, board::Board, player::PlayerType, header)
+    
     if filesize(file_name) == 0
         write(file, "$header\n")
+    elseif game.turn_num == 1
+        data, existing_header = readdlm(file_name, ',', header=true)
+        @assert length(existing_header) == length(features) "Mismatch between existing feature schema in $file_name of length $(length(existing_header)) and current schema of length $(length(features))"
     end
+    
+    write(file, "$values\n")
+    close(file)
 end
 
 get_csv_friendly(value::Nothing) = "\"\""
 get_csv_friendly(value::AbstractString) = "\"$value\""
 get_csv_friendly(value::Int) = string(value)
 get_csv_friendly(value::Int8) = string(value)
+get_csv_friendly(value::Int32) = string(value)
 get_csv_friendly(value::AbstractFloat) = rstrip(rstrip(string(value), '0'),'.')
 get_csv_friendly(value::Bool) = string(Int(value))
 get_csv_friendly(value::Symbol) = "\"$value\""

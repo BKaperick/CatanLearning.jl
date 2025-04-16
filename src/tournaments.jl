@@ -25,7 +25,7 @@ function do_tournament_one_epoch(tourney, teams, configs, create_players::Functi
             else
                 #println("winner: noone")
             end
-            if g_num % 10 == 0
+            if g_num % 100 == 0
                 println("Game $(g_num) / $(tourney.maps_per_epoch * tourney.games_per_map)")
             end
         end
@@ -79,6 +79,7 @@ function run_tournament(tourney, player_schemas::Vector, configs)
     configs["MAP_FILE"] = "$(configs["DATA_DIR"])/_temp_map_file.csv"
     winners = init_winners(teams)
     for k=1:tourney.epochs
+        println("epoch $k / $(tourney.epochs)")
         epoch_winners = do_tournament_one_epoch(tourney, teams, configs, player_schemas)
         #println(epoch_winners)
         for (w,n) in collect(epoch_winners)

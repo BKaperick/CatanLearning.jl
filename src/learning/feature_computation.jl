@@ -38,6 +38,7 @@ using DelimitedFiles
 struct Feature
     name::Symbol
     type::Type
+    #TODO add scitype as well for ML pipeline
     min::Float64
     max::Float64
 end
@@ -74,15 +75,15 @@ compute_sum_stone_dice_weight = (board, player) -> get_sum_resource_dice_weight(
 register_feature(:SumGrainDiceWeight, Int8, 4, 186)
 compute_sum_grain_dice_weight = (board, player) -> get_sum_resource_dice_weight(board, player.team, :Grain)
 
-register_feature(:PortWood, Int8, 0, 1)
+register_feature(:CountPortWood, Int8, 0, 1)
 compute_count_port_wood = (board, player) -> get_resource_port_count(board, player.team, :Wood)
-register_feature(:PortBrick, Int8, 0, 1)
+register_feature(:CountPortBrick, Int8, 0, 1)
 compute_count_port_brick = (board, player) -> get_resource_port_count(board, player.team, :Brick)
-register_feature(:PortPasture, Int8, 0, 1)
+register_feature(:CountPortPasture, Int8, 0, 1)
 compute_count_port_pasture = (board, player) -> get_resource_port_count(board, player.team, :Pasture)
-register_feature(:PortStone, Int8, 0, 1)
+register_feature(:CountPortStone, Int8, 0, 1)
 compute_count_port_stone = (board, player) -> get_resource_port_count(board, player.team, :Stone)
-register_feature(:PortGrain, Int8, 0, 1)
+register_feature(:CountPortGrain, Int8, 0, 1)
 compute_count_port_grain = (board, player) -> get_resource_port_count(board, player.team, :Grain)
 
 register_feature(:CountHandWood, Int8, 0, 20)
@@ -234,7 +235,7 @@ function compute_labels(game, board, player::Player)::Vector{Pair{Symbol, Float6
     return [
         # :CountVictoryPoint => compute_count_victory_points(board, player),
         :HasMostPoints => compute_has_most_points(game, board, player),
-        :NumberOfTurns => compute_number_of_turns(game, board, player),
+        #:NumberOfTurns => compute_number_of_turns(game, board, player),
         :WonGame => compute_won_game(board, player)
        ]
 end

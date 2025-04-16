@@ -18,32 +18,49 @@ function load_tree_model()
 end
 
 function try_load_model_from_csv(player_configs::Dict)::Machine
-    try_load_model_from_csv(load_tree_model(), player_configs["MODEL"],  player_configs["FEATURES"])
+    try_load_model_from_csv(player_configs["MODEL"],  player_configs["FEATURES"])
 end
+
+function try_load_public_model_from_csv(player_configs::Dict)::Machine
+    try_load_model_from_csv(player_configs["PUBLIC_MODEL"],  player_configs["PUBLIC_FEATURES"])
+end
+
 """
     try_load_model_from_csv(tree, model_file_name, features_file_name)
 
 If the serialized file exists, then load it.  If not, train a new model and 
 serialize it before returning it to caller.
 """
-function try_load_model_from_csv(tree, model_file_name, features_file_name)::Machine
+function try_load_model_from_csv(model_file_name, features_file_name)::Machine
     @info "Looking for model stored in $model_file_name"
     if isfile(model_file_name)
         @info "Found model stored in $model_file_name"
         return load_model_from_csv(model_file_name)
     end
     @info "Not found, let's try to train a new model from features in $features_file_name"
-    return serialize_model_from_csv_features(tree, features_file_name, model_file_name)
+    return serialize_model_from_csv_features(load_tree_model(), features_file_name, model_file_name)
 end
+
 function load_model_from_csv(model_file_name)::Machine
     return machine(model_file_name)
 end
 
-train_model_from_csv(tree) = train_model_from_csv(tree, player_configs["FEATURES"])
+train_model_from_csv(tree, player_configs::Dict) = train_model_from_csv(tree, player_configs["FEATURES"])
+train_public_model_from_csv(tree, player_configs::Dict) = train_model_from_csv(tree, player_configs["PUBLIC_FEATURES"])
 
-function train_model_from_csv(tree, features_csv)
+function coerce_feature_types!(df)
+    for (name,feat) in CatanLearning.feature_library
+        if string(name) in names(df)
+            df[!,name] = convert(Vector{feat.type}, df[!,name])
+        end
+    end
+    coerce!(df, :WonGame => OrderedFactor{2})
+end
+
+function load_typed_features_from_csv(features_csv)
     data, header = readdlm(features_csv, ',', header=true)
     df = DataFrame(data, vec(header))
+    coerce_feature_types!(df)
 
     select!(df, Not([
         :CountHandWood,
@@ -55,8 +72,12 @@ function train_model_from_csv(tree, features_csv)
         :CountVictoryPoint
         ]))
 
-    coerce!(df, :WonGame => Multiclass{2})
     df = DFM.@transform(df, :WonGame)
+    return df
+end
+
+function train_model_from_csv(tree, features_csv)
+    df = load_typed_features_from_csv(features_csv)
     df_train, df_test = partition(df, 0.7, rng=123)
 
     y, X = unpack(df_train, ==(:WonGame));
@@ -97,6 +118,11 @@ function serialize_model_from_csv_features(tree, csv_name, model_path)
     return mach
 end
 
+"""
+    `train_and_serialize_model(features_csv, output_path)`
+
+This is the access point for re-training a model based on new features or engine bug fixes.
+"""
 function train_and_serialize_model(features_csv, output_path)
     Tree = @load RandomForestClassifier pkg=DecisionTree verbosity=0
     tree = Base.invokelatest(Tree)

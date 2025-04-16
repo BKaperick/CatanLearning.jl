@@ -82,7 +82,7 @@ function EmpathRobotPlayer(team::Symbol, configs::Dict)
     EmpathRobotPlayer(
         Player(team, configs), 
         try_load_model_from_csv(configs["PlayerSettings"]),
-        nothing
+        try_load_public_model_from_csv(configs["PlayerSettings"])
     )
 end
 
