@@ -1,14 +1,21 @@
 SAVE_GAME_TO_FILE = true
 SAVE_FILE = "./data/savefile.txt"
 MAP_FILE = "./data/sample.csv"
-LOG_OUTPUT = "./data/oneoff_test_log.txt"
-LOG_LEVEL = "Logging.Info"
+#LOG_OUTPUT = "./data/oneoff_test_log.txt"
+LOG_OUTPUT = "stderr"
+LOG_LEVEL = "Logging.Debug"
 PRINT_BOARD = false
 MAX_TURNS = 500
 
 [GameSettings]
 [PlayerSettings]
 MODEL = "./data/model.jls"
+PUBLIC_MODEL = "./data/public_model.jls"
 FEATURES = "./data/features.csv"
+PUBLIC_FEATURES = "./data/public_features.csv"
 STATE_VALUES = "./data/state_values.csv"
 SEARCH_DEPTH = 1
+[PlayerSettings.blue]
+[PlayerSettings.cyan]
+[PlayerSettings.green]
+[PlayerSettings.yellow]

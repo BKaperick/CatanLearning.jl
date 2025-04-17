@@ -131,8 +131,6 @@ register_feature(:HasLargestArmy, Bool, 0, 1)
 compute_has_largest_army = (board, player) -> board.largest_army == player.team
 register_feature(:HasLongestRoad, Bool, 0, 1)
 compute_has_longest_road = (board, player) -> board.longest_road == player.team
-register_feature(:CountDevCardsVictoryPoint, Int8, 0, Catan.DEVCARD_COUNTS[:VictoryPoint])
-compute_has_largest_army
 register_feature(:CountVictoryPoint, Int8, 0, 10)
 compute_count_victory_points = (board, player) -> Catan.GameRunner.get_total_vp_count(board, player)
 register_feature(:CountVisibleVictoryPoint, Int8, 0, 10)
@@ -151,7 +149,7 @@ Compute features from public info, and used for inference.  Note, this *cannot* 
 would leak private info about other players.
 """
 function compute_features(board, player::Player)::Vector{Pair{Symbol, Float64}}
-    return [
+    raw_features = [
         :CountSettlement => compute_count_settlement(board, player),
         :CountTotalSettlement => compute_count_total_settlement(board, player),
         :CountCity => compute_count_city(board, player),
@@ -189,6 +187,7 @@ function compute_features(board, player::Player)::Vector{Pair{Symbol, Float64}}
         :HasLongestRoad => compute_has_longest_road(board, player),
         :CountVictoryPoint => compute_count_victory_points(board, player)
        ]
+    
 end
 
 function compute_public_features(board, player)::Vector{Pair{Symbol, Float64}}
@@ -403,5 +402,6 @@ end
 function _predict_model_feature_vec(machine::Machine, feature_vals::Vector{T}, header::Vector{String}) where T <: Number
     data = reshape(feature_vals, 1, length(feature_vals))
     df = DataFrame(data, vec(header), makeunique=true)
+    coerce_feature_types!(df)
     return Base.invokelatest(MLJ.predict, machine, df)
 end

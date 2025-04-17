@@ -71,22 +71,18 @@ end
 
 function write_main_features_file(game::Game, board::Board, players, player::PlayerType, winner::Union{PlayerType, Nothing}) 
     file_name = get_player_config(game.configs, "FEATURES", player.player.team)
-    _write_features_file(game, board, players, player, winner, file_name)
+    features = compute_features_and_labels(game, board, player.player)
+    _write_features_file(game, board, players, player, winner, file_name, features)
 end
 
 function write_public_features_file(game::Game, board::Board, players, player::PlayerType, winner::Union{PlayerType, Nothing}) 
     file_name = get_player_config(game.configs, "PUBLIC_FEATURES", player.player.team)
-    _write_features_file(game, board, players, player, winner, file_name)
-end
-
-function _write_features_file(game::Game, board::Board, players, player::PlayerType, winner::Union{PlayerType, Nothing}, file_name) 
-    file = open(file_name, "a")
     features = compute_public_features_and_labels(game, board, player.player)
-    _write_features_file(game, board, players, player, winner, file_name, file, features)
+    _write_features_file(game, board, players, player, winner, file_name, features)
 end
 
-function _write_features_file(game::Game, board::Board, players, player::PlayerType, winner::Union{PlayerType, Nothing}, file_name, file, features) 
-    features = compute_features_and_labels(game, board, player.player)
+function _write_features_file(game::Game, board::Board, players, player::PlayerType, winner::Union{PlayerType, Nothing}, file_name::String, features::Vector) 
+    file = open(file_name, "a")
     header = join([get_csv_friendly(f[1]) for f in features], ",")
     values = join([get_csv_friendly(f[2]) for f in features], ",")
     

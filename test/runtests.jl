@@ -213,6 +213,20 @@ function test_choose_road_location(configs)
 choose_road_location(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Vector{Tuple{Int, Int}}})
 end
 
+function test_empath_road_building(configs)
+    players = Vector{PlayerType}([
+                                  EmpathRobotPlayer(:Blue, configs), 
+                                  DefaultRobotPlayer(:Test2, configs),
+                                  DefaultRobotPlayer(:Test3, configs),
+                                  DefaultRobotPlayer(:Test4, configs),
+                                 ])
+    player = players[1]
+    board = read_map(configs)
+    
+    #BoardApi.build_settlement!(board, :Blue, (1,1))
+    Catan.do_road_building_action(board, PlayerPublicView.(players), player)
+end
+
 function test_action_interface(configs)
     players = Vector{PlayerType}([
                                   EmpathRobotPlayer(:Blue, configs), 
@@ -241,6 +255,7 @@ end
 
 function run_tests(neverend = false)
     (configs, player_configs, _) = parse_configs("Configuration.toml")
+    test_empath_road_building(configs)
     test_action_interface(configs)
     test_player_implementation(Catan.DefaultRobotPlayer, configs)
     test_player_implementation(EmpathRobotPlayer, configs)

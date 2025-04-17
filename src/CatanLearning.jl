@@ -3,14 +3,15 @@ using Logging
 using Profile
 using BenchmarkTools
 
+import MLJModelInterface
+const MMI = MLJModelInterface
 
-# Suppress all normal logs
-#using Catan
 import Catan
 import Catan: Player, PlayerPublicView, PlayerType, RobotPlayer, DefaultRobotPlayer, Game, Board, 
 get_player_config
 
 include("structs.jl")
+include("learning/naive_model.jl")
 include("learning/production_model.jl")
 include("players/structs.jl")
 include("helpers.jl")

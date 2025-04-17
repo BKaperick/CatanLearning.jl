@@ -16,11 +16,11 @@ function load_tree_model()
 end
 
 function try_load_model_from_csv(team::Symbol, configs::Dict)::Machine
-    try_load_model_from_csv(get_player_config(configs, team, "MODEL"),  get_player_config(configs, team, "FEATURES"))
+    try_load_serialized_model_from_csv(get_player_config(configs, "MODEL", team),  get_player_config(configs, "FEATURES", team))
 end
 
 function try_load_public_model_from_csv(team::Symbol, configs::Dict)::Machine
-    try_load_model_from_csv(get_player_config(configs, team, "PUBLIC_MODEL"),  get_player_config(configs, team, "PUBLIC_FEATURES"))
+    try_load_serialized_model_from_csv(get_player_config(configs, "PUBLIC_MODEL", team),  get_player_config(configs, "PUBLIC_FEATURES", team))
 end
 
 """
@@ -29,7 +29,7 @@ end
 If the serialized file exists, then load it.  If not, train a new model and 
 serialize it before returning it to caller.
 """
-function try_load_model_from_csv(model_file_name, features_file_name)::Machine
+function try_load_serialized_model_from_csv(model_file_name::String, features_file_name::String)::Machine
     @info "Looking for model stored in $model_file_name"
     if isfile(model_file_name)
         @info "Found model stored in $model_file_name"
@@ -59,8 +59,7 @@ function load_typed_features_from_csv(features_csv)
     data, header = readdlm(features_csv, ',', header=true)
     df = DataFrame(data, vec(header))
     coerce_feature_types!(df)
-
-    select!(df, Not([
+    features_to_exclude = [
         :CountHandWood,
         :CountHandBrick,
         :CountHandPasture,
@@ -68,7 +67,12 @@ function load_typed_features_from_csv(features_csv)
         :CountHandGrain,
         :HasMostPoints,
         :CountVictoryPoint
-        ]))
+        ]
+    for feat in features_to_exclude
+        if feat in names(df)
+            select!(df, Not([feat]))
+        end
+    end
 
     df = DFM.@transform(df, :WonGame)
     return df
@@ -121,9 +125,9 @@ end
 
 This is the access point for re-training a model based on new features or engine bug fixes.
 """
-function train_and_serialize_model(features_csv, output_path)
+function train_and_serialize_model(features_csv, output_path; num_tuning_iterations = 100)
     Tree = @load RandomForestClassifier pkg=DecisionTree verbosity=0
     tree = Base.invokelatest(Tree)
-    tuned_mach = train_model_from_csv(tree, features_csv)
+    tuned_mach = train_model_from_csv(tree, features_csv, num_tuning_iterations = num_tuning_iterations)
     MLJ.save(output_path, tuned_mach)
 end

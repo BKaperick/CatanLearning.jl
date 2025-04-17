@@ -78,7 +78,6 @@ function Base.deepcopy(player::TemporalDifferencePlayer)
 end
 
 function EmpathRobotPlayer(team::Symbol, configs::Dict) 
-    println(configs)
     EmpathRobotPlayer(
         Player(team, configs), 
         try_load_model_from_csv(team, configs),

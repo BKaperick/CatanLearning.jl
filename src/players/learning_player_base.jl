@@ -255,7 +255,7 @@ function analyze_action!(action::AbstractAction, board::Board, players::Vector{P
     hypoth_board = deepcopy(board)
     hypoth_player = deepcopy(player)
     hypoth_game = Game([DefaultRobotPlayer(p.team, board.configs) for p in players], board.configs)
-    @debug "Entering hypoth game $(hypoth_game.unique_id)"
+    @debug "Entering hypoth game $(hypoth_game.unique_id) with action $(action.name)($(action.args))"
     main_logger = global_logger()
     global_logger(NullLogger())
     action.func!(hypoth_game, hypoth_board, hypoth_player)
