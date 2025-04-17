@@ -378,30 +378,15 @@ Either a trained simple model that uses publicly-available info (defined in `com
 and use that, or we use the naive model, i.e., we just do a linear scaling of public VP count 
 """
 function predict_public_model(machine::Machine, board::Board, player::PlayerPublicView)
-    features = [x for x in compute_public_features(board, player)]
-    return predict_model(machine, features)
+    return predict_model(machine, compute_public_features(board, player))
 end
 
 function predict_model(machine::Machine, board::Board, player::PlayerType)
-    features = [x for x in compute_features(board, player.player)]
-    return predict_model(machine, features)
+    return predict_model(machine, compute_features(board, player))
 end
-
-function predict_model(machine::Machine, features::Dict{Symbol, Float64})
-    return predict_model(machine, collect(features))
-end
-function predict_model(machine::Machine, features::Vector{Pair{Symbol, Float64}})
-    header = get_csv_friendly.(first.(features))
-    feature_vals = last.(features)
-    pred = _predict_model_feature_vec(machine, feature_vals, header)
-
-    # Returns the win probability (proba weight on category for label `1` indicating win)
+function predict_model(machine::Machine, features)
+    X_new = DataFrame(features)
+    CatanLearning.coerce_feature_types!(X_new)
+    pred = MLJ.predict(machine, X_new)
     return pdf(pred[1], 1)
-end
-
-function _predict_model_feature_vec(machine::Machine, feature_vals::Vector{T}, header::Vector{String}) where T <: Number
-    data = reshape(feature_vals, 1, length(feature_vals))
-    df = DataFrame(data, vec(header), makeunique=true)
-    coerce_feature_types!(df)
-    return Base.invokelatest(MLJ.predict, machine, df)
 end
