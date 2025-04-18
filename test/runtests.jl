@@ -4,7 +4,7 @@ using Logging
 using Catan
 using Catan: Game, Board, Player, PlayerType, PlayerApi, BoardApi, GameApi,
              DefaultRobotPlayer, PlayerPublicView, 
-             ALL_ACTIONS, choose_accept_trade,
+             ALL_ACTIONS, choose_accept_trade, get_legal_actions,
 read_map,
 load_gamestate!,
 reset_savefile,
@@ -29,7 +29,8 @@ MarkovState,
 MaxValueMarkovPolicy,
 MaxRewardMarkovPolicy,
 TemporalDifferencePlayer,
-get_legal_action_sets
+get_legal_action_sets,
+feature_library
 
 #configs["MAP_FILE"] = "../../CatanEngine.jl/data/sample.csv"
 #Catan.reset_test_data_dirs(@__DIR__)
@@ -53,34 +54,8 @@ function empath_player(configs)
 end
 
 
-features = [
-:SettlementCount,
-:CityCount,
-:RoadCount,
-:MaxRoadLength,
-:SumWoodDiceWeight,
-:SumBrickDiceWeight,
-:SumPastureDiceWeight,
-:SumStoneDiceWeight,
-:SumGrainDiceWeight,
-:PortWood,
-:PortBrick,
-:PortPasture,
-:PortStone,
-:PortGrain,
-:CountWood,
-:CountBrick,
-:CountPasture,
-:CountStone,
-:CountGrain,
-:CountKnight,
-:CountMonopoly,
-:CountYearOfPlenty,
-:CountRoadBuilding,
-:HasLargestArmy,
-:HasLongestRoad,
-:CountVictoryPoint
-]
+features = collect(keys(feature_library))
+
 features_increasing_good = Set([
 :SettlementCount,
 :CityCount,
@@ -91,22 +66,27 @@ features_increasing_good = Set([
 :SumPastureDiceWeight,
 :SumStoneDiceWeight,
 :SumGrainDiceWeight,
-:PortWood,
-:PortBrick,
-:PortPasture,
-:PortStone,
-:PortGrain,
-:CountWood,
-:CountBrick,
-:CountPasture,
-:CountStone,
-:CountGrain,
+:CountPortWood,
+:CountPortBrick,
+:CountPortPasture,
+:CountPortStone,
+:CountPortGrain,
+:CountHandWood,
+:CountHandBrick,
+:CountHandPasture,
+:CountHandStone,
+:CountHandGrain,
+:CountTotalWood,
+:CountTotalBrick,
+:CountTotalPasture,
+:CountTotalStone,
+:CountTotalGrain,
 :CountKnight,
 :CountMonopoly,
 :CountYearOfPlenty,
 :CountRoadBuilding,
-:HasLargestArmy,
-:HasLongestRoad,
+#:HasLargestArmy,
+#:HasLongestRoad,
 :CountVictoryPoint
 ])
 
@@ -213,6 +193,23 @@ function test_choose_road_location(configs)
 choose_road_location(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Vector{Tuple{Int, Int}}})
 end
 
+function test_stackoverflow_knight(main_configs)
+    configs = deepcopy(main_configs)
+    configs["PlayerSettings"]["SEARCH_DEPTH"] = 2
+    player = EmpathRobotPlayer(:Blue, configs)
+    players = Vector{PlayerType}([
+                                  player, 
+                                  DefaultRobotPlayer(:Test2, configs),
+                                  DefaultRobotPlayer(:Test3, configs),
+                                  DefaultRobotPlayer(:Test4, configs),
+                                 ])
+    board = read_map(configs)
+    game = Game(players, configs)
+    PlayerApi.add_devcard!(player.player, :Knight)
+    actions = get_legal_actions(game, board, player.player)
+    choice = Catan.choose_next_action(board, PlayerPublicView.(players), player, actions)
+end
+
 function test_empath_road_building(configs)
     players = Vector{PlayerType}([
                                   EmpathRobotPlayer(:Blue, configs), 
@@ -255,6 +252,7 @@ end
 
 function run_tests(neverend = false)
     (configs, player_configs, _) = parse_configs("Configuration.toml")
+    test_stackoverflow_knight(configs)
     test_empath_road_building(configs)
     test_action_interface(configs)
     test_player_implementation(Catan.DefaultRobotPlayer, configs)

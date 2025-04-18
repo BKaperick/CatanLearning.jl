@@ -264,8 +264,7 @@ function analyze_action!(action::AbstractAction, board::Board, players::Vector{P
     
     @debug "Leaving hypoth game $(hypoth_game.unique_id)"
     
-    # Look ahead an additional `MAX_DEPTH` turns
-    
+    # Look ahead an additional `SEARCH_DEPTH` turns
     
     if depth < get_player_config(player, "SEARCH_DEPTH")
         next_legal_actions = Catan.get_legal_actions(hypoth_game, hypoth_board, hypoth_player.player)

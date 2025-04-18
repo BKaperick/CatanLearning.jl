@@ -47,7 +47,7 @@ function get_combined_reward(process::MarkovRewardProcess, machine::Machine, tra
 end
 function get_combined_reward(process::MarkovRewardProcess, machine::Machine, state)
     #value = query_state_value(state.key)
-    model_proba = predict_model(machine, state.features)
+    model_proba = predict_model(machine, collect(state.features))
     # TODO
     # win or loss feature is too difficult to calculate without passing game to feature computation
     # win_loss = state.features[:CountVictoryPoint]
