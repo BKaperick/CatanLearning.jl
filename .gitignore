@@ -1,3 +1,4 @@
+data/*
 data/state_values.csv
 data/features.csv
 data/old_features.csv
