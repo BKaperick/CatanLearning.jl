@@ -13,7 +13,8 @@ NUM_EPOCHS = 1
 
 [GameSettings]
 [PlayerSettings]
-MODEL = "./data/model.jls"
+MODEL = "./models/model.jls"
+PUBLIC_MODEL = "./models/public_model.jls"
 FEATURES = "./data/features.csv"
 STATE_VALUES = "./data/state_values.csv"
 SEARCH_DEPTH = 2
