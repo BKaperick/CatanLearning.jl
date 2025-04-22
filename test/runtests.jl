@@ -12,8 +12,8 @@ test_player_implementation,
 setup_players,
 setup_and_do_robot_game,
 test_automated_game,
-configs,
-player_configs,
+#configs,
+#player_configs,
 #logger,
 parse_configs
 
