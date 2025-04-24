@@ -58,37 +58,9 @@ function run(T::Type, configs::Dict, player_configs::Dict)
     run(player_constructors, configs)
 end
 
-function run_validation()
-    global (configs, player_configs, logger) = Catan.parse_configs("Configuration.toml")
-    master_state_to_value = read_values_file(player_configs["STATE_VALUES"])::Dict{UInt64, Float64}
-    new_state_to_value = Dict{UInt64, Float64}()
-    player_constructors = Dict([
-        :Blue => (mutation) -> TemporalDifferencePlayer(
-                                    MaxRewardPlusValueMarkovPolicy, 
-                                    :Blue, 
-                                    master_state_to_value, 
-                                    new_state_to_value
-                                    ), 
-        :Green => (mutation) -> Catan.DefaultRobotPlayer(:Green), 
-        :Cyan => (mutation) -> Catan.DefaultRobotPlayer(:Cyan), 
-        :Yellow => (mutation) -> Catan.DefaultRobotPlayer(:Yellow)
-    ])
-    run(player_constructors)
-end
-
-function run_validation_ml()
-    global (configs, player_configs, logger) = Catan.parse_configs("Configuration.toml")
-    player_constructors = Dict([
-        :Blue => (mutation) -> EmpathRobotPlayer(:Blue, player_configs), 
-        :Green => (mutation) -> Catan.DefaultRobotPlayer(:Green, player_configs), 
-        :Cyan => (mutation) -> Catan.DefaultRobotPlayer(:Cyan, player_configs), 
-        :Yellow => (mutation) -> Catan.DefaultRobotPlayer(:Yellow, player_configs)
-    ])
-    run(player_constructors)
-end
-
 function run_explore()
-    global (configs, player_configs, logger) = Catan.parse_configs("Configuration.toml")
+    configs = Catan.parse_configs("Configuration.toml")
+    player_configs = configs["PlayerSettings"]
     master_state_to_value = read_values_file(player_configs["STATE_VALUES"])::Dict{UInt64, Float64}
     new_state_to_value = Dict{UInt64, Float64}()
     player_maker = team -> ((mutation) -> TemporalDifferencePlayer(
