@@ -122,7 +122,7 @@ end
 
 This is the access point for re-training a model based on new features or engine bug fixes.
 """
-function train_and_serialize_model(features_csv, output_path; num_tuning_iterations = 100)
+function train_and_serialize_model(features_csv::String, output_path::String; num_tuning_iterations = 100)
     tree = load_tree_model()
     tuned_mach = train_model_from_csv(tree, features_csv, num_tuning_iterations = num_tuning_iterations)
     @info "Serializing model trained on $features_csv into $output_path"

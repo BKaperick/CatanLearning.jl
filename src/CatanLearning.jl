@@ -32,6 +32,7 @@ function __init__()
     Catan.add_player_to_register("MutatedEmpathRobotPlayer", (t,c) -> MutatedEmpathRobotPlayer(t,c))
     Catan.add_player_to_register("TemporalDifferencePlayer", (t,c) -> TemporalDifferencePlayer(t,c))
 
+    # Upsert the configs from this package
     default_config_path = joinpath(@__DIR__, "..", "DefaultConfiguration.toml")
     Catan.update_default_configs(default_config_path)
 end

@@ -7,7 +7,7 @@ using Catan: Game, Board, Player, PlayerType, PlayerApi, BoardApi, GameApi,
              ALL_ACTIONS, choose_accept_trade, get_legal_actions,
 read_map,
 load_gamestate!,
-reset_savefile,
+reset_savefile!,
 test_player_implementation,
 setup_players,
 setup_and_do_robot_game,
@@ -89,7 +89,6 @@ features_increasing_good = Set([
 #:HasLongestRoad,
 :CountVictoryPoint
 ])
-
 
 function test_compute_features(configs)
     #players = setup_players()
@@ -251,7 +250,7 @@ function test_action_interface(configs)
 end
 
 function run_tests(neverend = false)
-    (configs, player_configs, _) = parse_configs("Configuration.toml")
+    configs = parse_configs("Configuration.toml")
     test_stackoverflow_knight(configs)
     test_empath_road_building(configs)
     test_action_interface(configs)

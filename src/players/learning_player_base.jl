@@ -20,7 +20,7 @@ A helper function for the learning player to make a probabilistic decision
 about what remains in the devcard deck based on public information.
 """
 function get_estimated_remaining_devcards(board::Board, players::Vector{PlayerPublicView}, player::Player)::Dict{Symbol, Int}
-    devcards = deepcopy(Catan.DEVCARD_COUNTS)
+    devcards = Catan.get_devcard_counts(board.configs)
     for (card,count) in collect(player.devcards)
         devcards[card] -= count
     end
@@ -219,7 +219,9 @@ function analyze_and_aggregate_action_sets(board::Board, players::Vector{PlayerP
         push!(best_actions.actions, aggregate(set))
     end
     @debug "$(player.player.team) is now choosing among $(join([a.name for a in best_actions.actions], ", "))"
-
+    if length(best_actions.actions) == 0
+        @warn "No best actions, starting from $action_sets"
+    end
     # Aggregate chooses the best action from the `best_actions` set
     return aggregate(best_actions)
 end
