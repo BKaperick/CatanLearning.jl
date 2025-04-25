@@ -136,7 +136,7 @@ compute_count_victory_points = (board, player) -> Catan.GameRunner.get_total_vp_
 register_feature(:CountVisibleVictoryPoint, Int8, 0, 10)
 compute_count_public_victory_points = (board, player) -> Catan.BoardApi.get_public_vp_count(board, player.team)
 register_feature(:WonGame, Bool, 0, 1)
-compute_won_game = (board, player) -> Catan.GameRunner.get_total_vp_count(board, player) >= 10
+compute_won_game = (board, player) -> Catan.GameRunner.get_total_vp_count(board, player) >= board.configs["GameSettings"]["VICTORY_POINT_GOAL"]
 register_feature(:HasMostPoints, Bool, 0, 1)
 compute_has_most_points = (game, board, player) -> get_has_most_points(game, board, player)
 register_feature(:NumberOfTurns, Int32, 0, 10_000)

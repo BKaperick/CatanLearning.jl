@@ -1,5 +1,7 @@
 function Catan.do_post_game_action(game::Game, board::Board, players::Vector{PlayerType}, player::EmpathRobotPlayer, winner::Union{PlayerType, Nothing})
-    Catan.BoardApi.print_board(board)
+    if game.configs["PRINT_BOARD"]
+        Catan.BoardApi.print_board(board)
+    end
 end
 function Catan.do_post_game_action(game::Game, board::Board, players::Vector{PlayerType}, player::Catan.DefaultRobotPlayer, winner::Union{PlayerType, Nothing})
     write_public_features_file(game, board, players, player, winner)
