@@ -62,7 +62,7 @@ register_feature(:CountRoad, Int8, 0, 14)
 compute_count_road = (board, player) -> get_road_count(board, player.team)
 
 register_feature(:MaxRoadLength, Int8, 0, 14)
-compute_max_road_length = (board, player) -> get_max_road_length(board, player.team)
+compute_max_road_length = (board, player) -> BoardApi.get_max_road_length(board, player.team)
 
 register_feature(:SumWoodDiceWeight, Int16, 4, 186)
 compute_sum_wood_dice_weight = (board, player) -> get_sum_resource_dice_weight(board, player.team, :Wood)
@@ -154,6 +154,7 @@ function compute_features(board, player::Player)::Vector{Pair{Symbol, Float64}}
         :CountTotalSettlement => compute_count_total_settlement(board, player),
         :CountCity => compute_count_city(board, player),
         :CountRoad => compute_count_road(board, player),
+        :MaxRoadLength => compute_max_road_length(board, player),
 
         :SumWoodDiceWeight => compute_sum_wood_dice_weight(board, player),
         :SumBrickDiceWeight => compute_sum_brick_dice_weight(board, player),
@@ -196,6 +197,7 @@ function compute_public_features(board, player)::Vector{Pair{Symbol, Float64}}
         :CountTotalSettlement => compute_count_total_settlement(board, player),
         :CountCity => compute_count_city(board, player),
         :CountRoad => compute_count_road(board, player),
+        :MaxRoadLength => compute_max_road_length(board, player),
 
         :SumWoodDiceWeight => compute_sum_wood_dice_weight(board, player),
         :SumBrickDiceWeight => compute_sum_brick_dice_weight(board, player),

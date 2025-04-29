@@ -1,6 +1,3 @@
-generate_players(team_to_mutation) = Vector{MutatedEmpathRobotPlayer}([MutatedEmpathRobotPlayer(team, mutation) for (team, mutation) in team_to_mutation])
-
-
 function print_mutation(mutation::Dict)
     return join(["$c => $v" for (c,v) in mutation if v != 0], ", ")
 end

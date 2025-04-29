@@ -25,7 +25,7 @@ function get_transitions(set::ActionSet{Action})::Vector{MarkovTransition}
     transitions = []
     # One transition per deterministic action
     for action in set.actions
-        transition = MarkovTransition(MarkovState(action.features), ActionSet(action))
+        transition = MarkovTransition([MarkovState(action.features)], ActionSet(action))
         push!(transitions, transition)
     end
     return transitions

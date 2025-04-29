@@ -26,18 +26,23 @@ function update_state_value(process, state_key, new_value)
     end
 end
 
-
 function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::MaxRewardMarkovPolicy, state::MarkovState)
     return get_combined_reward(process, policy.machine, state) 
 end
 function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::MaxRewardMarkovPolicy, transition::MarkovTransition)
     return get_combined_reward(process, policy.machine, transition) 
 end
-function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::MaxValueMarkovPolicy, state)
+function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::MaxValueMarkovPolicy, state::MarkovState)
     return query_state_value(process, state.key) 
 end
-function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::MaxRewardPlusValueMarkovPolicy, state)
+function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::MaxValueMarkovPolicy, transition::MarkovTransition)
+    return query_state_value(process, transition) 
+end
+function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::MaxRewardPlusValueMarkovPolicy, state::MarkovState)
     return get_combined_reward(process, policy.machine, state) + query_state_value(process, state.key) 
+end
+function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::MaxRewardPlusValueMarkovPolicy, transition::MarkovTransition)
+    return get_combined_reward(process, policy.machine, transition) + query_state_value(process, transition) 
 end
 
 function get_combined_reward(process::MarkovRewardProcess, machine::Machine, transition::MarkovTransition)
@@ -45,7 +50,14 @@ function get_combined_reward(process::MarkovRewardProcess, machine::Machine, tra
     reward = sum([get_combined_reward(process, machine, s) for s in transition.states]) / length(transition.states)
     return reward
 end
-function get_combined_reward(process::MarkovRewardProcess, machine::Machine, state)
+
+function query_state_value(process::MarkovRewardProcess, transition::MarkovTransition)
+    # Get average value from this transition
+    value = sum([query_state_value(process, s.key) for s in transition.states]) / length(transition.states)
+    return value
+end
+
+function get_combined_reward(process::MarkovRewardProcess, machine::Machine, state::MarkovState)
     #value = query_state_value(state.key)
     model_proba = predict_model(machine, collect(state.features))
     # TODO
@@ -81,6 +93,18 @@ function get_new_current_value(process, current_value, next_state, next_value)
     return current_value + (process.learning_rate * delta)
 end
 
+function finish_temporal_difference_step!(process::MarkovRewardProcess, 
+        current_state::MarkovState, next_state::MarkovState)
+    # Update current state value
+    current_value = query_state_value(process, current_state.key)
+
+    next_value = query_state_value(process, next_state.key)
+    new_current_value = get_new_current_value(process, current_value, next_state, 
+                                              next_value)
+    update_state_value(process, current_state.key, new_current_value)
+    return next_state, next_state.reward
+end
+
 """
     `temporal_difference_step!(process::MarkovRewardProcess, policy::MarkovPolicy, current_state::MarkovState, state_to_value::Dict{UInt64, Float64}, reachable_states::Vector{MarkovState})`
 next_quantity
@@ -97,18 +121,7 @@ function temporal_difference_step!(process::MarkovRewardProcess,
     return next_quantity, index, next_state
 end
 
-function finish_temporal_difference_step!(process::MarkovRewardProcess, 
-        current_state::MarkovState, next_state::MarkovState)
-    # Update current state value
-    current_value = query_state_value(process, current_state.key)
-
-    next_value = query_state_value(process, next_state.key)
-    new_current_value = get_new_current_value(process, current_value, next_state, 
-                                              next_value)
-    update_state_value(process, current_state.key, new_current_value)
-    return index, next_state, next_state.reward
-end
-
+#=
 """
     `temporal_difference_step!(process::MarkovRewardProcess, policy::MarkovPolicy, current_state::MarkovState, state_to_value::Dict{UInt64, Float64}, reachable_states::Vector{MarkovState})`
 
@@ -119,5 +132,6 @@ function temporal_difference_step!(process::MarkovRewardProcess, policy::MarkovP
     # sample from policy to get next state
     index, next_state = sample_from_policy(process, policy, current_state, reachable_states)
     next_state_quantity = get_state_optimizing_quantity(process, policy, next_state)
-    return index, next_state, next_state_quantity
+    return next_state_quantity, index, next_state
 end
+=#

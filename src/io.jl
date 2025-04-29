@@ -47,19 +47,19 @@ function read_values_file(values_file::String, max_lines = nothing)::Dict{UInt64
 end
 
 function write_values_file(players::Vector{PlayerType}, player::TemporalDifferencePlayer)
-    values_file = player.io_config.values
+    values_file = get_player_config(player, "STATE_VALUES")
     state_to_value = player.process.new_state_to_value
     write_values_file(values_file, state_to_value)
 
     # Merge all new entries from this game into the main state_to_value dict
-    merge!(player.process.state_to_value, winner.process.new_state_to_value)
+    merge!(player.process.state_to_value, player.process.new_state_to_value)
     # and clear the new state to values learned
     empty!(player.process.new_state_to_value)
     
-    for player in players
-        if hasproperty(player, :process)
-            empty!(player.process.new_state_to_value)
-            player.process.state_to_value = player.process.state_to_value
+    for other_player in players
+        if hasproperty(other_player, :process)
+            empty!(other_player.process.new_state_to_value)
+            other_player.process.state_to_value = player.process.state_to_value
         end
     end
 end

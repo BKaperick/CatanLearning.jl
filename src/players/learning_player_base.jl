@@ -180,7 +180,7 @@ function Catan.choose_resource_to_draw(board::Board, players::Vector{PlayerPubli
 end
 
 function Catan.choose_one_resource_to_discard(board::Board, player::LearningPlayer)::Symbol
-    ~isempty(player.player.resources) && throw(ArgumentError("Player has no resources"))
+    isempty(player.player.resources) && throw(ArgumentError("Player has no resources"))
     resources = [r for (r,v) in player.player.resources if v > 0]
     return get_best_action(board, Vector{PlayerPublicView}([]), player, Set([PreAction(:LoseResource, resources)])).args[1]
 end
@@ -244,11 +244,12 @@ Identifies the best parameters to use for this action
 function aggregate(set::ActionSet)::Action
     return argmax(a -> a.win_proba, set.actions)
 end
+
 function aggregate(set::ActionSet{SampledAction})::Action
     avg_proba = sum([a.win_proba for a in set.actions]) / length(set.actions)
-    # an ActionSet{SampledAction} contains only actions with the same func (they differ only in Sampling Func)
+    # an ActionSet{SampledAction} contains only actions with the same `real_func!` (they differ only in Sampling Func `func!`)
     # TODO some way to enforce this in the code?
-    func! = set.actions[1].func!
+    func! = set.actions[1].real_func!
     args = set.actions[1].args
     return Action(set.name, avg_proba, func!, args)
 end
@@ -296,7 +297,7 @@ function Catan.choose_next_action(board::Board, players::Vector{PlayerPublicView
 end
 
 function Catan.choose_accept_trade(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, from_player::Player, from_goods::Vector{Symbol}, to_goods::Vector{Symbol})::Bool
-    actions = Set([PreAction(:DoNothing), PreAction(:AcceptTrade, (from_player, from_goods, to_goods))])
+    actions = Set([PreAction(:DoNothing), PreAction(:AcceptTrade, [(from_player, from_goods, to_goods)])])
     best_action = get_best_action(board, players, player, actions)
     return best_action.args !== nothing
 end

@@ -26,6 +26,7 @@ end
 mutable struct SampledAction <: AbstractAction
     args::Tuple
     name::Symbol
+    # Deterministic version of `real_func!` that is used to calculate win proba of a deterministic branch
     func!::Function
     real_func!::Function
     win_proba::Union{Nothing, Float64}
@@ -62,6 +63,13 @@ mutable struct MarkovState
     features::Dict{Symbol, Float64}
     reward::Union{Nothing, Float64}
 end
+
+"""
+    `MarkovTransition`
+
+Transitions are used as an intermediary data structure to allow TD-learning on non-deterministic actions, by calculating
+reward/value as an average among the sampled possible actions.
+"""
 mutable struct MarkovTransition
     #win_proba::Float64
     #victory_ponts::Int8

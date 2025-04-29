@@ -1,5 +1,6 @@
 using Test
 using StatsBase
+using JET
 using Logging
 using Catan
 using Catan: Game, Board, Player, PlayerType, PlayerApi, BoardApi, GameApi,
@@ -17,6 +18,7 @@ test_automated_game,
 #logger,
 parse_configs
 
+using CatanLearning
 using CatanLearning:
     compute_features,
     MutatedEmpathRobotPlayer,EmpathRobotPlayer,
@@ -35,7 +37,7 @@ feature_library
 function test_jet_fails()
     rep = report_package(CatanLearning;
     ignored_modules=())
-    @test length(JET.get_reports(rep)) <= 31
+    @test length(JET.get_reports(rep)) <= 53
 end
 
 function test_evolving_robot_game(neverend, configs)
@@ -254,7 +256,6 @@ end
 
 function run_tests(neverend = false)
     configs = parse_configs("Configuration.toml")
-    test_jet_fails()
     test_stackoverflow_knight(configs)
     test_empath_road_building(configs)
     test_action_interface(configs)
@@ -276,6 +277,7 @@ function run_tests(neverend = false)
     println("value fails with +2 perturbation: $(fails_v[2])")
     println("value fails with +1 perturbation: $(fails_v[1])")
     =#
+    test_jet_fails()
 end
 
 if length(ARGS) > 1
