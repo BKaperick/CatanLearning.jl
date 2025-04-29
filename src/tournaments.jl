@@ -20,7 +20,7 @@ function do_tournament_one_epoch(tourney, teams, configs, create_players::Functi
             players = create_players()
             winner = do_tournament_one_game!(winners, players, configs)
             g_num = (j - 1)*tourney.games_per_map + i
-            if winner != nothing
+            if winner !== nothing
                 #println("winner: $(winner.player.team)")
             else
                 #println("winner: noone")
@@ -39,7 +39,7 @@ function do_tournament_one_game!(winners, players, configs)
     _,winner = Catan.run(game)
 
     w = winner
-    if winner != nothing
+    if winner !== nothing
         w = winner.player.team
         #@warn "$w won"
     end

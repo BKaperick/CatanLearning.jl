@@ -6,5 +6,5 @@ function print_mutation(mutation::Dict)
 end
 
 function order_winners(unordered_winners)
-    return [(k,v) for (k,v) in sort(collect(unordered_winners), by=x -> x.second, rev=true)]# if k != nothing]
+    return [(k,v) for (k,v) in sort(collect(unordered_winners), by=x -> x.second, rev=true)]# if k !== nothing]
 end

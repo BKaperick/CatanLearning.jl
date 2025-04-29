@@ -32,8 +32,11 @@ TemporalDifferencePlayer,
 get_legal_action_sets,
 feature_library
 
-#configs["MAP_FILE"] = "../../CatanEngine.jl/data/sample.csv"
-#Catan.reset_test_data_dirs(@__DIR__)
+function test_jet_fails()
+    rep = report_package(CatanLearning;
+    ignored_modules=())
+    @test length(JET.get_reports(rep)) <= 31
+end
 
 function test_evolving_robot_game(neverend, configs)
     team_and_playertype = [
@@ -251,6 +254,7 @@ end
 
 function run_tests(neverend = false)
     configs = parse_configs("Configuration.toml")
+    test_jet_fails()
     test_stackoverflow_knight(configs)
     test_empath_road_building(configs)
     test_action_interface(configs)

@@ -49,7 +49,7 @@ function TemporalDifferencePlayer(TPolicy::Type, team::Symbol, configs::Dict)
 end
 TemporalDifferencePlayer(team::Symbol, configs::Dict) = TemporalDifferencePlayer(MaxRewardMarkovPolicy, team::Symbol, configs)
 
-TemporalDifferencePlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}) = TemporalDifferencePlayer(MaxRewardMarkovPolicy, team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, player_configs)
+TemporalDifferencePlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs::Dict) = TemporalDifferencePlayer(MaxRewardMarkovPolicy, team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs)
 
 function TemporalDifferencePlayer(TPolicy::Type, team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs)
     machine = try_load_model_from_csv(team, configs)
@@ -88,8 +88,4 @@ end
 function Base.deepcopy(player::EmpathRobotPlayer)
     return EmpathRobotPlayer(deepcopy(player.player), player.machine, player.machine_public)
 end
-
-inner_player(player::EmpathRobotPlayer)::Player = p -> p.player
-inner_player(player::MutatedEmpathRobotPlayer)::Player = p -> p.player
-inner_player(player::TemporalDifferencePlayer)::Player = p -> p.player
 

@@ -382,7 +382,7 @@ function predict_public_model(machine::Machine, board::Board, player::PlayerPubl
 end
 
 function predict_model(machine::Machine, board::Board, player::PlayerType)
-    return predict_model(machine, compute_features(board, player))
+    return predict_model(machine, compute_features(board, player.player))
 end
 function predict_model(machine::Machine, features)
     X_new = DataFrame(features)

@@ -84,7 +84,7 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
         for card in sampled_devcards 
             push!(action_set.actions, SampledAction(:BuyDevCard, 
                                              (g, b, p) -> deterministic_draw_devcard(g, b, p, card),
-                                             (g, b, p) -> Catan.draw_devcard(g, p.player)))
+                                             (g, b, p) -> Catan.draw_devcard(g, b, p.player)))
         end
         push!(action_sets, action_set)
     end
@@ -180,6 +180,7 @@ function Catan.choose_resource_to_draw(board::Board, players::Vector{PlayerPubli
 end
 
 function Catan.choose_one_resource_to_discard(board::Board, player::LearningPlayer)::Symbol
+    ~isempty(player.player.resources) && throw(ArgumentError("Player has no resources"))
     resources = [r for (r,v) in player.player.resources if v > 0]
     return get_best_action(board, Vector{PlayerPublicView}([]), player, Set([PreAction(:LoseResource, resources)])).args[1]
 end

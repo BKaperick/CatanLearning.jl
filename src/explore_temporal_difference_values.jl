@@ -56,11 +56,11 @@ for k=1:tourney.epochs
             @assert isempty(intersect(keys(new_state_to_value), keys(master_state_to_value)))
 
             w = winner
-            if winner != nothing
+            if winner !== nothing
                 w = winner.player.team
             end
             winners[w] += 1
-            if winner != nothing
+            if winner !== nothing
                 println("Game $((j - 1)*tourney.games_per_map + i) / $(tourney.maps_per_epoch * tourney.games_per_map): $(winner.player.team)")
             end
 
