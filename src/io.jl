@@ -1,3 +1,21 @@
+
+function Catan.do_post_game_action(game::Game, board::Board, players::Vector{T}, winner::Union{PlayerType, Nothing}) where T <: PlayerType
+    
+    main_file_name = get_player_config(game.configs, "FEATURES", players[1].player.team)
+    main_file = open(main_file_name, "a")
+
+    public_file_name = get_player_config(game.configs, "PUBLIC_FEATURES", players[1].player.team)
+    public_file = open(public_file_name, "a")
+    
+    for player in players
+        features = compute_features_and_labels(game, board, player.player)
+        _write_features_file(game, board, players, player, winner, main_file, main_file_name, features)
+
+        public_features = compute_public_features_and_labels(game, board, player.player)
+        _write_features_file(game, board, players, player, winner, public_file, public_file_name, features)
+    end
+end
+
 function Catan.do_post_game_action(game::Game, board::Board, players::Vector{PlayerType}, player::EmpathRobotPlayer, winner::Union{PlayerType, Nothing})
     if game.configs["PRINT_BOARD"]
         Catan.BoardApi.print_board(board)
@@ -73,18 +91,20 @@ end
 
 function write_main_features_file(game::Game, board::Board, players, player::PlayerType, winner::Union{PlayerType, Nothing}) 
     file_name = get_player_config(game.configs, "FEATURES", player.player.team)
+    file = open(file_name, "a")
     features = compute_features_and_labels(game, board, player.player)
-    _write_features_file(game, board, players, player, winner, file_name, features)
+    _write_features_file(game, board, players, player, winner, file, file_name, features)
 end
 
 function write_public_features_file(game::Game, board::Board, players, player::PlayerType, winner::Union{PlayerType, Nothing}) 
     file_name = get_player_config(game.configs, "PUBLIC_FEATURES", player.player.team)
+    file = open(file_name, "a")
     features = compute_public_features_and_labels(game, board, player.player)
-    _write_features_file(game, board, players, player, winner, file_name, features)
+    _write_features_file(game, board, players, player, winner, file, file_name, features)
 end
 
-function _write_features_file(game::Game, board::Board, players, player::PlayerType, winner::Union{PlayerType, Nothing}, file_name::String, features::Vector) 
-    file = open(file_name, "a")
+function _write_features_file(game::Game, board::Board, players, player::PlayerType, winner::Union{PlayerType, Nothing}, file::IO, file_name, features::Vector) 
+    
     header = join([get_csv_friendly(f[1]) for f in features], ",")
     values = join([get_csv_friendly(f[2]) for f in features], ",")
     

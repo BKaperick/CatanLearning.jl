@@ -1,5 +1,3 @@
-#include("../learning/feature_computation.jl")
-#include("../learning/production_model.jl")
 using Catan: GameApi, BoardApi, PlayerApi, PreAction, random_sample_resources, get_random_resource,
              construct_city, construct_settlement, construct_road,
              do_play_devcard, propose_trade_goods, do_robber_move_theft,
