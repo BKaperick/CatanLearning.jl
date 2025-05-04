@@ -136,11 +136,98 @@ compute_count_victory_points = (board, player) -> Catan.GameRunner.get_total_vp_
 register_feature(:CountVisibleVictoryPoint, Int8, 0, 10)
 compute_count_public_victory_points = (board, player) -> Catan.BoardApi.get_public_vp_count(board, player.team)
 register_feature(:WonGame, Bool, 0, 1)
-compute_won_game = (board, player) -> Catan.GameRunner.get_total_vp_count(board, player) >= board.configs["GameSettings"]["VICTORY_POINT_GOAL"]
+
+# Note the labels are functions taking (g,b,p) not just (b,p)
+compute_won_game = (game, board, player) -> Catan.GameRunner.get_total_vp_count(board, player) >= board.configs["GameSettings"]["VICTORY_POINT_GOAL"]
 register_feature(:HasMostPoints, Bool, 0, 1)
 compute_has_most_points = (game, board, player) -> get_has_most_points(game, board, player)
 register_feature(:NumberOfTurns, Int32, 0, 10_000)
 compute_number_of_turns = (game, board, player) -> game.turn_num
+
+
+function get_features()::Vector{Pair{Symbol, Function}}
+    raw_features = [
+        :CountSettlement => compute_count_settlement,
+        :CountTotalSettlement => compute_count_total_settlement,
+        :CountCity => compute_count_city,
+        :CountRoad => compute_count_road,
+        :MaxRoadLength => compute_max_road_length,
+
+        :SumWoodDiceWeight => compute_sum_wood_dice_weight,
+        :SumBrickDiceWeight => compute_sum_brick_dice_weight,
+        :SumPastureDiceWeight => compute_sum_pasture_dice_weight,
+        :SumStoneDiceWeight => compute_sum_stone_dice_weight,
+        :SumGrainDiceWeight => compute_sum_grain_dice_weight,
+        :CountPortWood => compute_count_port_wood,
+        :CountPortBrick => compute_count_port_brick,
+        :CountPortPasture => compute_count_port_pasture,
+        :CountPortStone => compute_count_port_stone,
+        :CountPortGrain => compute_count_port_grain,
+
+        :CountHandWood => compute_count_hand_wood,
+        :CountHandBrick => compute_count_hand_brick,
+        :CountHandPasture => compute_count_hand_pasture,
+        :CountHandStone => compute_count_hand_stone,
+        :CountHandGrain => compute_count_hand_grain,
+        
+        :CountTotalWood => compute_count_total_wood,
+        :CountTotalBrick => compute_count_total_brick,
+        :CountTotalPasture => compute_count_total_pasture,
+        :CountTotalStone => compute_count_total_stone,
+        :CountTotalGrain => compute_count_total_grain,
+        
+        :CountDevCardsKnight => compute_count_devcards_owned_knight,
+        :CountDevCardsMonopoly => compute_count_devcards_owned_monopoly,
+        :CountDevCardsYearOfPlenty => compute_count_devcards_owned_year_of_plenty,
+        :CountDevCardsRoadBuilding => compute_count_devcards_owned_road_building,
+        :CountDevCardsVictoryPoint => compute_count_devcards_owned_victory_point,
+        :HasLargestArmy => compute_has_largest_army,
+        :HasLongestRoad => compute_has_longest_road,
+        :CountVictoryPoint => compute_count_victory_points
+       ]
+end
+
+
+function get_public_features()::Vector{Pair{Symbol, Function}}
+    return [
+        :CountSettlement => compute_count_settlement,
+        :CountTotalSettlement => compute_count_total_settlement,
+        :CountCity => compute_count_city,
+        :CountRoad => compute_count_road,
+        :MaxRoadLength => compute_max_road_length,
+
+        :SumWoodDiceWeight => compute_sum_wood_dice_weight,
+        :SumBrickDiceWeight => compute_sum_brick_dice_weight,
+        :SumPastureDiceWeight => compute_sum_pasture_dice_weight,
+        :SumStoneDiceWeight => compute_sum_stone_dice_weight,
+        :SumGrainDiceWeight => compute_sum_grain_dice_weight,
+        :CountPortWood => compute_count_port_wood,
+        :CountPortBrick => compute_count_port_brick,
+        :CountPortPasture => compute_count_port_pasture,
+        :CountPortStone => compute_count_port_stone,
+        :CountPortGrain => compute_count_port_grain,
+
+        #:CountHandWood => compute_count_hand_wood,
+        #:CountHandBrick => compute_count_hand_brick,
+        #:CountHandPasture => compute_count_hand_pasture,
+        #:CountHandStone => compute_count_hand_stone,
+        #:CountHandGrain => compute_count_hand_grain,
+        
+        #:CountTotalWood => compute_count_total_wood,
+        #:CountTotalBrick => compute_count_total_brick,
+        #:CountTotalPasture => compute_count_total_pasture,
+        #:CountTotalStone => compute_count_total_stone,
+        #:CountTotalGrain => compute_count_total_grain,
+        
+        :CountDevCardsUsedKnight => compute_count_devcards_used_knight,
+        :CountDevCardsUsedMonopoly => compute_count_devcards_used_monopoly,
+        :CountDevCardsUsedYearOfPlenty => compute_count_devcards_used_year_of_plenty,
+        :CountDevCardsUsedRoadBuilding => compute_count_devcards_used_road_building,
+        :HasLargestArmy => compute_has_largest_army,
+        :HasLongestRoad => compute_has_longest_road,
+        :CountVisibleVictoryPoint => compute_count_public_victory_points
+       ]
+end
 
 """
     `compute_features(board, player::Player)::Vector{Pair{Symbol, Float64}}`
@@ -149,97 +236,28 @@ Compute features from public info, and used for inference.  Note, this *cannot* 
 would leak private info about other players.
 """
 function compute_features(board, player::Player)::Vector{Pair{Symbol, Float64}}
-    raw_features = [
-        :CountSettlement => compute_count_settlement(board, player),
-        :CountTotalSettlement => compute_count_total_settlement(board, player),
-        :CountCity => compute_count_city(board, player),
-        :CountRoad => compute_count_road(board, player),
-        :MaxRoadLength => compute_max_road_length(board, player),
-
-        :SumWoodDiceWeight => compute_sum_wood_dice_weight(board, player),
-        :SumBrickDiceWeight => compute_sum_brick_dice_weight(board, player),
-        :SumPastureDiceWeight => compute_sum_pasture_dice_weight(board, player),
-        :SumStoneDiceWeight => compute_sum_stone_dice_weight(board, player),
-        :SumGrainDiceWeight => compute_sum_grain_dice_weight(board, player),
-        :CountPortWood => compute_count_port_wood(board, player),
-        :CountPortBrick => compute_count_port_brick(board, player),
-        :CountPortPasture => compute_count_port_pasture(board, player),
-        :CountPortStone => compute_count_port_stone(board, player),
-        :CountPortGrain => compute_count_port_grain(board, player),
-
-        :CountHandWood => compute_count_hand_wood(board, player),
-        :CountHandBrick => compute_count_hand_brick(board, player),
-        :CountHandPasture => compute_count_hand_pasture(board, player),
-        :CountHandStone => compute_count_hand_stone(board, player),
-        :CountHandGrain => compute_count_hand_grain(board, player),
-        
-        :CountTotalWood => compute_count_total_wood(board, player),
-        :CountTotalBrick => compute_count_total_brick(board, player),
-        :CountTotalPasture => compute_count_total_pasture(board, player),
-        :CountTotalStone => compute_count_total_stone(board, player),
-        :CountTotalGrain => compute_count_total_grain(board, player),
-        
-        :CountDevCardsKnight => compute_count_devcards_owned_knight(board, player),
-        :CountDevCardsMonopoly => compute_count_devcards_owned_monopoly(board, player),
-        :CountDevCardsYearOfPlenty => compute_count_devcards_owned_year_of_plenty(board, player),
-        :CountDevCardsRoadBuilding => compute_count_devcards_owned_road_building(board, player),
-        :CountDevCardsVictoryPoint => compute_count_devcards_owned_victory_point(board, player),
-        :HasLargestArmy => compute_has_largest_army(board, player),
-        :HasLongestRoad => compute_has_longest_road(board, player),
-        :CountVictoryPoint => compute_count_victory_points(board, player)
-       ]
-    
+    raw_features = get_features()
+    return [s => f(board, player) for (s,f) in raw_features]
 end
 
-function compute_public_features(board, player)::Vector{Pair{Symbol, Float64}}
+function compute_public_features(board, player::Player)::Vector{Pair{Symbol, Float64}}
+    raw_features = get_public_features()
+    return [s => f(board, player) for (s,f) in raw_features]
+end
+
+function get_labels()::Vector{Pair{Symbol, Function}}
     return [
-        :CountSettlement => compute_count_settlement(board, player),
-        :CountTotalSettlement => compute_count_total_settlement(board, player),
-        :CountCity => compute_count_city(board, player),
-        :CountRoad => compute_count_road(board, player),
-        :MaxRoadLength => compute_max_road_length(board, player),
-
-        :SumWoodDiceWeight => compute_sum_wood_dice_weight(board, player),
-        :SumBrickDiceWeight => compute_sum_brick_dice_weight(board, player),
-        :SumPastureDiceWeight => compute_sum_pasture_dice_weight(board, player),
-        :SumStoneDiceWeight => compute_sum_stone_dice_weight(board, player),
-        :SumGrainDiceWeight => compute_sum_grain_dice_weight(board, player),
-        :CountPortWood => compute_count_port_wood(board, player),
-        :CountPortBrick => compute_count_port_brick(board, player),
-        :CountPortPasture => compute_count_port_pasture(board, player),
-        :CountPortStone => compute_count_port_stone(board, player),
-        :CountPortGrain => compute_count_port_grain(board, player),
-
-        #:CountHandWood => compute_count_hand_wood(board, player),
-        #:CountHandBrick => compute_count_hand_brick(board, player),
-        #:CountHandPasture => compute_count_hand_pasture(board, player),
-        #:CountHandStone => compute_count_hand_stone(board, player),
-        #:CountHandGrain => compute_count_hand_grain(board, player),
-        
-        #:CountTotalWood => compute_count_total_wood(board, player),
-        #:CountTotalBrick => compute_count_total_brick(board, player),
-        #:CountTotalPasture => compute_count_total_pasture(board, player),
-        #:CountTotalStone => compute_count_total_stone(board, player),
-        #:CountTotalGrain => compute_count_total_grain(board, player),
-        
-        :CountDevCardsUsedKnight => compute_count_devcards_used_knight(board, player),
-        :CountDevCardsUsedMonopoly => compute_count_devcards_used_monopoly(board, player),
-        :CountDevCardsUsedYearOfPlenty => compute_count_devcards_used_year_of_plenty(board, player),
-        :CountDevCardsUsedRoadBuilding => compute_count_devcards_used_road_building(board, player),
-        :HasLargestArmy => compute_has_largest_army(board, player),
-        :HasLongestRoad => compute_has_longest_road(board, player),
-        :CountVisibleVictoryPoint => compute_count_public_victory_points(board, player)
-       ]
+    # :CountVictoryPoint => compute_count_victory_points(board, player),
+    :HasMostPoints => compute_has_most_points,
+    #:NumberOfTurns => compute_number_of_turns(game, board, player),
+    :WonGame => compute_won_game
+   ]
 end
-
 function compute_labels(game, board, player::Player)::Vector{Pair{Symbol, Float64}}
-    return [
-        # :CountVictoryPoint => compute_count_victory_points(board, player),
-        :HasMostPoints => compute_has_most_points(game, board, player),
-        #:NumberOfTurns => compute_number_of_turns(game, board, player),
-        :WonGame => compute_won_game(board, player)
-       ]
+    raw_labels = get_labels()
+    return [s => f(game, board, player) for (s,f) in raw_labels]
 end
+
 function compute_features_and_labels(game, board, player::Player)::Vector{Pair{Symbol, Float64}}
     return vcat(compute_features(board, player), compute_labels(game, board, player))
 end

@@ -1,5 +1,6 @@
+using Catan: do_post_game_action, initialize_player
 
-function Catan.do_post_game_action(game::Game, board::Board, players::Vector{T}, winner::Union{PlayerType, Nothing}) where T <: PlayerType
+function Catan.do_post_game_action(game::Game, board::Board, players::Vector{DefaultRobotPlayer}, winner::Union{PlayerType, Nothing})
     
     main_file_name = get_player_config(game.configs, "FEATURES", players[1].player.team)
     main_file = open(main_file_name, "a")
@@ -9,11 +10,17 @@ function Catan.do_post_game_action(game::Game, board::Board, players::Vector{T},
     
     for player in players
         features = compute_features_and_labels(game, board, player.player)
-        _write_features_file(game, board, players, player, winner, main_file, main_file_name, features)
+        _write_features_file(main_file, main_file_name, features)
 
         public_features = compute_public_features_and_labels(game, board, player.player)
-        _write_features_file(game, board, players, player, winner, public_file, public_file_name, features)
+        _write_features_file(public_file, public_file_name, public_features)
     end
+end
+
+function Catan.initialize_player(board::Board, player::DefaultRobotPlayer)
+    @info "Intializing player feature files"
+    write_features_header_if_needed(get_player_config(player, "FEATURES"), get_features())
+    write_features_header_if_needed(get_player_config(player, "PUBLIC_FEATURES"), get_public_features())
 end
 
 function Catan.do_post_game_action(game::Game, board::Board, players::Vector{PlayerType}, player::EmpathRobotPlayer, winner::Union{PlayerType, Nothing})
@@ -26,7 +33,43 @@ function Catan.do_post_game_action(game::Game, board::Board, players::Vector{Pla
     return write_main_features_file(game, board, players, player, winner)
 end
 
-function do_post_game_action(game::Game, board::Board, players::Vector{PlayerType}, player::TemporalDifferencePlayer, winner::Union{PlayerType, Nothing})
+function Catan.do_post_game_produce!(channels::Dict{Symbol, Channel}, game::Game, board::Board, players::Vector{PlayerType}, player::Catan.DefaultRobotPlayer, winner::Union{PlayerType, Nothing})
+    main_features = compute_features_and_labels(game, board, player.player)
+    public_features = compute_public_features_and_labels(game, board, player.player)
+    put!(channels[:main], main_features)
+    put!(channels[:public], public_features)
+end
+
+#=
+function Catan.do_post_game_consume!(channels::Dict{Symbol, Channel}, output_ios::Dict{Symbol, IO}, game::Game, board::Board, players::Vector{PlayerType}, player::Catan.DefaultRobotPlayer, winner::Union{PlayerType, Nothing})
+    _write_features_file
+    main_features = take!(channels[:main])
+    public_features = take!(channels[:public])
+    _write_features_file(game, board, players, player, winner, output_ios[:main], game.configs["FEATURES"], main_features)
+    _write_features_file(game, board, players, player, winner, output_ios[:public], game.configs["PUBLIC_FEATURES"], public_features)
+end
+=#
+function do_post_game_consume!(channels::Dict{Symbol, Channel}, game::Game, board::Board, players::Vector{PlayerType}, player::Catan.DefaultRobotPlayer, winner::Union{PlayerType, Nothing})
+    do_post_game_consume!(channels, game.configs)
+end
+
+function do_post_game_consume!(channels::Dict{Symbol, Channel}, configs::Dict)
+    println(channels)
+    while ~isempty(channels[:main])
+        consume_channel!(channels[:main], configs["PlayerSettings"]["FEATURES"])
+    end
+    while ~isempty(channels[:public])
+        consume_channel!(channels[:public], configs["PlayerSettings"]["PUBLIC_FEATURES"])
+    end
+end
+
+function consume_channel!(channel, file_name)
+    println("Consuming channel content to $file_name !")
+    features = take!(channel)
+    _write_features_file(file_name, features)
+end
+
+function Catan.do_post_game_action(game::Game, board::Board, players::Vector{PlayerType}, player::TemporalDifferencePlayer, winner::Union{PlayerType, Nothing})
     println("writing values")
     return write_values_file(players, player)
 end
@@ -93,27 +136,37 @@ function write_main_features_file(game::Game, board::Board, players, player::Pla
     file_name = get_player_config(game.configs, "FEATURES", player.player.team)
     file = open(file_name, "a")
     features = compute_features_and_labels(game, board, player.player)
-    _write_features_file(game, board, players, player, winner, file, file_name, features)
+    _write_features_file(file, file_name, features)
 end
 
 function write_public_features_file(game::Game, board::Board, players, player::PlayerType, winner::Union{PlayerType, Nothing}) 
     file_name = get_player_config(game.configs, "PUBLIC_FEATURES", player.player.team)
     file = open(file_name, "a")
     features = compute_public_features_and_labels(game, board, player.player)
-    _write_features_file(game, board, players, player, winner, file, file_name, features)
+    _write_features_file(file, file_name, features)
 end
 
-function _write_features_file(game::Game, board::Board, players, player::PlayerType, winner::Union{PlayerType, Nothing}, file::IO, file_name, features::Vector) 
-    
-    header = join([get_csv_friendly(f[1]) for f in features], ",")
-    values = join([get_csv_friendly(f[2]) for f in features], ",")
-    
-    if filesize(file_name) == 0
-        write(file, "$header\n")
-    elseif game.turn_num == 1
-        data, existing_header = readdlm(file_name, ',', header=true)
-        @assert length(existing_header) == length(features) "Mismatch between existing feature schema in $file_name of length $(length(existing_header)) and current schema of length $(length(features))"
+
+
+function write_features_header_if_needed(file_name, features)
+    columns = vcat(features, get_labels())
+    open(file_name, "a") do file
+        header = join(get_csv_friendly.(first.(columns)), ",")
+        if filesize(file_name) == 0
+            write(file, "$header\n")
+        else
+            data, existing_header = readdlm(file_name, ',', header=true)
+            @assert length(existing_header) == length(columns) "Mismatch between existing feature schema in $file_name of length $(length(existing_header)) and current schema of length $(length(columns))"
+        end
     end
+end
+
+function _write_features_file(file_name, features::Vector) 
+    _write_features_file(open(file_name, "a"), file_name, features)
+end
+
+function _write_features_file(file::IO, file_name, features::Vector) 
+    values = join([get_csv_friendly(f[2]) for f in features], ",")
     
     write(file, "$values\n")
     close(file)

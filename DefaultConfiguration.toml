@@ -4,6 +4,15 @@ MAPS_PER_EPOCH = 2
 # Number of epochs (1 epoch is M*N games) to run
 NUM_EPOCHS = 1
 
+[Async]
+CHANNELS = ["main", "public"]
+[Async.main]
+SIZE = 32
+[Async.public]
+SIZE = 32
+
+
+
 [GameSettings]
 [PlayerSettings]
 MODEL = "./models/model.jls"
