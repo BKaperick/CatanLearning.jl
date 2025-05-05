@@ -37,7 +37,9 @@ function Catan.do_post_game_produce!(channels::Dict{Symbol, Channel}, game::Game
     main_features = compute_features_and_labels(game, board, player.player)
     public_features = compute_public_features_and_labels(game, board, player.player)
     put!(channels[:main], main_features)
+    println("Putting channel content to :main")
     put!(channels[:public], public_features)
+    println("Putting channel content to :public")
 end
 
 #=
@@ -64,8 +66,8 @@ function do_post_game_consume!(channels::Dict{Symbol, Channel}, configs::Dict)
 end
 
 function consume_channel!(channel, file_name)
-    println("Consuming channel content to $file_name !")
     features = take!(channel)
+    println("Consuming channel content to $file_name !")
     _write_features_file(file_name, features)
 end
 

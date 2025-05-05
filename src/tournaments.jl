@@ -1,3 +1,7 @@
+macro  tourneyinfo(exs...)
+    logmsg_code((@_sourceinfo)..., :Fatal,  exs...)
+end
+
 function do_tournament_one_epoch(tourney, teams, configs, player_constructors::Dict)
     do_tournament_one_epoch(tourney, teams, configs, player_constructors, Dict([(t,Dict()) for t in teams]))
 end
@@ -29,6 +33,8 @@ function do_tournament_one_epoch_async(channels, tourney, teams, configs, player
     for j=1:tourney.maps_per_epoch
         @info "game $j / $(tourney.maps_per_epoch)"
         do_tournament_one_map_async!(channels, tourney, configs, create_players)
+
+        #TODO better to control this with yield here or just implicitly with the Channel buffer size?
         yield()
     end
 end
@@ -72,21 +78,11 @@ function do_tournament_one_game!(winners, map, players, configs)
 end
 
 function do_tournament_one_game_async!(channels, map, players, configs)
-    println("running one game")
     game = Game(players, configs)
     board = Catan.read_map(configs, map)
+    println("starting game $(game.unique_id)")
     _,winner = Catan.run_async(channels, game, board)
-    #=
-    #channels[:winners]
-    w = winner
-    if winner !== nothing
-        w = winner.player.team
-        #@warn "$w won"
-    end
-    winners[w] += 1
-
-    return winner
-    =#
+    println("finished game $(game.unique_id)")
     return
 end
 
@@ -138,110 +134,28 @@ function run_tournament_async(configs)
     channels = Catan.read_channels_from_config(configs)
     
     println("Runnin dis tourney")
-    #_run_tournament_async(channels, tourney, player_schemas, configs, teams)
-    #do_post_game_consume!(channels, configs)
-    
-    #Threads.@spawn _run_tournament_async(channels, tourney, player_schemas, configs, teams))
-    #errormonitor(Threads.@spawn CatanLearning.do_post_game_consume!(channels, game, board, players, player, winner))
-    #t1 = Threads.@spawn _run_tournament_async(channels, tourney, player_schemas, configs, teams)
-    #fetch(t1)
 
-    #t2 = Threads.@spawn CatanLearning.do_post_game_consume!(channels, configs)
-    #fetch(t2)
-
-    #=
-    @sync while ~isempty(channels[:main])
-        @async consume_channel!(channels[:main], configs["PlayerSettings"]["FEATURES"])
-    end
-    close(channels[:main])
-    =#
-
-    #game_tasks = _run_tournament_async(channels, tourney, player_schemas, configs, teams)
     data_points = 4*(tourney.games_per_map * tourney.maps_per_epoch * tourney.epochs)
     @info "Running tournament of $data_points games in total"
     @sync begin
         @async _run_tournament_async(channels, tourney, player_schemas, configs, teams)
-        #@async consume_remaining_features!(channels, configs)
         @async consume_feature_channel!(channels[:main], data_points, configs["PlayerSettings"]["FEATURES"])
         @async consume_feature_channel!(channels[:public], data_points, configs["PlayerSettings"]["PUBLIC_FEATURES"])
     end
-
-    #=
-    fetch(game_tasks[1])
-    for t in game_tasks[2:end]
-        consume_remaining_features!(channels, configs)
-        fetch(t)
-    end
-    =#
-    #consume_remaining_features!(channels, configs)
-    
-    #=
-    while ~isempty(channels[:public]) || ~isempty(channels[:main])
-        t1 = Threads.@spawn consume_channel!(channels[:main], configs["PlayerSettings"]["FEATURES"])
-        consume_channel!(channels[:public], configs["PlayerSettings"]["PUBLIC_FEATURES"])
-        fetch(t1)
-    end
-    consume_remaining_features!(channels, configs)
-    =#
-
-    close(channels[:main])
-    close(channels[:public])
 end
-
-function consume_remaining_features!(channels, configs)
-    while ~isempty(channels[:public]) || ~isempty(channels[:main])
-        #t1 = Threads.@spawn consume_channel!(channels[:main], configs["PlayerSettings"]["FEATURES"])
-        consume_channel!(channels[:main], configs["PlayerSettings"]["FEATURES"])
-        consume_channel!(channels[:public], configs["PlayerSettings"]["PUBLIC_FEATURES"])
-        yield()
-        #fetch(t1)
-    end
-end
-
 
 function consume_feature_channel!(channel, count, key)
     for i=1:count
-        #t1 = Threads.@spawn consume_channel!(channels[:main], configs["PlayerSettings"]["FEATURES"])
         consume_channel!(channel, key)
-        yield()
-        #fetch(t1)
     end
+    close(channel)
 end
-
-#=
-function consume_feature_tasks(channels::Dict{Symbol, Channel}, game::Game, board::Board, players::Vector{PlayerType}, player::Catan.DefaultRobotPlayer, winner::Union{PlayerType, Nothing}))
-    
-
-    # Put game data on channel
-    @async do_post_game_produce!(channels, game, board, game.players, winner)
-end
-=#
-#=
-function _run_tournament_async(channels, tourney, player_schemas::Vector, configs, teams)
-    tasks = []
-    for k=1:tourney.epochs
-        @info "epoch $k / $(tourney.epochs)"
-        push!(tasks, Threads.@spawn do_tournament_one_epoch_async(channels, tourney, teams, configs, player_schemas))
-    end
-    #=
-    for (n,c) in channels
-        close(c)
-    end
-    =#
-    return tasks
-end
-=#
 
 function _run_tournament_async(channels, tourney, player_schemas::Vector, configs, teams)
     for k=1:tourney.epochs
         @info "epoch $k / $(tourney.epochs)"
         do_tournament_one_epoch_async(channels, tourney, teams, configs, player_schemas)
     end
-    #=
-    for (n,c) in channels
-        close(c)
-    end
-    =#
 end
 
 function run_tournament(tourney, create_players::Function, configs)
