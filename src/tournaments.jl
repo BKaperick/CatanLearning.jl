@@ -29,6 +29,7 @@ function do_tournament_one_epoch_async(channels, tourney, teams, configs, player
     for j=1:tourney.maps_per_epoch
         @info "game $j / $(tourney.maps_per_epoch)"
         do_tournament_one_map_async!(channels, tourney, configs, create_players)
+        yield()
     end
 end
 
@@ -155,12 +156,24 @@ function run_tournament_async(configs)
     close(channels[:main])
     =#
 
-    game_tasks = _run_tournament_async(channels, tourney, player_schemas, configs, teams)
-    
-    for t in game_tasks
-        fetch(t)
-        consume_remaining_features!(channels, configs)
+    #game_tasks = _run_tournament_async(channels, tourney, player_schemas, configs, teams)
+    data_points = 4*(tourney.games_per_map * tourney.maps_per_epoch * tourney.epochs)
+    @info "Running tournament of $data_points games in total"
+    @sync begin
+        @async _run_tournament_async(channels, tourney, player_schemas, configs, teams)
+        #@async consume_remaining_features!(channels, configs)
+        @async consume_feature_channel!(channels[:main], data_points, configs["PlayerSettings"]["FEATURES"])
+        @async consume_feature_channel!(channels[:public], data_points, configs["PlayerSettings"]["PUBLIC_FEATURES"])
     end
+
+    #=
+    fetch(game_tasks[1])
+    for t in game_tasks[2:end]
+        consume_remaining_features!(channels, configs)
+        fetch(t)
+    end
+    =#
+    #consume_remaining_features!(channels, configs)
     
     #=
     while ~isempty(channels[:public]) || ~isempty(channels[:main])
@@ -177,9 +190,21 @@ end
 
 function consume_remaining_features!(channels, configs)
     while ~isempty(channels[:public]) || ~isempty(channels[:main])
-        t1 = Threads.@spawn consume_channel!(channels[:main], configs["PlayerSettings"]["FEATURES"])
+        #t1 = Threads.@spawn consume_channel!(channels[:main], configs["PlayerSettings"]["FEATURES"])
+        consume_channel!(channels[:main], configs["PlayerSettings"]["FEATURES"])
         consume_channel!(channels[:public], configs["PlayerSettings"]["PUBLIC_FEATURES"])
-        fetch(t1)
+        yield()
+        #fetch(t1)
+    end
+end
+
+
+function consume_feature_channel!(channel, count, key)
+    for i=1:count
+        #t1 = Threads.@spawn consume_channel!(channels[:main], configs["PlayerSettings"]["FEATURES"])
+        consume_channel!(channel, key)
+        yield()
+        #fetch(t1)
     end
 end
 
@@ -191,7 +216,7 @@ function consume_feature_tasks(channels::Dict{Symbol, Channel}, game::Game, boar
     @async do_post_game_produce!(channels, game, board, game.players, winner)
 end
 =#
-
+#=
 function _run_tournament_async(channels, tourney, player_schemas::Vector, configs, teams)
     tasks = []
     for k=1:tourney.epochs
@@ -204,6 +229,19 @@ function _run_tournament_async(channels, tourney, player_schemas::Vector, config
     end
     =#
     return tasks
+end
+=#
+
+function _run_tournament_async(channels, tourney, player_schemas::Vector, configs, teams)
+    for k=1:tourney.epochs
+        @info "epoch $k / $(tourney.epochs)"
+        do_tournament_one_epoch_async(channels, tourney, teams, configs, player_schemas)
+    end
+    #=
+    for (n,c) in channels
+        close(c)
+    end
+    =#
 end
 
 function run_tournament(tourney, create_players::Function, configs)
