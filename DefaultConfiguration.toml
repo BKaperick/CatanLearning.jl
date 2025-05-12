@@ -1,4 +1,5 @@
 SAVE_MAP = ""
+WRITE_FEATURES = false
 
 [Tournament]
 GAMES_PER_MAP = 100

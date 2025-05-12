@@ -2,25 +2,31 @@ using Catan: do_post_game_action, initialize_player
 
 function Catan.do_post_game_action(game::Game, board::Board, players::Vector{DefaultRobotPlayer}, winner::Union{PlayerType, Nothing})
     
-    main_file_name = get_player_config(game.configs, "FEATURES", players[1].player.team)
-    main_file = open(main_file_name, "a")
+    if game.configs["WRITE_FEATURES"] == true
+        main_file_name = get_player_config(game.configs, "FEATURES", players[1].player.team)
+        main_file = open(main_file_name, "a")
 
-    public_file_name = get_player_config(game.configs, "PUBLIC_FEATURES", players[1].player.team)
-    public_file = open(public_file_name, "a")
-    
-    for player in players
-        features = compute_features_and_labels(game, board, player.player)
-        _write_features_file(main_file, main_file_name, features)
+        public_file_name = get_player_config(game.configs, "PUBLIC_FEATURES", players[1].player.team)
+        public_file = open(public_file_name, "a")
+        
+        for player in players
+            features = compute_features_and_labels(game, board, player.player)
+            _write_features_file(main_file, main_file_name, features)
 
-        public_features = compute_public_features_and_labels(game, board, player.player)
-        _write_features_file(public_file, public_file_name, public_features)
+            public_features = compute_public_features_and_labels(game, board, player.player)
+            _write_features_file(public_file, public_file_name, public_features)
+        end
+    else
+        println("Skipping feature writing")
     end
 end
 
 function Catan.initialize_player(board::Board, player::DefaultRobotPlayer)
-    @info "Intializing player feature files"
-    write_features_header_if_needed(get_player_config(player, "FEATURES"), get_features())
-    write_features_header_if_needed(get_player_config(player, "PUBLIC_FEATURES"), get_public_features())
+    if board.configs["WRITE_FEATURES"] == true
+        @info "Intializing player feature files"
+        write_features_header_if_needed(get_player_config(player, "FEATURES"), get_features())
+        write_features_header_if_needed(get_player_config(player, "PUBLIC_FEATURES"), get_public_features())
+    end
 end
 
 function Catan.do_post_game_action(game::Game, board::Board, players::Vector{PlayerType}, player::EmpathRobotPlayer, winner::Union{PlayerType, Nothing})
