@@ -240,7 +240,7 @@ function compute_features(board, player::Player)::Vector{Pair{Symbol, Float64}}
     return [s => f(board, player) for (s,f) in raw_features]
 end
 
-function compute_public_features(board, player::Player)::Vector{Pair{Symbol, Float64}}
+function compute_public_features(board, player::Union{Player, PlayerPublicView})::Vector{Pair{Symbol, Float64}}
     raw_features = get_public_features()
     return [s => f(board, player) for (s,f) in raw_features]
 end
