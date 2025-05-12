@@ -10,6 +10,10 @@ import Catan
 import Catan: Player, PlayerPublicView, PlayerType, RobotPlayer, DefaultRobotPlayer, Game, Board, 
 get_player_config
 
+function toggleprint(str)
+    #println(str)
+end
+
 include("structs.jl")
 include("learning/naive_model.jl")
 include("learning/production_model.jl")
@@ -34,6 +38,7 @@ function __init__()
 
     # Upsert the configs from this package
     default_config_path = joinpath(@__DIR__, "..", "DefaultConfiguration.toml")
+    @info "Adding new configs: $default_config_path"
     Catan.update_default_configs(default_config_path)
 end
 

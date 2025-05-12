@@ -1,3 +1,5 @@
+SAVE_MAP = ""
+
 [Tournament]
 GAMES_PER_MAP = 100
 MAPS_PER_EPOCH = 2

@@ -37,9 +37,9 @@ function Catan.do_post_game_produce!(channels::Dict{Symbol, Channel}, game::Game
     main_features = compute_features_and_labels(game, board, player.player)
     public_features = compute_public_features_and_labels(game, board, player.player)
     put!(channels[:main], main_features)
-    println("Putting channel content to :main")
+    toggleprint("Putting channel content to :main")
     put!(channels[:public], public_features)
-    println("Putting channel content to :public")
+    toggleprint("Putting channel content to :public")
 end
 
 #=
@@ -67,7 +67,7 @@ end
 
 function consume_channel!(channel, file_name)
     features = take!(channel)
-    println("Consuming channel content to $file_name !")
+    toggleprint("Consuming channel content to $file_name !")
     _write_features_file(file_name, features)
 end
 
@@ -150,15 +150,20 @@ end
 
 
 
-function write_features_header_if_needed(file_name, features)
+function write_features_header_if_needed(path, features)
     columns = vcat(features, get_labels())
-    open(file_name, "a") do file
+
+    if ~isfile(path)
+        touch(path)
+    end
+
+    open(path, "a") do file
         header = join(get_csv_friendly.(first.(columns)), ",")
-        if filesize(file_name) == 0
+        if filesize(path) == 0
             write(file, "$header\n")
         else
-            data, existing_header = readdlm(file_name, ',', header=true)
-            @assert length(existing_header) == length(columns) "Mismatch between existing feature schema in $file_name of length $(length(existing_header)) and current schema of length $(length(columns))"
+            data, existing_header = readdlm(path, ',', header=true)
+            @assert length(existing_header) == length(columns) "Mismatch between existing feature schema in $path of length $(length(existing_header)) and current schema of length $(length(columns))"
         end
     end
 end

@@ -1,6 +1,3 @@
-macro  tourneyinfo(exs...)
-    logmsg_code((@_sourceinfo)..., :Fatal,  exs...)
-end
 
 function do_tournament_one_epoch(tourney, teams, configs, player_constructors::Dict)
     do_tournament_one_epoch(tourney, teams, configs, player_constructors, Dict([(t,Dict()) for t in teams]))
@@ -20,7 +17,7 @@ function do_tournament_one_epoch(tourney, teams, configs, create_players::Functi
     winners = init_winners(teams)
     for j=1:tourney.maps_per_epoch
         @info "map $j / $(tourney.maps_per_epoch)"
-        do_tournament_one_map!(winners, tourney, configs, create_players)
+        do_tournament_one_map!(winners, tourney, configs, create_players, j)
     end
     order_winners(winners)
 end
@@ -39,15 +36,15 @@ function do_tournament_one_epoch_async(channels, tourney, teams, configs, player
     end
 end
 
-function do_tournament_one_map!(winners, tourney, configs, create_players)
-    map = Catan.generate_random_map(configs["MAP_FILE"])
+function do_tournament_one_map!(winners, tourney, configs, create_players, map_num)
+    map = Catan.generate_random_map()
     for i=1:tourney.games_per_map
         players = create_players()
         do_tournament_one_game!(winners, map, players, configs)
 
-        g_num = (j - 1)*tourney.games_per_map + i
+        g_num = (map_num - 1)*tourney.games_per_map + i
         if g_num % 100 == 0
-            println("Game $(g_num) / $(tourney.maps_per_epoch * tourney.games_per_map)")
+            toggleprint("Game $(g_num) / $(tourney.maps_per_epoch * tourney.games_per_map)")
         end
     end
 end
@@ -64,7 +61,7 @@ end
 
 function do_tournament_one_game!(winners, map, players, configs)
     game = Game(players, configs)
-    board = Catan.read_map(map)
+    board = Catan.read_map(configs, map)
     _,winner = Catan.run(game)
 
     w = winner
@@ -80,9 +77,9 @@ end
 function do_tournament_one_game_async!(channels, map, players, configs)
     game = Game(players, configs)
     board = Catan.read_map(configs, map)
-    println("starting game $(game.unique_id)")
+    toggleprint("starting game $(game.unique_id)")
     _,winner = Catan.run_async(channels, game, board)
-    println("finished game $(game.unique_id)")
+    toggleprint("finished game $(game.unique_id)")
     return
 end
 
@@ -95,7 +92,7 @@ end
 function run_mutating_tournament(tourney, player_constructors, configs)
     teams = configs["TEAMS"]
     team_to_mutation = Dict([(t, Dict()) for t in teams])
-    configs["MAP_FILE"] = "./data/_temp_map_file.csv"
+    configs["SAVE_MAP"] = "./data/_temp_map_file.csv"
     for k=1:tourney.epochs
         ordered_winners = do_tournament_one_epoch(tourney, teams, configs, player_constructors, team_to_mutation)
         @info ordered_winners
@@ -107,18 +104,17 @@ function run_mutating_tournament(tourney, player_constructors, configs)
     end
 
     for (player,mt) in team_to_mutation
-        println("$(player): $(print_mutation(mt))")
+        toggleprint("$(player): $(print_mutation(mt))")
     end
 end
 
 function run_tournament(tourney, player_schemas::Vector, configs)
     teams = [Symbol(t) for t in configs["TEAMS"]]
-    configs["MAP_FILE"] = "./data/_temp_map_file.csv"
     winners = init_winners(teams)
     for k=1:tourney.epochs
         @info "epoch $k / $(tourney.epochs)"
         epoch_winners = do_tournament_one_epoch(tourney, teams, configs, player_schemas)
-        #println(epoch_winners)
+        #toggleprint(epoch_winners)
         for (w,n) in collect(epoch_winners)
             winners[w] += n
         end
@@ -133,7 +129,7 @@ function run_tournament_async(configs)
 
     channels = Catan.read_channels_from_config(configs)
     
-    println("Runnin dis tourney")
+    toggleprint("Runnin dis tourney")
 
     data_points = 4*(tourney.games_per_map * tourney.maps_per_epoch * tourney.epochs)
     @info "Running tournament of $data_points games in total"
@@ -160,11 +156,10 @@ end
 
 function run_tournament(tourney, create_players::Function, configs)
     teams = [Symbol(t) for t in configs["TEAMS"]]
-    configs["MAP_FILE"] = "./data/_temp_map_file.csv"
     winners = init_winners(teams)
     for k=1:tourney.epochs
         epoch_winners = do_tournament_one_epoch(tourney, teams, configs, create_players)
-        #println(epoch_winners)
+        #toggleprint(epoch_winners)
         for (w,n) in collect(epoch_winners)
             winners[w] += n
         end
