@@ -16,8 +16,6 @@ function Catan.do_post_game_action(game::Game, board::Board, players::Vector{Def
             public_features = compute_public_features_and_labels(game, board, player.player)
             _write_features_file(public_file, public_file_name, public_features)
         end
-    else
-        println("Skipping feature writing")
     end
 end
 

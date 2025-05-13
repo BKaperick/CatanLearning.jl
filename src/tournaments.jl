@@ -32,7 +32,7 @@ function do_tournament_one_epoch_async(channels, tourney, teams, configs, player
         do_tournament_one_map_async!(channels, tourney, configs, create_players)
 
         #TODO better to control this with yield here or just implicitly with the Channel buffer size?
-        yield()
+        #yield()
     end
 end
 
