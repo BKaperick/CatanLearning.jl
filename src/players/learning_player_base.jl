@@ -6,7 +6,8 @@ using Catan: GameApi, BoardApi, PlayerApi, PreAction, random_sample_resources, g
 using Catan: choose_next_action, choose_who_to_trade_with,
              choose_place_robber, do_post_action_step, 
              choose_accept_trade, choose_resource_to_draw,
-             choose_one_resource_to_discard
+             choose_one_resource_to_discard,
+             choose_robber_victim
 
 function get_estimated_resources(board::Board, players::Vector{PlayerPublicView}, target::PlayerPublicView)::Dict{Symbol, Int}
     return Dict([(r,1) for r in Catan.RESOURCES])
@@ -287,11 +288,11 @@ Gathers all legal actions, and chooses the one that most increases the player's
 probability of victory, based on his `player.machine` model.  If no action 
 increases the probability of victory, then do nothing.
 """
-function Catan.choose_next_action(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, actions::Set{PreAction})::Tuple
+function Catan.choose_next_action(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, actions::Set{PreAction})::Function
     @info "$(player.player.team) considers $(collect(actions))"
     best_action = get_best_action(board, players, player, actions)
     @info "$(player.player.team) chooses to $(best_action.name) $(best_action.args)"
-    return (best_action.args, best_action.func!)
+    return best_action.func!
 end
 
 function Catan.choose_accept_trade(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, from_player::Player, from_goods::Vector{Symbol}, to_goods::Vector{Symbol})::Bool
@@ -311,3 +312,6 @@ end
 #function Catan.choose_monopoly_resource(board::Board, players::Vector{PlayerPublicView}, player::RobotPlayer)::Symbol
 #end
 
+
+#TODO missing implementation
+#function Catan.choose_robber_victim
