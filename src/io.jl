@@ -33,8 +33,10 @@ function Catan.do_post_game_action(game::Game, board::Board, players::Vector{Pla
     end
 end
 function Catan.do_post_game_action(game::Game, board::Board, players::Vector{PlayerType}, player::Catan.DefaultRobotPlayer, winner::Union{PlayerType, Nothing})
-    write_public_features_file(game, board, players, player, winner)
-    return write_main_features_file(game, board, players, player, winner)
+    if game.configs["WRITE_FEATURES"] == true
+        write_public_features_file(game, board, players, player, winner)
+        return write_main_features_file(game, board, players, player, winner)
+    end
 end
 
 function Catan.do_post_game_produce!(channels::Dict{Symbol, Channel}, game::Game, board::Board, players::Vector{PlayerType}, player::Catan.DefaultRobotPlayer, winner::Union{PlayerType, Nothing})

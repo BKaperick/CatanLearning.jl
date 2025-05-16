@@ -124,12 +124,12 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
                     push!(action_set.actions, 
                           SampledAction(
                                  Symbol("$(r)"), 
-                                 (g, b, p) -> do_robber_move_theft(
+                                 (g, b, p) -> inner_do_robber_move_theft(
                                                                    b, g.players, 
                                                                    p, victim.team, 
                                                                    candidate_tile, 
                                                                    r), 
-                                 (g, b, p) -> do_robber_move_theft(b, p, victim.team, candidate_tile),
+                                 (g, b, p) -> do_robber_move_choose_victim_theft(b, p, victim.team, candidate_tile),
                                  victim, candidate_tile))
                 end
                 push!(action_sets, action_set)
@@ -137,7 +137,7 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
             if length(candidate_victims) == 0
                 push!(main_action_set.actions, 
                       Action(:PlaceRobber, 
-                             (g, b, p) -> do_robber_move_theft(b, g.players, p, nothing, candidate_tile, nothing), 
+                             (g, b, p) -> inner_do_robber_move_theft(b, g.players, p, nothing, candidate_tile, nothing), 
                              nothing, candidate_tile))
             end
         end
