@@ -22,8 +22,14 @@ end
 function Catan.initialize_player(board::Board, player::DefaultRobotPlayer)
     if board.configs["WRITE_FEATURES"] == true
         @info "Intializing player feature files"
-        write_features_header_if_needed(get_player_config(player, "FEATURES"), get_features())
-        write_features_header_if_needed(get_player_config(player, "PUBLIC_FEATURES"), get_public_features())
+        @debug "getting features"
+        f = get_features()
+        @debug "writing features header"
+        write_features_header_if_needed(get_player_config(player, "FEATURES"), f, board.configs)
+        @debug "getting public features"
+        pf = get_public_features()
+        @debug "writing public features header"
+        write_features_header_if_needed(get_player_config(player, "PUBLIC_FEATURES"), pf, board.configs)
     end
 end
 
@@ -156,7 +162,7 @@ end
 
 
 
-function write_features_header_if_needed(path, features)
+function write_features_header_if_needed(path, features, configs)
     columns = vcat(features, get_labels())
 
     if ~isfile(path)
@@ -167,7 +173,7 @@ function write_features_header_if_needed(path, features)
         header = join(get_csv_friendly.(first.(columns)), ",")
         if filesize(path) == 0
             write(file, "$header\n")
-        else
+        elseif configs["FEATURE_SANITY_CHECK"] == true
             data, existing_header = readdlm(path, ',', header=true)
             @assert length(existing_header) == length(columns) "Mismatch between existing feature schema in $path of length $(length(existing_header)) and current schema of length $(length(columns))"
         end

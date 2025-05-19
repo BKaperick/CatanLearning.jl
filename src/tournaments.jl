@@ -133,11 +133,17 @@ function run_tournament_async(configs)
 
     data_points = 4*(tourney.games_per_map * tourney.maps_per_epoch * tourney.epochs)
     @info "Running tournament of $data_points games in total"
+    #=
     @sync begin
         @async _run_tournament_async(channels, tourney, player_schemas, configs, teams)
         @async consume_feature_channel!(channels[:main], data_points, configs["PlayerSettings"]["FEATURES"])
         @async consume_feature_channel!(channels[:public], data_points, configs["PlayerSettings"]["PUBLIC_FEATURES"])
     end
+    =#
+    _run_tournament_async(channels, tourney, player_schemas, configs, teams)
+    consume_feature_channel!(channels[:main], data_points, configs["PlayerSettings"]["FEATURES"])
+    consume_feature_channel!(channels[:public], data_points, configs["PlayerSettings"]["PUBLIC_FEATURES"])
+
 end
 
 function consume_feature_channel!(channel, count, key)

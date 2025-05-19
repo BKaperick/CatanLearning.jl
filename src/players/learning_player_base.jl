@@ -1,4 +1,4 @@
-using Catan: GameApi, BoardApi, PlayerApi, PreAction, random_sample_resources, get_random_resource,
+using Catan: GameApi, BoardApi, PlayerApi, PreAction, ChosenAction, random_sample_resources, unsafe_random_sample_one_resource, get_random_resource,
              construct_city, construct_settlement, construct_road,
              do_play_devcard, propose_trade_goods, do_robber_move_theft,
             get_admissible_theft_victims, choose_road_location, trade_goods, choose_building_location
@@ -93,8 +93,9 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
     # can check if the trade would be accepted before deciding to do it.
     if haskey(actions, :ProposeTrade)
         #action_set = ActionSet{Action}(:ProposeTrade)
-        sampled = random_sample_resources(player.resources, 1)
-        rand_resource_from = [sampled...]
+        #sampled = random_sample_resources(player.resources, 1)
+        #rand_resource_from = [sampled...]
+        rand_resource_from = [unsafe_random_sample_one_resource(player.resources)]
         rand_resource_to = [get_random_resource()]
         while rand_resource_to[1] == rand_resource_from[1]
             rand_resource_to = [get_random_resource()]
@@ -288,11 +289,12 @@ Gathers all legal actions, and chooses the one that most increases the player's
 probability of victory, based on his `player.machine` model.  If no action 
 increases the probability of victory, then do nothing.
 """
-function Catan.choose_next_action(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, actions::Set{PreAction})::Function
+function Catan.choose_next_action(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, actions::Set{PreAction})::ChosenAction
     @info "$(player.player.team) considers $(collect(actions))"
     best_action = get_best_action(board, players, player, actions)
     @info "$(player.player.team) chooses to $(best_action.name) $(best_action.args)"
-    return best_action.func!
+    return ChosenAction(best_action.name, best_action.args)
+    #return best_action.func!
 end
 
 function Catan.choose_accept_trade(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, from_player::Player, from_goods::Vector{Symbol}, to_goods::Vector{Symbol})::Bool
