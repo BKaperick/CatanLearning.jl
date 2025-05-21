@@ -38,7 +38,7 @@ function Catan.do_post_action_step(board::Board, player::TemporalDifferencePlaye
 end
 
 
-function Catan.choose_next_action(board::Board, players::Vector{PlayerPublicView}, player::TemporalDifferencePlayer, actions::Set{PreAction})::Function
+function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPublicView}, player::TemporalDifferencePlayer, actions::Set{PreAction})::Function
     best_action_index = 0
     best_action_proba = -1
     machine = player.machine

@@ -9,7 +9,7 @@ using Catan: choose_next_action, choose_who_to_trade_with,
              choose_one_resource_to_discard,
              choose_robber_victim
 
-function get_estimated_resources(board::Board, players::Vector{PlayerPublicView}, target::PlayerPublicView)::Dict{Symbol, Int}
+function get_estimated_resources(board::Board, players::AbstractVector{PlayerPublicView}, target::PlayerPublicView)::Dict{Symbol, Int}
     return Dict([(r,1) for r in Catan.RESOURCES])
 end
 """
@@ -18,7 +18,7 @@ end
 A helper function for the learning player to make a probabilistic decision 
 about what remains in the devcard deck based on public information.
 """
-function get_estimated_remaining_devcards(board::Board, players::Vector{PlayerPublicView}, player::Player)::Dict{Symbol, Int}
+function get_estimated_remaining_devcards(board::Board, players::AbstractVector{PlayerPublicView}, player::Player)::Dict{Symbol, Int}
     devcards = Catan.get_devcard_counts(board.configs)
     for (card,count) in collect(player.devcards)
         devcards[card] -= count
@@ -34,7 +34,7 @@ function get_estimated_remaining_devcards(board::Board, players::Vector{PlayerPu
     return devcards
 end
 
-function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, player::Player, pre_actions::Set{PreAction})::Vector{AbstractActionSet}
+function get_legal_action_sets(board::Board, players::AbstractVector{PlayerPublicView}, player::Player, pre_actions::Set{PreAction})::Vector{AbstractActionSet}
 
     main_action_set = ActionSet(:Deterministic)
     action_sets = Vector{AbstractActionSet}([])
@@ -155,13 +155,13 @@ function get_legal_action_sets(board::Board, players::Vector{PlayerPublicView}, 
     return action_sets
 end
 
-function Catan.choose_road_location(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Vector{Tuple{Int, Int}}})::Union{Nothing,Vector{Tuple{Int, Int}}}
+function Catan.choose_road_location(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Vector{Tuple{Int, Int}}})::Union{Nothing,Vector{Tuple{Int, Int}}}
     cand_args = Set([Tuple(t) for t in candidates])
     best_action = get_best_action(board, players, player, Set([PreAction(:ConstructRoad, cand_args)]))
     return collect(best_action.args[1])
 end
 
-function Catan.choose_building_location(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Tuple{Int, Int}}, building_type::Symbol)::Union{Nothing,Tuple{Int,Int}}
+function Catan.choose_building_location(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Tuple{Int, Int}}, building_type::Symbol)::Union{Nothing,Tuple{Int,Int}}
     @debug "learning player has $candidates as choices to build"
     if building_type == :City
         return get_best_action(board, players, player, Set([PreAction(:ConstructCity, candidates)])).args[1]
@@ -170,11 +170,11 @@ function Catan.choose_building_location(board::Board, players::Vector{PlayerPubl
     end
 end
 
-function Catan.choose_place_robber(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, candidate_tiles::Vector{Symbol})::Symbol
+function Catan.choose_place_robber(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidate_tiles::Vector{Symbol})::Symbol
     return get_best_action(board, players, player, Set([PreAction(:PlaceRobber, candidate_tiles)])).args[2]
 end
 
-function Catan.choose_resource_to_draw(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer)::Symbol
+function Catan.choose_resource_to_draw(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer)::Symbol
     resources = collect(keys(Dict((k,v) for (k,v) in board.resources if v > 0)))
     return get_best_action(board, players, player, Set([PreAction(:GainResource, resources)])).args[1]
 end
@@ -198,19 +198,19 @@ function deterministic_draw_devcard(game, board, player, card)
 end
 
 """
-    `get_best_action(board::Board, players::Vector{PlayerPublicView}, 
+    `get_best_action(board::Board, players::AbstractVector{PlayerPublicView}, 
                               player::PlayerType, actions::Set{Symbol})`
 
 Gets the legal action functions for the player at this board state, and 
 computes the feature vector for each resulting state.  This is a critical 
 helper function for all the machine-learning players.
 """
-function get_best_action(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, actions::Set, depth::Int=1)::Action
+function get_best_action(board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, actions::Set, depth::Int=1)::Action
     action_sets = get_legal_action_sets(board, players, player.player, actions)
     return analyze_and_aggregate_action_sets(board, players, player, action_sets, depth)
 end
 
-function analyze_and_aggregate_action_sets(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, action_sets::Vector{AbstractActionSet}, depth::Int)::Action
+function analyze_and_aggregate_action_sets(board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, action_sets::Vector{AbstractActionSet}, depth::Integer)::Action
     best_actions = ActionSet(:SecondRound)
 
     # Enriches the inner actions with `win_proba` and `features` properties
@@ -227,7 +227,7 @@ function analyze_and_aggregate_action_sets(board::Board, players::Vector{PlayerP
     return aggregate(best_actions)
 end
 
-function analyze_actions!(board::Board, players::Vector{PlayerPublicView}, player::PlayerType, action_sets::Vector{AbstractActionSet}, depth::Int)
+function analyze_actions!(board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, action_sets::Vector{AbstractActionSet}, depth::Integer)
     for (i,set) in enumerate(action_sets)
         @debug "analyzing action set ($(length(set.actions)) actions): \n$(join(["$(a.name)($(a.args))" for a in set.actions], "\n"))"
         for action in set.actions
@@ -255,7 +255,7 @@ function aggregate(set::ActionSet{SampledAction})::Action
 end
 
 
-function analyze_action!(action::AbstractAction, board::Board, players::Vector{PlayerPublicView}, player::PlayerType, depth::Int)
+function analyze_action!(action::AbstractAction, board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, depth::Integer)
     hypoth_board = deepcopy(board)
     hypoth_player = deepcopy(player)
     hypoth_game = Game([DefaultRobotPlayer(p.team, board.configs) for p in players], board.configs)
@@ -283,13 +283,13 @@ function analyze_action!(action::AbstractAction, board::Board, players::Vector{P
 end
 
 """    
-    `choose_next_action(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, actions::Set{Symbol})`
+    `choose_next_action(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, actions::Set{Symbol})`
 
 Gathers all legal actions, and chooses the one that most increases the player's 
 probability of victory, based on his `player.machine` model.  If no action 
 increases the probability of victory, then do nothing.
 """
-function Catan.choose_next_action(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, actions::Set{PreAction})::ChosenAction
+function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, actions::Set{PreAction})::ChosenAction
     @info "$(player.player.team) considers $(collect(actions))"
     best_action = get_best_action(board, players, player, actions)
     @info "$(player.player.team) chooses to $(best_action.name) $(best_action.args)"
@@ -297,21 +297,21 @@ function Catan.choose_next_action(board::Board, players::Vector{PlayerPublicView
     #return best_action.func!
 end
 
-function Catan.choose_accept_trade(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, from_player::Player, from_goods::Vector{Symbol}, to_goods::Vector{Symbol})::Bool
+function Catan.choose_accept_trade(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, from_player::Player, from_goods::Vector{Symbol}, to_goods::Vector{Symbol})::Bool
     actions = Set([PreAction(:DoNothing), PreAction(:AcceptTrade, [(from_player, from_goods, to_goods)])])
     best_action = get_best_action(board, players, player, actions)
     return best_action.args !== nothing
 end
 
 """
-    `Catan.choose_who_to_trade_with(board::Board, player::LearningPlayer, players::Vector{PlayerPublicView})::Symbol`
+    `Catan.choose_who_to_trade_with(board::Board, player::LearningPlayer, players::AbstractVector{PlayerPublicView})::Symbol`
 
 Use public model (stored in `player.player.machine_public`) to choose a trading partner as the weakest among the options
 """
-function Catan.choose_who_to_trade_with(board::Board, player::LearningPlayer, players::Vector{PlayerPublicView})::Symbol
+function Catan.choose_who_to_trade_with(board::Board, player::LearningPlayer, players::AbstractVector{PlayerPublicView})::Symbol
     return argmin(p -> predict_public_model(player.machine_public, board, p), players).team
 end
-#function Catan.choose_monopoly_resource(board::Board, players::Vector{PlayerPublicView}, player::RobotPlayer)::Symbol
+#function Catan.choose_monopoly_resource(board::Board, players::AbstractVector{PlayerPublicView}, player::RobotPlayer)::Symbol
 #end
 
 

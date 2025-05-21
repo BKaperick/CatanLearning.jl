@@ -1,4 +1,20 @@
 
+function initialize_tournament(configs::Dict)
+    if configs["WRITE_FEATURES"] == true
+        @info "Intializing player feature files"
+        f = get_features()
+        pf = get_public_features()
+        for team in configs["TEAMS"]
+            f_file_name = get_player_config(configs, "FEATURES", team)
+            pf_file_name = get_player_config(configs, "PUBLIC_FEATURES", team)
+            println("checking in $f_file_name")
+            write_features_header_if_needed(f_file_name, f, configs)
+            println("checking in $pf_file_name")
+            write_features_header_if_needed(pf_file_name, pf, configs)
+        end
+    end
+end
+
 function do_tournament_one_epoch(tourney, teams, configs, player_constructors::Dict)
     do_tournament_one_epoch(tourney, teams, configs, player_constructors, Dict([(t,Dict()) for t in teams]))
 end
@@ -26,9 +42,8 @@ function do_tournament_one_epoch_async(channels, tourney, teams, configs, player
     players = Catan.get_known_players()
 
     create_players = () -> [players[p[1]](Symbol(p[2]), configs) for p in players_schema]
-    @debug "players loaded"
     for j=1:tourney.maps_per_epoch
-        @info "game $j / $(tourney.maps_per_epoch)"
+        @info "map $j / $(tourney.maps_per_epoch)"
         do_tournament_one_map_async!(channels, tourney, configs, create_players)
 
         #TODO better to control this with yield here or just implicitly with the Channel buffer size?
@@ -53,9 +68,10 @@ function do_tournament_one_map_async!(channels, tourney, configs, create_players
     @debug "running do_tournament_one_map_async!"
     map = Catan.generate_random_map()
     for i=1:tourney.games_per_map
-        @info "game $i / $(tourney.games_per_map)"
+        @debug "game $i / $(tourney.games_per_map)"
         players = create_players()
         do_tournament_one_game_async!(channels, map, players, configs)
+        yield()
     end
 end
 
@@ -77,9 +93,12 @@ end
 function do_tournament_one_game_async!(channels, map, players, configs)
     game = Game(players, configs)
     board = Catan.read_map(configs, map)
-    toggleprint("starting game $(game.unique_id)")
+    @debug "starting game $(game.unique_id)"
+    main_logger = global_logger()
+    global_logger(NullLogger())
     _,winner = Catan.run_async(channels, game, board)
-    toggleprint("finished game $(game.unique_id)")
+    global_logger(main_logger)
+    @debug "finished game $(game.unique_id)"
     return
 end
 
@@ -109,6 +128,7 @@ function run_mutating_tournament(tourney, player_constructors, configs)
 end
 
 function run_tournament(tourney, player_schemas::Vector, configs)
+    initialize_tournament(configs)
     teams = [Symbol(t) for t in configs["TEAMS"]]
     winners = init_winners(teams)
     for k=1:tourney.epochs
@@ -123,6 +143,7 @@ function run_tournament(tourney, player_schemas::Vector, configs)
 end
 
 function run_tournament_async(configs)
+    initialize_tournament(configs)
     tourney = Tournament(configs, :Sequential)
     teams = [Symbol(t) for t in configs["TEAMS"]]
     player_schemas = Catan.read_player_constructors_from_config(configs["PlayerSettings"])
@@ -132,18 +153,18 @@ function run_tournament_async(configs)
     toggleprint("Runnin dis tourney")
 
     data_points = 4*(tourney.games_per_map * tourney.maps_per_epoch * tourney.epochs)
-    @info "Running tournament of $data_points games in total"
-    #=
+    @info "Running tournament of $(data_points/4) games in total"
+    
     @sync begin
         @async _run_tournament_async(channels, tourney, player_schemas, configs, teams)
         @async consume_feature_channel!(channels[:main], data_points, configs["PlayerSettings"]["FEATURES"])
         @async consume_feature_channel!(channels[:public], data_points, configs["PlayerSettings"]["PUBLIC_FEATURES"])
     end
-    =#
+    #=
     _run_tournament_async(channels, tourney, player_schemas, configs, teams)
     consume_feature_channel!(channels[:main], data_points, configs["PlayerSettings"]["FEATURES"])
     consume_feature_channel!(channels[:public], data_points, configs["PlayerSettings"]["PUBLIC_FEATURES"])
-
+    =#
 end
 
 function consume_feature_channel!(channel, count, key)

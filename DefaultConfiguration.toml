@@ -1,7 +1,5 @@
 SAVE_MAP = ""
 WRITE_FEATURES = false
-# Check if the features files header matches the runtime feature set
-FEATURE_SANITY_CHECK = true
 
 [Tournament]
 GAMES_PER_MAP = 100

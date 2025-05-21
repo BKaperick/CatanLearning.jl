@@ -1,6 +1,6 @@
 using Catan: do_post_game_action, initialize_player
 
-function Catan.do_post_game_action(game::Game, board::Board, players::Vector{DefaultRobotPlayer}, winner::Union{PlayerType, Nothing})
+function Catan.do_post_game_action(game::Game, board::Board, players::AbstractVector{DefaultRobotPlayer}, winner::Union{PlayerType, Nothing})
     
     if game.configs["WRITE_FEATURES"] == true
         main_file_name = get_player_config(game.configs, "FEATURES", players[1].player.team)
@@ -20,6 +20,7 @@ function Catan.do_post_game_action(game::Game, board::Board, players::Vector{Def
 end
 
 function Catan.initialize_player(board::Board, player::DefaultRobotPlayer)
+    #=
     if board.configs["WRITE_FEATURES"] == true
         @info "Intializing player feature files"
         @debug "getting features"
@@ -31,21 +32,23 @@ function Catan.initialize_player(board::Board, player::DefaultRobotPlayer)
         @debug "writing public features header"
         write_features_header_if_needed(get_player_config(player, "PUBLIC_FEATURES"), pf, board.configs)
     end
+    =#
 end
 
-function Catan.do_post_game_action(game::Game, board::Board, players::Vector{PlayerType}, player::EmpathRobotPlayer, winner::Union{PlayerType, Nothing})
+function Catan.do_post_game_action(game::Game, board::Board, players::AbstractVector{PlayerType}, player::EmpathRobotPlayer, winner::Union{PlayerType, Nothing})
     if game.configs["PRINT_BOARD"]
         Catan.BoardApi.print_board(board)
     end
 end
-function Catan.do_post_game_action(game::Game, board::Board, players::Vector{PlayerType}, player::Catan.DefaultRobotPlayer, winner::Union{PlayerType, Nothing})
+
+function Catan.do_post_game_action(game::Game, board::Board, players::AbstractVector{PlayerType}, player::Catan.DefaultRobotPlayer, winner::Union{PlayerType, Nothing})
     if game.configs["WRITE_FEATURES"] == true
         write_public_features_file(game, board, players, player, winner)
         return write_main_features_file(game, board, players, player, winner)
     end
 end
 
-function Catan.do_post_game_produce!(channels::Dict{Symbol, Channel}, game::Game, board::Board, players::Vector{PlayerType}, player::Catan.DefaultRobotPlayer, winner::Union{PlayerType, Nothing})
+function Catan.do_post_game_produce!(channels::Dict{Symbol, Channel}, game::Game, board::Board, players::AbstractVector{PlayerType}, player::Catan.DefaultRobotPlayer, winner::Union{PlayerType, Nothing})
     main_features = compute_features_and_labels(game, board, player.player)
     public_features = compute_public_features_and_labels(game, board, player.player)
     put!(channels[:main], main_features)
@@ -55,7 +58,7 @@ function Catan.do_post_game_produce!(channels::Dict{Symbol, Channel}, game::Game
 end
 
 #=
-function Catan.do_post_game_consume!(channels::Dict{Symbol, Channel}, output_ios::Dict{Symbol, IO}, game::Game, board::Board, players::Vector{PlayerType}, player::Catan.DefaultRobotPlayer, winner::Union{PlayerType, Nothing})
+function Catan.do_post_game_consume!(channels::Dict{Symbol, Channel}, output_ios::Dict{Symbol, IO}, game::Game, board::Board, players::AbstractVector{PlayerType}, player::Catan.DefaultRobotPlayer, winner::Union{PlayerType, Nothing})
     _write_features_file
     main_features = take!(channels[:main])
     public_features = take!(channels[:public])
@@ -63,7 +66,7 @@ function Catan.do_post_game_consume!(channels::Dict{Symbol, Channel}, output_ios
     _write_features_file(game, board, players, player, winner, output_ios[:public], game.configs["PUBLIC_FEATURES"], public_features)
 end
 =#
-function do_post_game_consume!(channels::Dict{Symbol, Channel}, game::Game, board::Board, players::Vector{PlayerType}, player::Catan.DefaultRobotPlayer, winner::Union{PlayerType, Nothing})
+function do_post_game_consume!(channels::Dict{Symbol, Channel}, game::Game, board::Board, players::AbstractVector{PlayerType}, player::Catan.DefaultRobotPlayer, winner::Union{PlayerType, Nothing})
     do_post_game_consume!(channels, game.configs)
 end
 
@@ -83,7 +86,7 @@ function consume_channel!(channel, file_name)
     _write_features_file(file_name, features)
 end
 
-function Catan.do_post_game_action(game::Game, board::Board, players::Vector{PlayerType}, player::TemporalDifferencePlayer, winner::Union{PlayerType, Nothing})
+function Catan.do_post_game_action(game::Game, board::Board, players::AbstractVector{PlayerType}, player::TemporalDifferencePlayer, winner::Union{PlayerType, Nothing})
     println("writing values")
     return write_values_file(players, player)
 end
@@ -121,7 +124,7 @@ function read_values_file(values_file::String, max_lines = nothing)::Dict{UInt64
     return out
 end
 
-function write_values_file(players::Vector{PlayerType}, player::TemporalDifferencePlayer)
+function write_values_file(players::AbstractVector{PlayerType}, player::TemporalDifferencePlayer)
     values_file = get_player_config(player, "STATE_VALUES")
     state_to_value = player.process.new_state_to_value
     write_values_file(values_file, state_to_value)
@@ -173,12 +176,13 @@ function write_features_header_if_needed(path, features, configs)
         header = join(get_csv_friendly.(first.(columns)), ",")
         if filesize(path) == 0
             write(file, "$header\n")
-        elseif configs["FEATURE_SANITY_CHECK"] == true
-            data, existing_header = readdlm(path, ',', header=true)
-            @assert length(existing_header) == length(columns) "Mismatch between existing feature schema in $path of length $(length(existing_header)) and current schema of length $(length(columns))"
+        else
+            existing_header_size = size(CSV.read(path, DataFrame, limit=0))[2]
+            @assert existing_header_size == length(columns) "Mismatch between existing feature schema in $path of length $(existing_header_size) and current schema of length $(length(columns))"
         end
     end
 end
+
 
 function _write_features_file(file_name, features::Vector) 
     _write_features_file(open(file_name, "a"), file_name, features)
