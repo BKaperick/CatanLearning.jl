@@ -7,7 +7,7 @@ using Catan: choose_next_action, choose_who_to_trade_with,
              choose_place_robber, do_post_action_step, 
              choose_accept_trade, choose_resource_to_draw,
              choose_one_resource_to_discard,
-             choose_robber_victim
+             choose_robber_victim, inner_do_robber_move_theft
 
 function get_estimated_resources(board::Board, players::AbstractVector{PlayerPublicView}, target::PlayerPublicView)::Dict{Symbol, Int}
     return Dict([(r,1) for r in Catan.RESOURCES])

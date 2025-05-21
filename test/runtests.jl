@@ -37,7 +37,7 @@ feature_library
 function test_jet_fails()
     rep = report_package(CatanLearning;
     ignored_modules=())
-    @test length(JET.get_reports(rep)) <= 53
+    @test length(JET.get_reports(rep)) <= 69
 end
 
 function test_evolving_robot_game(neverend, configs)

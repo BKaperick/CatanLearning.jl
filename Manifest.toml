@@ -219,7 +219,7 @@ uuid = "83423d85-b0ee-5818-9007-b63ccbeb887a"
 version = "1.18.4+0"
 
 [[deps.Catan]]
-deps = ["Crayons", "Dates", "DocStringExtensions", "Documenter", "JET", "Logging", "Random", "StatsBase", "TOML"]
+deps = ["Crayons", "Dates", "DocStringExtensions", "Documenter", "JET", "Logging", "Random", "StaticArrays", "StatsBase", "TOML", "Test"]
 path = "../CatanEngine.jl"
 uuid = "f5a9156a-9005-488a-a606-ecf760a1f632"
 version = "0.1.0"
