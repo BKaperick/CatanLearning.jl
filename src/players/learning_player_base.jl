@@ -46,17 +46,23 @@ function get_legal_action_sets(board::Board, players::AbstractVector{PlayerPubli
         for args in candidates
             func! = nothing
             if action == :ConstructCity
+                #args = args::Tuple{Int8, Int8}
                 func! = (g, b, p) -> construct_city(b, p.player, args)
             elseif action == :ConstructSettlement
+                #args = args::Tuple{Int8, Int8}
                 func! = (g, b, p) -> construct_settlement(b, p.player, args)
             elseif action == :ConstructRoad
+                #args = args::Tuple{Tuple{Int8, Int8}, Tuple{Int8, Int8}}
                 func! = (g, b, p) -> construct_road(b, p.player, args...)
             elseif action == :PlayDevCard
-                func! = (g, b, p) -> do_play_devcard(b, g.players, p, args)
+                #args = args::Tuple{Symbol}
+                func! = (g, b, p) -> do_play_devcard(b, g.players, p, args...)
             elseif action == :GainResource
-                func! = (g, b, p) -> Catan.harvest_one_resource!(b, p.player, args, 1)
+                #args = args::Tuple{Symbol}
+                func! = (g, b, p) -> Catan.harvest_one_resource!(b, p.player, args..., 1)
             elseif action == :LoseResource
-                func! = (g, b, p) -> Catan.PlayerApi.take_resource!(p.player, args)
+                #args = args::Tuple{Symbol}
+                func! = (g, b, p) -> Catan.PlayerApi.take_resource!(p.player, args...)
             elseif action == :AcceptTrade
                 func! = (g, b, p) -> Catan.trade_goods(args[1], p.player, args[2:end]...)
             #elseif action == :DoNothing
@@ -69,7 +75,7 @@ function get_legal_action_sets(board::Board, players::AbstractVector{PlayerPubli
             else
                 @assert false "Found unexpected action $action while handling deterministic actions"
             end
-            push!(main_action_set.actions, Action(action, func!, args))
+            push!(main_action_set.actions, Action(action, func!, args...))
         end
     end
 
@@ -114,7 +120,8 @@ function get_legal_action_sets(board::Board, players::AbstractVector{PlayerPubli
     if haskey(actions, :PlaceRobber)
         candidates = actions[:PlaceRobber]
         # Get candidates
-        for candidate_tile = candidates
+        for candidate_tiles = candidates
+            candidate_tile = candidate_tiles[1]
             candidate_victims = get_admissible_theft_victims(board, players, player, candidate_tile)
             for victim in candidate_victims
                 victim_team = victim.team    
@@ -182,7 +189,11 @@ end
 function Catan.choose_one_resource_to_discard(board::Board, player::LearningPlayer)::Symbol
     isempty(player.player.resources) && throw(ArgumentError("Player has no resources"))
     resources = [r for (r,v) in player.player.resources if v > 0]
-    return get_best_action(board, Vector{PlayerPublicView}([]), player, Set([PreAction(:LoseResource, resources)])).args[1]
+    pre_actions = Set([PreAction(:LoseResource, resources)])
+    action = get_best_action(board, Vector{PlayerPublicView}([]), player, pre_actions)
+    println(action.name)
+    println(action.args)
+    return action.args[1]
 end
 
 """
@@ -293,7 +304,7 @@ function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPu
     @info "$(player.player.team) considers $(collect(actions))"
     best_action = get_best_action(board, players, player, actions)
     @info "$(player.player.team) chooses to $(best_action.name) $(best_action.args)"
-    return ChosenAction(best_action.name, best_action.args)
+    return ChosenAction(best_action.name, best_action.args...)
     #return best_action.func!
 end
 

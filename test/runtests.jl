@@ -2,6 +2,7 @@ using Test
 using StatsBase
 using JET
 using Logging
+using Revise
 using Catan
 using Catan: Game, Board, Player, PlayerType, PlayerApi, BoardApi, GameApi,
              DefaultRobotPlayer, PlayerPublicView, 
@@ -56,6 +57,23 @@ function empath_player(configs)
     board = read_map(configs)
     p = predict_model(player.machine, board, player)
     return player, board, p
+end
+
+
+function test_learning_player_base_actions(configs)
+    player = EmpathRobotPlayer(:red, configs)
+    player2 = DefaultRobotPlayer(:blue, configs)
+    players = [player, player2]
+    game = Game(players, configs)
+    board = read_map(configs)
+    # get_legal_action_sets(board::Board, players::AbstractVector{PlayerPublicView}, player::Player, pre_actions::Set{PreAction})::Vector{AbstractActionSet}
+
+    PlayerApi.give_resource!(player.player, :Grain)
+    PlayerApi.give_resource!(player.player, :Wood)
+    PlayerApi.give_resource!(player.player, :Brick)
+    PlayerApi.give_resource!(player.player, :Pasture)
+    legal_actions = get_legal_action_sets(board, game.players, player, Set([PreAction(:ConstructSettlement, [((1,1),(1,2),)])]))
+    return legal_actions
 end
 
 
@@ -256,6 +274,7 @@ end
 
 function run_tests(neverend = false)
     configs = parse_configs("Configuration.toml")
+    test_learning_player_base_actions(configs)
     test_stackoverflow_knight(configs)
     test_empath_road_building(configs)
     test_action_interface(configs)

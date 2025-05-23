@@ -127,8 +127,10 @@ function run_mutating_tournament(tourney, player_constructors, configs)
     end
 end
 
-function run_tournament(tourney, player_schemas::Vector, configs)
+function run_tournament(configs::Dict)
     initialize_tournament(configs)
+    tourney = Tournament(configs, :Sequential)
+    player_schemas = Catan.read_player_constructors_from_config(configs["PlayerSettings"])
     teams = [Symbol(t) for t in configs["TEAMS"]]
     winners = init_winners(teams)
     for k=1:tourney.epochs
