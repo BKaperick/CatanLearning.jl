@@ -1,4 +1,7 @@
 # CatanLearning
+
+<img src="https://github.com/BKaperick/CatanLearning.jl/blob/master/learning_cleaned_logo.svg" data-canonical-src="https://github.com/BKaperick/Catan.jl/blob/master/learning_cleaned_logo.svg" width="200" align="right" />
+
 Code for machine learning players training and playing via the [Catan.jl](https://github.com/BKaperick/Catan.jl) game engine.  It implements the reinforcement-learned players and their training code.
 
 ## Modeling strategy
