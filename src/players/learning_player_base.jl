@@ -46,22 +46,16 @@ function get_legal_action_sets(board::Board, players::AbstractVector{PlayerPubli
         for args in candidates
             func! = nothing
             if action == :ConstructCity
-                #args = args::Tuple{Int8, Int8}
                 func! = (g, b, p) -> construct_city(b, p.player, args)
             elseif action == :ConstructSettlement
-                #args = args::Tuple{Int8, Int8}
                 func! = (g, b, p) -> construct_settlement(b, p.player, args)
             elseif action == :ConstructRoad
-                #args = args::Tuple{Tuple{Int8, Int8}, Tuple{Int8, Int8}}
                 func! = (g, b, p) -> construct_road(b, p.player, args...)
             elseif action == :PlayDevCard
-                #args = args::Tuple{Symbol}
                 func! = (g, b, p) -> do_play_devcard(b, g.players, p, args...)
             elseif action == :GainResource
-                #args = args::Tuple{Symbol}
                 func! = (g, b, p) -> Catan.harvest_one_resource!(b, p.player, args..., 1)
             elseif action == :LoseResource
-                #args = args::Tuple{Symbol}
                 func! = (g, b, p) -> Catan.PlayerApi.take_resource!(p.player, args...)
             elseif action == :AcceptTrade
                 func! = (g, b, p) -> Catan.trade_goods(args[1], p.player, args[2:end]...)
@@ -318,9 +312,30 @@ Use public model (stored in `player.player.machine_public`) to choose a trading 
 function Catan.choose_who_to_trade_with(board::Board, player::LearningPlayer, players::AbstractVector{PlayerPublicView})::Symbol
     return argmin(p -> predict_public_model(player.machine_public, board, p), players).team
 end
-#function Catan.choose_monopoly_resource(board::Board, players::AbstractVector{PlayerPublicView}, player::RobotPlayer)::Symbol
-#end
 
+"""
+    choose_robber_victim(board::Board, player::RobotPlayer, 
+    potential_victims::PlayerPublicView...)::PlayerPublicView
 
-#TODO missing implementation
-#function Catan.choose_robber_victim
+Use public model (stored in `player.player.machine_public`) to choose a trading partner as the strongest among the options
+"""
+function Catan.choose_robber_victim(board::Board, player::LearningPlayer, potential_victims::PlayerPublicView...)::PlayerPublicView
+    return argmax(p -> predict_public_model(player.machine_public, board, p), potential_victims)
+    @info "$(player.player.team) decided it is wisest to steal from the $(max_ind.team) player"
+    return max_ind
+end
+
+"""
+    choose_monopoly_resource(board::Board, players::AbstractVector{PlayerPublicView}, 
+    player::RobotPlayer)::Symbol
+
+Called during the Monopoly development card action.  Choose the resource to steal from each player based on public information.
+"""
+function choose_monopoly_resource(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer)::Symbol
+    #= TODO do something smarter with resource estimates
+    for player in players
+        get_estimated_resources(board, players, target)::Dict{Symbol, Int}
+    end
+    =#
+    return get_best_action(board, players, player, Set([PreAction(:GainResource, r) for r in Catan.RESOURCES])).args[1]
+end

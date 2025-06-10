@@ -81,6 +81,19 @@ function test_learning_player_base_actions(configs)
     road_candidates = BoardApi.get_admissible_road_locations(board, player.player.team, true)
     @test ~isempty(road_candidates)
     Catan.choose_road_location(board, PlayerPublicView.(game.players), player, road_candidates)
+
+
+    PlayerApi.give_resource!(player.player, :Grain)
+    PlayerApi.give_resource!(player.player, :Grain)
+    PlayerApi.give_resource!(player.player, :Grain)
+    PlayerApi.give_resource!(player.player, :Stone)
+    PlayerApi.give_resource!(player.player, :Stone)
+    PlayerApi.give_resource!(player.player, :Stone)
+    candidates = BoardApi.get_admissible_city_locations(board, player.player.team)
+    pre_actions = Set([PreAction(:ConstructCity, candidates)])
+    legal_actions = get_legal_action_sets(board, PlayerPublicView.(game.players), player.player, pre_actions)
+    Catan.ACTIONS_DICTIONARY[:ConstructCity](game, board, player, legal_actions[1].actions[1].args)
+
     return legal_actions
 end
 
