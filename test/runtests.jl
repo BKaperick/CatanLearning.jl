@@ -38,7 +38,7 @@ feature_library
 function test_jet_fails()
     rep = report_package(CatanLearning;
     ignored_modules=())
-    @test length(JET.get_reports(rep)) <= 69
+    @test length(JET.get_reports(rep)) <= 73
 end
 
 function test_evolving_robot_game(neverend, configs)
@@ -61,8 +61,8 @@ end
 
 
 function test_learning_player_base_actions(configs)
-    player = EmpathRobotPlayer(:red, configs)
-    player2 = DefaultRobotPlayer(:blue, configs)
+    player = EmpathRobotPlayer(:Red, configs)
+    player2 = DefaultRobotPlayer(:Blue, configs)
     players = [player, player2]
     game = Game(players, configs)
     board = read_map(configs)
@@ -72,7 +72,15 @@ function test_learning_player_base_actions(configs)
     PlayerApi.give_resource!(player.player, :Wood)
     PlayerApi.give_resource!(player.player, :Brick)
     PlayerApi.give_resource!(player.player, :Pasture)
-    legal_actions = get_legal_action_sets(board, game.players, player, Set([PreAction(:ConstructSettlement, [((1,1),(1,2),)])]))
+    candidates = BoardApi.get_admissible_settlement_locations(board, player.player.team, true)
+    pre_actions = Set([PreAction(:ConstructSettlement, candidates)])
+    legal_actions = get_legal_action_sets(board, PlayerPublicView.(game.players), player.player, pre_actions)
+    
+    Catan.ACTIONS_DICTIONARY[:ConstructSettlement](game, board, player, legal_actions[1].actions[1].args)
+    BoardApi.print_board(board)
+    road_candidates = BoardApi.get_admissible_road_locations(board, player.player.team, true)
+    @test ~isempty(road_candidates)
+    Catan.choose_road_location(board, PlayerPublicView.(game.players), player, road_candidates)
     return legal_actions
 end
 

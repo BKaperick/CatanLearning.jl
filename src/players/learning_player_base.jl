@@ -162,19 +162,17 @@ function get_legal_action_sets(board::Board, players::AbstractVector{PlayerPubli
     return action_sets
 end
 
-function Catan.choose_road_location(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Vector{Tuple{Int, Int}}})::Union{Nothing,Vector{Tuple{Int, Int}}}
-    cand_args = Set([Tuple(t) for t in candidates])
-    best_action = get_best_action(board, players, player, Set([PreAction(:ConstructRoad, cand_args)]))
-    return collect(best_action.args[1])
+function Catan.choose_road_location(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Tuple{Tuple{TInt, TInt}, Tuple{TInt, TInt}}})::Union{Nothing,Tuple{Tuple{TInt, TInt}, Tuple{TInt, TInt}}} where {TInt <: Integer}
+    best_action = get_best_action(board, players, player, Set([PreAction(:ConstructRoad, candidates)]))
+    return best_action.args
 end
 
-function Catan.choose_building_location(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Tuple{Int, Int}}, building_type::Symbol)::Union{Nothing,Tuple{Int,Int}}
+function Catan.choose_building_location(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Tuple{TInt, TInt}}, building_type::Symbol)::Union{Nothing,Tuple{TInt,TInt}} where {TInt <: Integer}
     @debug "learning player has $candidates as choices to build"
-    if building_type == :City
-        return get_best_action(board, players, player, Set([PreAction(:ConstructCity, candidates)])).args[1]
-    else
-        return get_best_action(board, players, player, Set([PreAction(:ConstructSettlement, candidates)])).args[1]
-    end
+    pre_action_name = building_type == :City ? :ConstructCity : :ConstructSettlement
+    pre_actions = Set([PreAction(pre_action_name, candidates)])
+    action = get_best_action(board, players, player, pre_actions)
+    return action.args
 end
 
 function Catan.choose_place_robber(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidate_tiles::Vector{Symbol})::Symbol
@@ -191,8 +189,6 @@ function Catan.choose_one_resource_to_discard(board::Board, player::LearningPlay
     resources = [r for (r,v) in player.player.resources if v > 0]
     pre_actions = Set([PreAction(:LoseResource, resources)])
     action = get_best_action(board, Vector{PlayerPublicView}([]), player, pre_actions)
-    println(action.name)
-    println(action.args)
     return action.args[1]
 end
 

@@ -89,10 +89,6 @@ function run(create_players::Function, configs)
     tourney = Tournament(configs, :Sequential)
     run_tournament(tourney, create_players, configs)
 end
-function run(player_schemas::Vector, configs)
-    tourney = Tournament(configs, :Sequential)
-    run_tournament(tourney, player_schemas, configs)
-end
 
 function run(player_constructors::Dict, configs)
     tourney = Tournament(configs, :Sequential)
