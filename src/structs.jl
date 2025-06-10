@@ -28,6 +28,7 @@ mutable struct SampledAction <: AbstractAction
     name::Symbol
     # Deterministic version of `real_func!` that is used to calculate win proba of a deterministic branch
     func!::Function
+    # This is the actual stochastic version of `func!` that is called during game play once this action is chosen
     real_func!::Function
     win_proba::Union{Nothing, Float64}
     features::Vector

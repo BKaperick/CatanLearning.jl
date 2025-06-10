@@ -59,8 +59,6 @@ function get_legal_action_sets(board::Board, players::AbstractVector{PlayerPubli
                 func! = (g, b, p) -> Catan.PlayerApi.take_resource!(p.player, args...)
             elseif action == :AcceptTrade
                 func! = (g, b, p) -> Catan.trade_goods(args[1], p.player, args[2:end]...)
-            #elseif action == :DoNothing
-            #    func! = (g,b,p) -> ()
             
             # This is because `PreAction` currently doesn't have any way to represent an 
             # action passing in candidates, and *then* sampling
@@ -154,48 +152,6 @@ function get_legal_action_sets(board::Board, players::AbstractVector{PlayerPubli
     end
     
     return action_sets
-end
-
-function Catan.choose_road_location(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Tuple{Tuple{TInt, TInt}, Tuple{TInt, TInt}}})::Union{Nothing,Tuple{Tuple{TInt, TInt}, Tuple{TInt, TInt}}} where {TInt <: Integer}
-    best_action = get_best_action(board, players, player, Set([PreAction(:ConstructRoad, candidates)]))
-    return best_action.args
-end
-
-function Catan.choose_building_location(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Tuple{TInt, TInt}}, building_type::Symbol)::Union{Nothing,Tuple{TInt,TInt}} where {TInt <: Integer}
-    @debug "learning player has $candidates as choices to build"
-    pre_action_name = building_type == :City ? :ConstructCity : :ConstructSettlement
-    pre_actions = Set([PreAction(pre_action_name, candidates)])
-    action = get_best_action(board, players, player, pre_actions)
-    return action.args
-end
-
-function Catan.choose_place_robber(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidate_tiles::Vector{Symbol})::Symbol
-    return get_best_action(board, players, player, Set([PreAction(:PlaceRobber, candidate_tiles)])).args[2]
-end
-
-function Catan.choose_resource_to_draw(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer)::Symbol
-    resources = collect(keys(Dict((k,v) for (k,v) in board.resources if v > 0)))
-    return get_best_action(board, players, player, Set([PreAction(:GainResource, resources)])).args[1]
-end
-
-function Catan.choose_one_resource_to_discard(board::Board, player::LearningPlayer)::Symbol
-    isempty(player.player.resources) && throw(ArgumentError("Player has no resources"))
-    resources = [r for (r,v) in player.player.resources if v > 0]
-    pre_actions = Set([PreAction(:LoseResource, resources)])
-    action = get_best_action(board, Vector{PlayerPublicView}([]), player, pre_actions)
-    return action.args[1]
-end
-
-"""
-    `deterministic_draw_devcard(game, board, player, card)`
-
-Equivalent to `Catan.draw_devcard`, but we pass an explicit card choice, since we're sampling from our estimated
-card counts, rather than leaking info from the main one during the hypothetical games.
-"""
-function deterministic_draw_devcard(game, board, player, card)
-    GameApi._draw_devcard(game, card)
-    BoardApi.pay_construction!(board, :DevelopmentCard)
-    PlayerApi.buy_devcard(player.player, card)
 end
 
 """
@@ -296,6 +252,48 @@ function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPu
     @info "$(player.player.team) chooses to $(best_action.name) $(best_action.args)"
     return ChosenAction(best_action.name, best_action.args...)
     #return best_action.func!
+end
+
+function Catan.choose_road_location(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Tuple{Tuple{TInt, TInt}, Tuple{TInt, TInt}}})::Union{Nothing,Tuple{Tuple{TInt, TInt}, Tuple{TInt, TInt}}} where {TInt <: Integer}
+    best_action = get_best_action(board, players, player, Set([PreAction(:ConstructRoad, candidates)]))
+    return best_action.args
+end
+
+function Catan.choose_building_location(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Tuple{TInt, TInt}}, building_type::Symbol)::Union{Nothing,Tuple{TInt,TInt}} where {TInt <: Integer}
+    @debug "learning player has $candidates as choices to build"
+    pre_action_name = building_type == :City ? :ConstructCity : :ConstructSettlement
+    pre_actions = Set([PreAction(pre_action_name, candidates)])
+    action = get_best_action(board, players, player, pre_actions)
+    return action.args
+end
+
+function Catan.choose_place_robber(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidate_tiles::Vector{Symbol})::Symbol
+    return get_best_action(board, players, player, Set([PreAction(:PlaceRobber, candidate_tiles)])).args[2]
+end
+
+function Catan.choose_resource_to_draw(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer)::Symbol
+    resources = collect(keys(Dict((k,v) for (k,v) in board.resources if v > 0)))
+    return get_best_action(board, players, player, Set([PreAction(:GainResource, resources)])).args[1]
+end
+
+function Catan.choose_one_resource_to_discard(board::Board, player::LearningPlayer)::Symbol
+    isempty(player.player.resources) && throw(ArgumentError("Player has no resources"))
+    resources = [r for (r,v) in player.player.resources if v > 0]
+    pre_actions = Set([PreAction(:LoseResource, resources)])
+    action = get_best_action(board, Vector{PlayerPublicView}([]), player, pre_actions)
+    return action.args[1]
+end
+
+"""
+    `deterministic_draw_devcard(game, board, player, card)`
+
+Equivalent to `Catan.draw_devcard`, but we pass an explicit card choice, since we're sampling from our estimated
+card counts, rather than leaking info from the main one during the hypothetical games.
+"""
+function deterministic_draw_devcard(game, board, player, card)
+    GameApi._draw_devcard(game, card)
+    BoardApi.pay_construction!(board, :DevelopmentCard)
+    PlayerApi.buy_devcard(player.player, card)
 end
 
 function Catan.choose_accept_trade(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, from_player::Player, from_goods::Vector{Symbol}, to_goods::Vector{Symbol})::Bool
