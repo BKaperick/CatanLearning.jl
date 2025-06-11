@@ -235,10 +235,14 @@ function analyze_action!(action::AbstractAction, board::Board, players::Abstract
     hypoth_player = deepcopy(player)
     hypoth_game = Game([DefaultRobotPlayer(p.team, board.configs) for p in players], board.configs)
     @debug "Entering hypoth game $(hypoth_game.unique_id) with action $(action.name)($(action.args))"
+    
+    # We control the log-level of 'hypothetical' games separately from the main game.
     main_logger = global_logger()
-    global_logger(NullLogger())
+    Catan.parse_logging_configs!(board.configs["HypothGameSettings"])
+
     action.func!(hypoth_game, hypoth_board, hypoth_player)
     action.features = compute_features(hypoth_board, hypoth_player.player)
+
     global_logger(main_logger)
     
     @debug "Leaving hypoth game $(hypoth_game.unique_id)"

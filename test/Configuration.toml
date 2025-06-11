@@ -3,7 +3,7 @@ SAVE_FILE = "./data/savefile.txt"
 LOAD_MAP = "./data/sample.csv"
 #LOG_OUTPUT = "./data/oneoff_test_log.txt"
 LOG_OUTPUT = ""
-LOG_LEVEL = "Info"
+LOG_LEVEL = "Debug"
 PRINT_BOARD = false
 MAX_TURNS = 500
 
@@ -14,7 +14,7 @@ PUBLIC_MODEL = "./data/public_model.jls"
 FEATURES = "./data/features.csv"
 PUBLIC_FEATURES = "./data/public_features.csv"
 STATE_VALUES = "./data/state_values.csv"
-SEARCH_DEPTH = 2
+SEARCH_DEPTH = 1
 [PlayerSettings.blue]
 [PlayerSettings.cyan]
 [PlayerSettings.green]

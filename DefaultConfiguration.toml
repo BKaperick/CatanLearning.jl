@@ -14,7 +14,9 @@ SIZE = 32
 [Async.public]
 SIZE = 32
 
-
+[HypothGameSettings]
+LOG_OUTPUT = "stderr"
+LOG_LEVEL = "Warn"
 
 [GameSettings]
 [PlayerSettings]
