@@ -64,7 +64,7 @@ function filter_bad_features!(df)
         ]
     for feat in features_to_exclude
         if String(feat) in names(df)
-            @debug "removing $feat from features while loading"
+            #@debug "removing $feat from features while loading"
             select!(df, Not([feat]))
         end
     end

@@ -138,7 +138,7 @@ function get_legal_action_sets(board::Board, players::AbstractVector{PlayerPubli
                 for r in keys(resources)
                     push!(action_set.actions, 
                           SampledAction(
-                                 Symbol("$(r)"), 
+                                 Symbol("PlaceRobber_$(r)"), 
                                  (g, b, p) -> inner_do_robber_move_theft(
                                                                    b, g.players, 
                                                                    p, victim.team, 
@@ -265,7 +265,7 @@ function analyze_action!(action::AbstractAction, board::Board, players::Abstract
                 push!(filtered_next_legal_actions, a)
             end
         end
-        @info "after performing $(action.name)($(action.args[1])) at depth $depth, there are $(length(filtered_next_legal_actions)) possibilities"
+        @debug "after performing $(action.name)($(action.args[1])) at depth $depth, there are $(length(filtered_next_legal_actions)) possibilities"
         @debug join(["$(a.name)($(a.admissible_args))" for a in filtered_next_legal_actions], "\n")
         action.win_proba = get_best_action(hypoth_board, players, hypoth_player, filtered_next_legal_actions, depth + 1).win_proba
     else
@@ -286,7 +286,7 @@ probability of victory, based on his `player.machine` model.  If no action
 increases the probability of victory, then do nothing.
 """
 function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, actions::Set{PreAction})::ChosenAction
-    @info "$(player.player.team) considers $(collect(actions))"
+    @debug "$(player.player.team) considers $(collect(actions))"
     best_action = get_best_action(board, players, player, actions)
     @info "$(player.player.team) chooses to $(best_action.name) $(best_action.args)"
     return ChosenAction(best_action.name, best_action.args...)
