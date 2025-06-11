@@ -95,7 +95,9 @@ function get_legal_action_sets(board::Board, players::AbstractVector{PlayerPubli
                                              (g, b, p) -> deterministic_draw_devcard(g, b, p, card),
                                              (g, b, p) -> Catan.draw_devcard(g, b, p.player)))
         end
-        push!(action_sets, action_set)
+        if length(action_set.actions) > 0
+            push!(action_sets, action_set)
+        end
     end
     
     # TODO: this is leaking info from other players, since `propose_trade_goods` 
@@ -263,10 +265,11 @@ function analyze_action!(action::AbstractAction, board::Board, players::Abstract
                 push!(filtered_next_legal_actions, a)
             end
         end
-        @warn "after performing $(action.name) at depth $depth, there are $(length(filtered_next_legal_actions)) possibilities"
+        @info "after performing $(action.name)($(action.args[1])) at depth $depth, there are $(length(filtered_next_legal_actions)) possibilities"
+        @debug join(["$(a.name)($(a.admissible_args))" for a in filtered_next_legal_actions], "\n")
         action.win_proba = get_best_action(hypoth_board, players, hypoth_player, filtered_next_legal_actions, depth + 1).win_proba
     else
-        @warn "getting win_proba for action $(action.name)"
+        #@warn "getting win_proba for action $(action.name)"
         # TODO Temporal difference algo does this later, so we don't want to double compute
         action.win_proba = predict_model(player.machine, action.features)
     end
