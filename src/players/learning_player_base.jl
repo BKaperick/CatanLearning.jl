@@ -43,12 +43,28 @@ function get_legal_action_sets(board::Board, players::AbstractVector{PlayerPubli
     
     # Deterministic PreActions are all quite easy to handle
     for (action, candidates) in actions
+
+        # This is because `PreAction` currently doesn't have any way to represent an 
+        # action passing in candidates, and *then* sampling
+        if action == :PlaceRobber #FromKnight || action == :PlaceRobberFromSeven
+            continue
+        end
+
         for args in candidates
             func! = nothing
             if action == :ConstructCity
-                func! = (g, b, p) -> construct_city(b, p.player, args)
+                # TODO this is a hack, sometimes we pass Tuple{Tuple{Int8,Int8}}, sometimes Tuple{Int8,Int8}
+                if typeof(args) <: Tuple{Tuple}
+                    func! = (g, b, p) -> construct_city(b, p.player, args...)
+                else
+                    func! = (g, b, p) -> construct_city(b, p.player, args)
+                end
             elseif action == :ConstructSettlement
-                func! = (g, b, p) -> construct_settlement(b, p.player, args)
+                if typeof(args) <: Tuple{Tuple}
+                    func! = (g, b, p) -> construct_settlement(b, p.player, args...)
+                else
+                    func! = (g, b, p) -> construct_settlement(b, p.player, args)
+                end
             elseif action == :ConstructRoad
                 func! = (g, b, p) -> construct_road(b, p.player, args...)
             elseif action == :PlayDevCard
@@ -60,10 +76,6 @@ function get_legal_action_sets(board::Board, players::AbstractVector{PlayerPubli
             elseif action == :AcceptTrade
                 func! = (g, b, p) -> Catan.trade_goods(args[1], p.player, args[2:end]...)
             
-            # This is because `PreAction` currently doesn't have any way to represent an 
-            # action passing in candidates, and *then* sampling
-            elseif action == :PlaceRobber
-                break
             else
                 @assert false "Found unexpected action $action while handling deterministic actions"
             end
@@ -112,6 +124,7 @@ function get_legal_action_sets(board::Board, players::AbstractVector{PlayerPubli
     if haskey(actions, :PlaceRobber)
         candidates = actions[:PlaceRobber]
         # Get candidates
+        @warn "$(length(candidates)) candidate tiles"
         for candidate_tiles = candidates
             candidate_tile = candidate_tiles[1]
             candidate_victims = get_admissible_theft_victims(board, players, player, candidate_tile)
@@ -152,6 +165,11 @@ function get_legal_action_sets(board::Board, players::AbstractVector{PlayerPubli
     end
     
     return action_sets
+end
+
+function inner_do_robber_move_theft_from_knight(b, players, p, team, candidate_tile, r)
+    inner_do_robber_move_theft(b, players, p, team, candidate_tile, r)
+    PlayerApi.do_play_devcard(b, players, p, :Knight)
 end
 
 """
@@ -228,9 +246,23 @@ function analyze_action!(action::AbstractAction, board::Board, players::Abstract
     # Look ahead an additional `SEARCH_DEPTH` turns
     if depth < get_player_config(player, "SEARCH_DEPTH")
         next_legal_actions = Catan.get_legal_actions(hypoth_game, hypoth_board, hypoth_player.player)
-        action.win_proba = get_best_action(hypoth_board, players, hypoth_player, next_legal_actions, depth + 1).win_proba
-        @debug "after performing $(action.name), there are $(length(next_legal_actions)) possibilities"
+
+        #TODO hack to avoid re-calling PlaceRobber
+        filtered_next_legal_actions = Set{PreAction}()
+        for a in next_legal_actions
+            if a.name == :PlaceRobber
+                continue
+            elseif a.name == :PlayDevCard
+                new_a = PreAction(:PlayDevCard, [arg for arg in a.admissible_args if arg != :Knight])
+                push!(filtered_next_legal_actions, new_a)
+            else
+                push!(filtered_next_legal_actions, a)
+            end
+        end
+        @warn "after performing $(action.name) at depth $depth, there are $(length(filtered_next_legal_actions)) possibilities"
+        action.win_proba = get_best_action(hypoth_board, players, hypoth_player, filtered_next_legal_actions, depth + 1).win_proba
     else
+        @warn "getting win_proba for action $(action.name)"
         # TODO Temporal difference algo does this later, so we don't want to double compute
         action.win_proba = predict_model(player.machine, action.features)
     end
@@ -268,6 +300,7 @@ function Catan.choose_building_location(board::Board, players::AbstractVector{Pl
 end
 
 function Catan.choose_place_robber(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidate_tiles::Vector{Symbol})::Symbol
+    @warn "Calling PlaceRobber with $(length(candidate_tiles)) possibilities"
     return get_best_action(board, players, player, Set([PreAction(:PlaceRobber, candidate_tiles)])).args[2]
 end
 
