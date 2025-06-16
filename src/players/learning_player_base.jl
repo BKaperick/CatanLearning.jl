@@ -240,11 +240,14 @@ function analyze_action!(action::AbstractAction, board::Board, players::Abstract
     
     # We control the log-level of 'hypothetical' games separately from the main game.
     main_logger = global_logger()
-    Catan.parse_logging_configs!(board.configs["HypothGameSettings"])
-
+    #println(board.configs["HypothGameSettings"])
+    global_logger(ConsoleLogger(Logging.Warn))
+    #Catan.parse_logging_configs!(board.configs["HypothGameSettings"])
+    #global_logger(board.configs["HypothGameSettings"]["LOGGER"])
     action.func!(hypoth_game, hypoth_board, hypoth_player)
     action.features = compute_features(hypoth_board, hypoth_player.player)
 
+    #Catan.parse_logging_configs!(board.configs)
     global_logger(main_logger)
     
     @debug "Leaving hypoth game $(hypoth_game.unique_id)"

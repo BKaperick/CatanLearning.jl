@@ -38,7 +38,7 @@ function Catan.do_post_action_step(board::Board, player::TemporalDifferencePlaye
 end
 
 
-function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPublicView}, player::TemporalDifferencePlayer, actions::Set{PreAction})::Function
+function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPublicView}, player::TemporalDifferencePlayer, actions::Set{PreAction})::ChosenAction
     best_action_index = 0
     best_action_proba = -1
     machine = player.machine
@@ -58,7 +58,7 @@ function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPu
     # but we need to think about how temporal_difference_player should take probabilistic actions
     
     if length(reachable_transitions) == 0
-        return Returns(nothing)
+        return ChosenAction(:DoNothing)
     end
     
     next_state_quantity, index, transition = sample_from_policy(player.process, player.policy, current_state, 
@@ -67,12 +67,14 @@ function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPu
     # Two cases: 
     # 1. transition is deterministic, so there is only one action in the set
     # 2. transition is stochastic, so there are multiple actions, but they're all the same func!
-    action_func = transition.action_set.actions[1].func!
+    #action_func = transition.action_set.actions[1].func!
+    best_action = transition.action_set.actions[1]
     
     # Only do an action if it will improve his optimized quantity
     if next_state_quantity > current_quantity
-        return action_func # TODO
+        return ChosenAction(best_action.name, best_action.args...)
+        #return action_func # TODO
     end
 
-    return Returns(nothing)
+    return ChosenAction(:DoNothing)
 end
