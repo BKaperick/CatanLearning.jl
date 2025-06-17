@@ -91,6 +91,11 @@ function Catan.do_post_game_action(game::Game, board::Board, players::AbstractVe
     return write_values_file(players, player)
 end
 
+function Catan.do_post_game_action(game::Game, board::Board, players::AbstractVector{PlayerType}, player::HybridPlayer, winner::Union{PlayerType, Nothing})
+    println("writing values")
+    return write_values_file(players, player)
+end
+
 #
 # Feature writing utils
 #
@@ -124,7 +129,7 @@ function read_values_file(values_file::String, max_lines = nothing)::Dict{UInt64
     return out
 end
 
-function write_values_file(players::AbstractVector{PlayerType}, player::TemporalDifferencePlayer)
+function write_values_file(players::AbstractVector{PlayerType}, player::Union{HybridPlayer, TemporalDifferencePlayer})
     values_file = get_player_config(player, "STATE_VALUES")
     state_to_value = player.process.new_state_to_value
     write_values_file(values_file, state_to_value)
