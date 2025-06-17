@@ -62,7 +62,7 @@ end
 
 mutable struct HybridPlayer <: LearningPlayer
     player::Player
-    decision_model_weights::Array{Float64}
+    machine::DecisionModel
     machine_public::Machine
     process::MarkovRewardProcess
     policy::MarkovPolicy
@@ -70,18 +70,21 @@ mutable struct HybridPlayer <: LearningPlayer
     current_state::Union{Nothing, MarkovState}
 end
 
-HybridPlayer(team::Symbol, configs::Dict) = HybridPlayer(team::Symbol, configs)
-HybridPlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs::Dict) = HybridPlayer(WeightsRewardPlusValueMarkovPolicy, team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs)
+HybridPlayer(team::Symbol, configs::Dict) = HybridPlayer(team::Symbol, Dict{UInt64, Float64}(), Dict{UInt64, Float64}(), configs)
+#HybridPlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs::Dict) 
 
 function HybridPlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs)
-    model_weights = try_load_linear_model_from_csv(team, configs)
+    model_weights = try_load_linear_model_from_csv(team, configs)::Vector{Float64}
+    model = LinearModel(model_weights)
     machine_public = try_load_public_model_from_csv(team, configs)
 
-    process = MarkovRewardProcess(0.5, 0.1, 0.5, 0.5, master_state_to_value, new_state_to_value)
+    reward_discount = get_player_config(configs, "REWARD_DISCOUNT", team)
+    learning_rate = get_player_config(configs, "LEARNING_RATE", team)
     reward_weight = get_player_config(configs, "REWARD_WEIGHT", team)
     value_weight = get_player_config(configs, "VALUE_WEIGHT", team)
-    policy = WeightsRewardPlusValueMarkovPolicy(nothing, reward_weight, value_weight)
-    HybridPlayer(Player(team, configs), model_weights, machine_public, process, policy, configs, nothing)
+    process = MarkovRewardProcess(learning_rate, reward_discount, 1.0, 0.0, master_state_to_value, new_state_to_value)
+    policy = WeightsRewardPlusValueMarkovPolicy(model, reward_weight, value_weight)
+    HybridPlayer(Player(team, configs), model, machine_public, process, policy, configs, nothing)
 end
 
 function Base.deepcopy(player::MutatedEmpathRobotPlayer)
@@ -105,7 +108,7 @@ function Base.deepcopy(player::HybridPlayer)
     # Note, we deepcopy only the player data, while the RL data should persist in order to pass updates the state info properly
     return HybridPlayer(
         deepcopy(player.player), 
-        player.decision_model_weights, 
+        player.machine, 
         player.machine_public, 
         player.process, 
         player.policy, 

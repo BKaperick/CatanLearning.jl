@@ -21,7 +21,8 @@ function try_load_linear_model_from_csv(team::Symbol, configs::Dict)::Vector{Flo
     @info "Looking for linear model stored in $model_path"
     if isfile(model_path)
         @info "Found model stored in $model_path"
-        return CSV.read(model_path, Vector)
+        weights = CSV.read(model_path, DataFrame)
+        return weights[!, :Weights]
     end
     @assert false "Not found"
 end

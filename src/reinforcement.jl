@@ -27,10 +27,10 @@ function update_state_value(process, state_key, new_value)
 end
 
 function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::MaxRewardMarkovPolicy, state::MarkovState)
-    return get_combined_reward(process, policy.machine, state) 
+    return get_combined_reward(process, policy.model, state) 
 end
 function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::MaxRewardMarkovPolicy, transition::MarkovTransition)
-    return get_combined_reward(process, policy.machine, transition) 
+    return get_combined_reward(process, policy.model, transition) 
 end
 function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::MaxValueMarkovPolicy, state::MarkovState)
     return query_state_value(process, state.key) 
@@ -39,20 +39,20 @@ function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::Max
     return query_state_value(process, transition) 
 end
 function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::MaxRewardPlusValueMarkovPolicy, state::MarkovState)
-    return get_combined_reward(process, policy.machine, state) + query_state_value(process, state.key) 
+    return get_combined_reward(process, policy.model, state) + query_state_value(process, state.key) 
 end
 function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::MaxRewardPlusValueMarkovPolicy, transition::MarkovTransition)
-    return get_combined_reward(process, policy.machine, transition) + query_state_value(process, transition) 
+    return get_combined_reward(process, policy.model, transition) + query_state_value(process, transition) 
 end
 function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::WeightsRewardPlusValueMarkovPolicy, transition::MarkovTransition)
-    reward = policy.reward_weight * get_combined_reward(process, policy.machine, transition)
+    reward = policy.reward_weight * get_combined_reward(process, policy.model, transition)
     value = policy.value_weight * query_state_value(process, transition)
     return reward + value
 end
 
-function get_combined_reward(process::MarkovRewardProcess, machine::Machine, transition::MarkovTransition)
+function get_combined_reward(process::MarkovRewardProcess, model::DecisionModel, transition::MarkovTransition)
     # Get average reward from this transition
-    reward = sum([get_combined_reward(process, machine, s) for s in transition.states]) / length(transition.states)
+    reward = sum([get_combined_reward(process, model, s) for s in transition.states]) / length(transition.states)
     return reward
 end
 
@@ -62,9 +62,9 @@ function query_state_value(process::MarkovRewardProcess, transition::MarkovTrans
     return value
 end
 
-function get_combined_reward(process::MarkovRewardProcess, machine::Machine, state::MarkovState)
+function get_combined_reward(process::MarkovRewardProcess, model::DecisionModel, state::MarkovState)
     #value = query_state_value(state.key)
-    model_proba = predict_model(machine, collect(state.features))
+    model_proba = predict_model(model, collect(state.features))
     # TODO
     # win or loss feature is too difficult to calculate without passing game to feature computation
     # win_loss = state.features[:CountVictoryPoint]
