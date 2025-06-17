@@ -44,6 +44,11 @@ end
 function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::MaxRewardPlusValueMarkovPolicy, transition::MarkovTransition)
     return get_combined_reward(process, policy.machine, transition) + query_state_value(process, transition) 
 end
+function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::WeightsRewardPlusValueMarkovPolicy, transition::MarkovTransition)
+    reward = policy.reward_weight * get_combined_reward(process, policy.machine, transition)
+    value = policy.value_weight * query_state_value(process, transition)
+    return reward + value
+end
 
 function get_combined_reward(process::MarkovRewardProcess, machine::Machine, transition::MarkovTransition)
     # Get average reward from this transition

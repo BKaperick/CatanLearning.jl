@@ -60,6 +60,30 @@ function TemporalDifferencePlayer(TPolicy::Type, team::Symbol, master_state_to_v
     TemporalDifferencePlayer(Player(team, configs), machine, machine_public, process, policy, configs, nothing)
 end
 
+mutable struct HybridPlayer <: LearningPlayer
+    player::Player
+    decision_model_weights::Array{Float64}
+    machine_public::Machine
+    process::MarkovRewardProcess
+    policy::MarkovPolicy
+    configs::Dict
+    current_state::Union{Nothing, MarkovState}
+end
+
+HybridPlayer(team::Symbol, configs::Dict) = HybridPlayer(team::Symbol, configs)
+HybridPlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs::Dict) = HybridPlayer(WeightsRewardPlusValueMarkovPolicy, team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs)
+
+function HybridPlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs)
+    model_weights = try_load_linear_model_from_csv(team, configs)
+    machine_public = try_load_public_model_from_csv(team, configs)
+
+    process = MarkovRewardProcess(0.5, 0.1, 0.5, 0.5, master_state_to_value, new_state_to_value)
+    reward_weight = get_player_config(configs, "REWARD_WEIGHT", team)
+    value_weight = get_player_config(configs, "VALUE_WEIGHT", team)
+    policy = WeightsRewardPlusValueMarkovPolicy(nothing, reward_weight, value_weight)
+    HybridPlayer(Player(team, configs), model_weights, machine_public, process, policy, configs, nothing)
+end
+
 function Base.deepcopy(player::MutatedEmpathRobotPlayer)
     return MutatedEmpathRobotPlayer(deepcopy(player.player), player.machine, player.machine_public, deepcopy(player.mutation), player.configs) 
 end
@@ -69,6 +93,19 @@ function Base.deepcopy(player::TemporalDifferencePlayer)
     return TemporalDifferencePlayer(
         deepcopy(player.player), 
         player.machine, 
+        player.machine_public, 
+        player.process, 
+        player.policy, 
+        player.configs,
+        deepcopy(player.current_state)
+    )
+end
+
+function Base.deepcopy(player::HybridPlayer)
+    # Note, we deepcopy only the player data, while the RL data should persist in order to pass updates the state info properly
+    return HybridPlayer(
+        deepcopy(player.player), 
+        player.decision_model_weights, 
         player.machine_public, 
         player.process, 
         player.policy, 

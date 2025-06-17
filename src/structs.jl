@@ -88,6 +88,15 @@ struct MaxRewardPlusValueMarkovPolicy <: MarkovPolicy
 end
 
 """
+Samples reachable states by choosing maximum of a * reward + b * estimated value
+"""
+struct WeightsRewardPlusValueMarkovPolicy <: MarkovPolicy
+    machine::Machine
+    reward_weight::Float64
+    value_weight::Float64
+end
+
+"""
 Samples reachable states by choosing maximum reward
 """
 struct MaxRewardMarkovPolicy <: MarkovPolicy

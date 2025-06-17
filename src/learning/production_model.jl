@@ -16,6 +16,16 @@ function try_load_model_from_csv(team::Symbol, configs::Dict)::Machine
     try_load_serialized_model_from_csv(get_player_config(configs, "MODEL", team),  get_player_config(configs, "FEATURES", team))
 end
 
+function try_load_linear_model_from_csv(team::Symbol, configs::Dict)::Vector{Float64}
+    model_path = get_player_config(configs, "MODEL", team)
+    @info "Looking for linear model stored in $model_path"
+    if isfile(model_path)
+        @info "Found model stored in $model_path"
+        return CSV.read(model_path, Vector)
+    end
+    @assert false "Not found"
+end
+
 function try_load_public_model_from_csv(team::Symbol, configs::Dict)::Machine
     try_load_serialized_model_from_csv(get_player_config(configs, "PUBLIC_MODEL", team),  get_player_config(configs, "PUBLIC_FEATURES", team))
 end
@@ -141,6 +151,8 @@ function train_linear_model_from_csv(features_csv)
 
     M = df |> Tables.matrix
     U,S,V = svd(M)
+
+
 
     y, X = unpack(df_train, ==(:WonGame));
     y_test, X_test = unpack(df_test, ==(:WonGame));
