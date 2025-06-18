@@ -423,6 +423,8 @@ function predict_model(weights::Vector{Float64}, features)
     CatanLearning.filter_bad_features!(X_new)
     X_new = Matrix(X_new)
     pred = X_new * weights
+    @assert pred[1] !== nothing
+    @debug "pred = $(pred[1])"
     return pred[1]
 end
 

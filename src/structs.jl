@@ -126,6 +126,12 @@ MaxRewardMarkovPolicy(machine::Machine) = MaxRewardMarkovPolicy(MachineModel(mac
 struct FeatureVector <: AbstractVector{Pair{Symbol, Float64}}
 end
 
+function MarkovState(features::Vector{Pair{Symbol, Float64}}, model::DecisionModel)
+    state = MarkovState(features)
+    state.reward = predict_model(model, features)
+    return state
+end
+
 function MarkovState(features::Vector{Pair{Symbol, Float64}})
     # In order to avoid numerical instability issues in `Float64`, we apply rounding to the featurees first
     # Essentially applying a grid to our feature space, and considering all points the same if they are

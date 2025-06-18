@@ -86,12 +86,7 @@ function consume_channel!(channel, file_name)
     _write_features_file(file_name, features)
 end
 
-function Catan.do_post_game_action(game::Game, board::Board, players::AbstractVector{PlayerType}, player::TemporalDifferencePlayer, winner::Union{PlayerType, Nothing})
-    println("writing values")
-    return write_values_file(players, player)
-end
-
-function Catan.do_post_game_action(game::Game, board::Board, players::AbstractVector{PlayerType}, player::HybridPlayer, winner::Union{PlayerType, Nothing})
+function Catan.do_post_game_action(game::Game, board::Board, players::AbstractVector{PlayerType}, player::MarkovPlayer, winner::Union{PlayerType, Nothing})
     println("writing values")
     return write_values_file(players, player)
 end
@@ -129,8 +124,9 @@ function read_values_file(values_file::String, max_lines = nothing)::Dict{UInt64
     return out
 end
 
-function write_values_file(players::AbstractVector{PlayerType}, player::Union{HybridPlayer, TemporalDifferencePlayer})
+function write_values_file(players::AbstractVector{PlayerType}, player::MarkovPlayer)
     values_file = get_player_config(player, "STATE_VALUES")
+    @info "to $values_file"
     state_to_value = player.process.new_state_to_value
     write_values_file(values_file, state_to_value)
 

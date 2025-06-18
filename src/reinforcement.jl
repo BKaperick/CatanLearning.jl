@@ -1,13 +1,30 @@
 
 state_to_value = Dict()
-function query_state_value(state_to_value, state_key, default = 0.5)
+function query_state_value(state_to_value::Dict, state_key, default = 0.5)
     if haskey(state_to_value, state_key)
         return state_to_value[state_key]
     else
         return default
     end
 end
-function query_state_value(process::MarkovRewardProcess, state_key, default = 0.5)
+#=
+function query_state_value(process::MarkovRewardProcess, transition::MarkovTransition, default = 0.5)
+    total = 0
+    for state in transition.states
+        total += query_state_value(process, state.key, default = default)
+    end
+    return total / length(transition.states)
+end
+=#
+
+function query_state_value(process::MarkovRewardProcess, transition::MarkovTransition)
+    # Get average value from this transition
+    value = sum([query_state_value(process, s.key) for s in transition.states]) / length(transition.states)
+    return value
+end
+
+function query_state_value(process::MarkovRewardProcess, state_key::UInt, default = 0.5)
+    @info "querying key {$state_key.key} (searching $(length(keys(process.state_to_value))) + $(length(keys(process.new_state_to_value))) known values...)"
     if haskey(process.state_to_value, state_key)
         return process.state_to_value[state_key]
     elseif haskey(process.new_state_to_value, state_key)
@@ -49,17 +66,17 @@ function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::Wei
     value = policy.value_weight * query_state_value(process, transition)
     return reward + value
 end
+function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::WeightsRewardPlusValueMarkovPolicy, state::MarkovState)
+    reward = policy.reward_weight * get_combined_reward(process, policy.model, state)
+    value = policy.value_weight * query_state_value(process, state.key)
+    println("$(state.key): $(reward + value)")
+    return reward + value
+end
 
 function get_combined_reward(process::MarkovRewardProcess, model::DecisionModel, transition::MarkovTransition)
     # Get average reward from this transition
     reward = sum([get_combined_reward(process, model, s) for s in transition.states]) / length(transition.states)
     return reward
-end
-
-function query_state_value(process::MarkovRewardProcess, transition::MarkovTransition)
-    # Get average value from this transition
-    value = sum([query_state_value(process, s.key) for s in transition.states]) / length(transition.states)
-    return value
 end
 
 function get_combined_reward(process::MarkovRewardProcess, model::DecisionModel, state::MarkovState)
@@ -86,6 +103,9 @@ Default implementation simply chooses the next state to maximize the `get_state_
 """
 function sample_from_policy(process::MarkovRewardProcess, policy::MarkovPolicy, current_state, transitions::Vector{MarkovTransition})
     rewards = [get_state_optimizing_quantity(process, policy, t) for t in transitions]
+    for r in rewards
+        @assert r !== nothing
+    end
     return maximum(rewards), argmax(rewards), transitions[argmax(rewards)]
 end
 
@@ -94,12 +114,16 @@ end
 
 """
 function get_new_current_value(process, current_value, next_state, next_value)
-    delta = next_state.reward + (process.reward_discount * next_value) - current_value
+    next_discounted = (process.reward_discount * next_value)
+    step = next_state.reward + next_discounted
+    delta = step - current_value
     return current_value + (process.learning_rate * delta)
 end
 
 function finish_temporal_difference_step!(process::MarkovRewardProcess, 
         current_state::MarkovState, next_state::MarkovState)
+    @assert next_state.reward !== nothing
+    @warn next_state.reward
     # Update current state value
     current_value = query_state_value(process, current_state.key)
 

@@ -31,20 +31,24 @@ function get_transitions(set::ActionSet{Action})::Vector{MarkovTransition}
     return transitions
 end
 
-function Catan.do_post_action_step(board::Board, player::TemporalDifferencePlayer)
+function Catan.do_post_action_step(board::Board, player::MarkovPlayer)
     next_features = compute_features(board, player.player)
-    next_state = MarkovState(next_features)
+    next_state = MarkovState(next_features, player.machine)
+
+    @assert next_state.reward !== nothing
     finish_temporal_difference_step!(player.process, player.current_state, next_state::MarkovState)
 end
 
 
-function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPublicView}, player::TemporalDifferencePlayer, actions::Set{PreAction})::ChosenAction
+function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPublicView}, player::MarkovPlayer, actions::Set{PreAction})::ChosenAction
     best_action_index = 0
     best_action_proba = -1
     machine = player.machine
 
     current_features = compute_features(board, player.player)
     current_state = MarkovState(current_features)
+    #current_quantity = 0
+    #current_state.reward = 0
     current_quantity = get_state_optimizing_quantity(player.process, player.policy, current_state)
     player.current_state = current_state
 

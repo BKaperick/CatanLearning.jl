@@ -7,6 +7,9 @@ using DelimitedFiles
 abstract type LearningPlayer <: RobotPlayer
 end
 
+abstract type MarkovPlayer <: LearningPlayer
+end
+
 mutable struct EmpathRobotPlayer <: LearningPlayer 
     player::Player
     machine::Machine
@@ -33,7 +36,7 @@ function MutatedEmpathRobotPlayer(team::Symbol, mutation::Dict, configs::Dict)
     configs)
 end
 
-mutable struct TemporalDifferencePlayer <: LearningPlayer
+mutable struct TemporalDifferencePlayer <: MarkovPlayer
     player::Player
     machine::Machine
     machine_public::Machine
@@ -60,7 +63,7 @@ function TemporalDifferencePlayer(TPolicy::Type, team::Symbol, master_state_to_v
     TemporalDifferencePlayer(Player(team, configs), machine, machine_public, process, policy, configs, nothing)
 end
 
-mutable struct HybridPlayer <: LearningPlayer
+mutable struct HybridPlayer <: MarkovPlayer
     player::Player
     machine::DecisionModel
     machine_public::Machine
@@ -84,7 +87,8 @@ function HybridPlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}
     value_weight = get_player_config(configs, "VALUE_WEIGHT", team)
     process = MarkovRewardProcess(learning_rate, reward_discount, 1.0, 0.0, master_state_to_value, new_state_to_value)
     policy = WeightsRewardPlusValueMarkovPolicy(model, reward_weight, value_weight)
-    HybridPlayer(Player(team, configs), model, machine_public, process, policy, configs, nothing)
+    player = Player(team, configs)
+    HybridPlayer(player, model, machine_public, process, policy, configs, nothing)
 end
 
 function Base.deepcopy(player::MutatedEmpathRobotPlayer)

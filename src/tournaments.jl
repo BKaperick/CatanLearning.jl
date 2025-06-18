@@ -194,3 +194,33 @@ function run_tournament(tourney, create_players::Function, configs)
         end
     end
 end
+
+function run_state_space_tournament(tourney, create_players::Function, configs)
+    master_state_to_value = read_values_file(player_configs["STATE_VALUES"])::Dict{UInt64, Float64}
+    new_state_to_value = Dict{UInt64, Float64}()
+    start_length = length(master_state_to_value)
+    println("starting states known: $(start_length)")
+    teams = [Symbol(t) for t in configs["TEAMS"]]
+    create_players = () -> create_enriched_players(configs, master_state_to_value, new_state_to_value)
+    winners = init_winners(teams)
+    for k=1:tourney.epochs
+        epoch_winners = do_tournament_one_epoch(tourney, teams, configs, create_players)
+        #toggleprint(epoch_winners)
+        for (w,n) in collect(epoch_winners)
+            winners[w] += n
+        end
+    end
+end
+
+function create_enriched_players(configs, state_values::Dict{UInt64, Float64}, new_state_values::Dict{UInt64, Float64})
+    players = read_players_from_config(configs)
+    # Enrich players if needed
+    for p in players
+        if typeof(p) <: MarkovPlayer
+            p.process.state_to_value = state_values
+            p.process.new_state_to_value = new_state_values
+        end
+    end
+    return players
+end
+
