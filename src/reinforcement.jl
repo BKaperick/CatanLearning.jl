@@ -24,7 +24,7 @@ function query_state_value(process::MarkovRewardProcess, transition::MarkovTrans
 end
 
 function query_state_value(process::MarkovRewardProcess, state_key::UInt, default = 0.5)
-    @info "querying key {$state_key.key} (searching $(length(keys(process.state_to_value))) + $(length(keys(process.new_state_to_value))) known values...)"
+    @info "querying key {$state_key} (searching $(length(keys(process.state_to_value))) + $(length(keys(process.new_state_to_value))) known values...)"
     if haskey(process.state_to_value, state_key)
         return process.state_to_value[state_key]
     elseif haskey(process.new_state_to_value, state_key)

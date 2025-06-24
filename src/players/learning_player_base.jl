@@ -319,11 +319,11 @@ function Catan.choose_resource_to_draw(board::Board, players::AbstractVector{Pla
     return get_best_action(board, players, player, Set([PreAction(:GainResource, resources)])).args[1]
 end
 
-function Catan.choose_one_resource_to_discard(board::Board, player::LearningPlayer)::Symbol
+function Catan.choose_one_resource_to_discard(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer)::Symbol
     isempty(player.player.resources) && throw(ArgumentError("Player has no resources"))
     resources = [r for (r,v) in player.player.resources if v > 0]
     pre_actions = Set([PreAction(:LoseResource, resources)])
-    action = get_best_action(board, Vector{PlayerPublicView}([]), player, pre_actions)
+    action = get_best_action(board, players, player, pre_actions)
     return action.args[1]
 end
 
