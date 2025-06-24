@@ -22,7 +22,7 @@ function do_tournament_one_epoch(tourney, teams, configs, player_constructors::D
     create_players = () -> [player_constructors[t](team_to_mutation[t]) for t in teams]
 end
 
-function do_tournament_one_epoch(tourney, teams, configs; create_players = Catan.create_players(configs))
+function do_tournament_one_epoch(tourney, teams, configs; create_players = Catan.create_players)
     winners = init_winners(teams)
     for j=1:tourney.maps_per_epoch
         @info "map $j / $(tourney.maps_per_epoch)"
@@ -41,7 +41,7 @@ function do_tournament_one_epoch_async(channels, tourney, teams, configs)
     end
 end
 
-function do_tournament_one_map!(winners, tourney, configs, map_num; create_players = Catan.create_players(configs))
+function do_tournament_one_map!(winners, tourney, configs, map_num; create_players = Catan.create_players)
     map = Catan.generate_random_map()
     for i=1:tourney.games_per_map
         players = create_players(configs)
