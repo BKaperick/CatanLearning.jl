@@ -52,17 +52,6 @@ function run(T::MutatedEmpathRobotPlayer, configs::Dict, player_configs::Dict)
     ])
     run(player_constructors, configs)
 end
-function run(T::Type, configs::Dict, player_configs::Dict)
-    #global_logger(logger)
-    #global_logger()
-    player_constructors = Dict([
-        :Blue => (mutation) -> T(:Blue, player_configs), 
-        :Green => (mutation) -> T(:Green, player_configs), 
-        :Cyan => (mutation) -> T(:Cyan, player_configs), 
-        :Yellow => (mutation) -> T(:Yellow, player_configs)
-    ])
-    run(player_constructors, configs)
-end
 
 function run_explore()
     configs = Catan.parse_configs("Configuration.toml")
@@ -86,9 +75,9 @@ function run_explore()
     run(player_constructors, configs)
 end
 
-function run(create_players::Function, configs)
+function run(configs)
     tourney = Tournament(configs, :Sequential)
-    run_tournament(tourney, create_players, configs)
+    run_tournament(tourney, configs)
 end
 
 function run(player_constructors::Dict, configs)

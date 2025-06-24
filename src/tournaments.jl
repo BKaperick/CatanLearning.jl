@@ -21,40 +21,30 @@ end
 function do_tournament_one_epoch(tourney, teams, configs, player_constructors::Dict, team_to_mutation::Dict)
     create_players = () -> [player_constructors[t](team_to_mutation[t]) for t in teams]
 end
-function do_tournament_one_epoch(tourney, teams, configs, players_schema::Vector)
-    players = Catan.get_known_players()
-    @debug players
 
-    f = () -> [players[p[1]](Symbol(p[2]), configs) for p in players_schema]
-    do_tournament_one_epoch(tourney, teams, configs, f)
-end
-
-function do_tournament_one_epoch(tourney, teams, configs, create_players::Function)
+function do_tournament_one_epoch(tourney, teams, configs; create_players = Catan.create_players(configs))
     winners = init_winners(teams)
     for j=1:tourney.maps_per_epoch
         @info "map $j / $(tourney.maps_per_epoch)"
-        do_tournament_one_map!(winners, tourney, configs, create_players, j)
+        do_tournament_one_map!(winners, tourney, configs, j; create_players = create_players)
     end
     order_winners(winners)
 end
 
-function do_tournament_one_epoch_async(channels, tourney, teams, configs, players_schema::Vector)
-    players = Catan.get_known_players()
-
-    create_players = () -> [players[p[1]](Symbol(p[2]), configs) for p in players_schema]
+function do_tournament_one_epoch_async(channels, tourney, teams, configs)
     for j=1:tourney.maps_per_epoch
         @info "map $j / $(tourney.maps_per_epoch)"
-        do_tournament_one_map_async!(channels, tourney, configs, create_players)
+        do_tournament_one_map_async!(channels, tourney, configs)
 
         #TODO better to control this with yield here or just implicitly with the Channel buffer size?
         #yield()
     end
 end
 
-function do_tournament_one_map!(winners, tourney, configs, create_players, map_num)
+function do_tournament_one_map!(winners, tourney, configs, map_num; create_players = Catan.create_players(configs))
     map = Catan.generate_random_map()
     for i=1:tourney.games_per_map
-        players = create_players()
+        players = create_players(configs)
         do_tournament_one_game!(winners, map, players, configs)
 
         g_num = (map_num - 1)*tourney.games_per_map + i
@@ -64,12 +54,12 @@ function do_tournament_one_map!(winners, tourney, configs, create_players, map_n
     end
 end
 
-function do_tournament_one_map_async!(channels, tourney, configs, create_players)
+function do_tournament_one_map_async!(channels, tourney, configs)
     @debug "running do_tournament_one_map_async!"
     map = Catan.generate_random_map()
     for i=1:tourney.games_per_map
         @debug "game $i / $(tourney.games_per_map)"
-        players = create_players()
+        players = Catan.create_players(configs)
         do_tournament_one_game_async!(channels, map, players, configs)
         yield()
     end
@@ -130,12 +120,11 @@ end
 function run_tournament(configs::Dict)
     initialize_tournament(configs)
     tourney = Tournament(configs, :Sequential)
-    player_schemas = Catan.read_player_constructors_from_config(configs["PlayerSettings"])
     teams = [Symbol(t) for t in configs["TEAMS"]]
     winners = init_winners(teams)
     for k=1:tourney.epochs
         @info "epoch $k / $(tourney.epochs)"
-        epoch_winners = do_tournament_one_epoch(tourney, teams, configs, player_schemas)
+        epoch_winners = do_tournament_one_epoch(tourney, teams, configs)
         #toggleprint(epoch_winners)
         for (w,n) in collect(epoch_winners)
             winners[w] += n
@@ -148,7 +137,6 @@ function run_tournament_async(configs)
     initialize_tournament(configs)
     tourney = Tournament(configs, :Sequential)
     teams = [Symbol(t) for t in configs["TEAMS"]]
-    player_schemas = Catan.read_player_constructors_from_config(configs["PlayerSettings"])
 
     channels = Catan.read_channels_from_config(configs)
     
@@ -158,7 +146,7 @@ function run_tournament_async(configs)
     @info "Running tournament of $(data_points/4) games in total"
     
     @sync begin
-        @async _run_tournament_async(channels, tourney, player_schemas, configs, teams)
+        @async _run_tournament_async(channels, tourney, configs, teams)
         @async consume_feature_channel!(channels[:main], data_points, configs["PlayerSettings"]["FEATURES"])
         @async consume_feature_channel!(channels[:public], data_points, configs["PlayerSettings"]["PUBLIC_FEATURES"])
     end
@@ -176,35 +164,35 @@ function consume_feature_channel!(channel, count, key)
     close(channel)
 end
 
-function _run_tournament_async(channels, tourney, player_schemas::Vector, configs, teams)
+function _run_tournament_async(channels, tourney, configs, teams)
     for k=1:tourney.epochs
         @info "epoch $k / $(tourney.epochs)"
-        do_tournament_one_epoch_async(channels, tourney, teams, configs, player_schemas)
+        do_tournament_one_epoch_async(channels, tourney, teams, configs)
     end
 end
 
-function run_tournament(tourney, create_players::Function, configs)
+function run_tournament(tourney, configs)
     teams = [Symbol(t) for t in configs["TEAMS"]]
     winners = init_winners(teams)
     for k=1:tourney.epochs
-        epoch_winners = do_tournament_one_epoch(tourney, teams, configs, create_players)
-        #toggleprint(epoch_winners)
+        epoch_winners = do_tournament_one_epoch(tourney, teams, configs)
         for (w,n) in collect(epoch_winners)
             winners[w] += n
         end
     end
 end
 
-function run_state_space_tournament(tourney, create_players::Function, configs)
-    master_state_to_value = read_values_file(player_configs["STATE_VALUES"])::Dict{UInt64, Float64}
+function run_state_space_tournament(configs)
+    tourney = Tournament(configs, :Sequential)
+    master_state_to_value = read_values_file(configs["PlayerSettings"]["STATE_VALUES"])::Dict{UInt64, Float64}
     new_state_to_value = Dict{UInt64, Float64}()
     start_length = length(master_state_to_value)
     println("starting states known: $(start_length)")
     teams = [Symbol(t) for t in configs["TEAMS"]]
-    create_players = () -> create_enriched_players(configs, master_state_to_value, new_state_to_value)
+    with_enrichment = conf -> create_enriched_players(conf, master_state_to_value, new_state_to_value)
     winners = init_winners(teams)
     for k=1:tourney.epochs
-        epoch_winners = do_tournament_one_epoch(tourney, teams, configs, create_players)
+        epoch_winners = do_tournament_one_epoch(tourney, teams, configs; create_players = with_enrichment)
         #toggleprint(epoch_winners)
         for (w,n) in collect(epoch_winners)
             winners[w] += n
@@ -213,14 +201,15 @@ function run_state_space_tournament(tourney, create_players::Function, configs)
 end
 
 function create_enriched_players(configs, state_values::Dict{UInt64, Float64}, new_state_values::Dict{UInt64, Float64})
-    players = read_players_from_config(configs)
+    players = Catan.create_players(configs)
+
     # Enrich players if needed
     for p in players
         if typeof(p) <: MarkovPlayer
+            @info "Enriching player $(p.player.team) with $(length(state_values)) pre-explored states"
             p.process.state_to_value = state_values
             p.process.new_state_to_value = new_state_values
         end
     end
     return players
 end
-
