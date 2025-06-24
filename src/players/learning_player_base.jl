@@ -126,7 +126,6 @@ function get_legal_action_sets(board::Board, players::AbstractVector{PlayerPubli
     if haskey(actions, :PlaceRobber)
         candidates = actions[:PlaceRobber]
         # Get candidates
-        @warn "$(length(candidates)) candidate tiles"
         for candidate_tiles = candidates
             candidate_tile = candidate_tiles[1]
             candidate_victims = get_admissible_theft_victims(board, players, player, candidate_tile)
@@ -240,11 +239,14 @@ function analyze_action!(action::AbstractAction, board::Board, players::Abstract
     
     # We control the log-level of 'hypothetical' games separately from the main game.
     main_logger = global_logger()
-    Catan.parse_logging_configs!(board.configs["HypothGameSettings"])
-
+    #println(board.configs["HypothGameSettings"])
+    global_logger(ConsoleLogger(Logging.Warn))
+    #Catan.parse_logging_configs!(board.configs["HypothGameSettings"])
+    #global_logger(board.configs["HypothGameSettings"]["LOGGER"])
     action.func!(hypoth_game, hypoth_board, hypoth_player)
     action.features = compute_features(hypoth_board, hypoth_player.player)
 
+    #Catan.parse_logging_configs!(board.configs)
     global_logger(main_logger)
     
     @debug "Leaving hypoth game $(hypoth_game.unique_id)"
@@ -307,7 +309,6 @@ function Catan.choose_building_location(board::Board, players::AbstractVector{Pl
 end
 
 function Catan.choose_place_robber(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidate_tiles::Vector{Symbol})::Symbol
-    @warn "Calling PlaceRobber with $(length(candidate_tiles)) possibilities"
     return get_best_action(board, players, player, Set([PreAction(:PlaceRobber, candidate_tiles)])).args[2]
 end
 
@@ -316,11 +317,11 @@ function Catan.choose_resource_to_draw(board::Board, players::AbstractVector{Pla
     return get_best_action(board, players, player, Set([PreAction(:GainResource, resources)])).args[1]
 end
 
-function Catan.choose_one_resource_to_discard(board::Board, player::LearningPlayer)::Symbol
+function Catan.choose_one_resource_to_discard(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer)::Symbol
     isempty(player.player.resources) && throw(ArgumentError("Player has no resources"))
     resources = [r for (r,v) in player.player.resources if v > 0]
     pre_actions = Set([PreAction(:LoseResource, resources)])
-    action = get_best_action(board, Vector{PlayerPublicView}([]), player, pre_actions)
+    action = get_best_action(board, players, player, pre_actions)
     return action.args[1]
 end
 

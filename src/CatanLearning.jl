@@ -35,6 +35,7 @@ function __init__()
     Catan.add_player_to_register("EmpathRobotPlayer", (t,c) -> EmpathRobotPlayer(t,c))
     Catan.add_player_to_register("MutatedEmpathRobotPlayer", (t,c) -> MutatedEmpathRobotPlayer(t,c))
     Catan.add_player_to_register("TemporalDifferencePlayer", (t,c) -> TemporalDifferencePlayer(t,c))
+    Catan.add_player_to_register("HybridPlayer", (t,c) -> HybridPlayer(t,c))
 
     # Upsert the configs from this package
     default_config_path = joinpath(@__DIR__, "..", "DefaultConfiguration.toml")
@@ -48,17 +49,6 @@ function run(T::MutatedEmpathRobotPlayer, configs::Dict, player_configs::Dict)
         :Green => (mutation) -> T(:Green, mutation, player_configs), 
         :Cyan => (mutation) -> T(:Cyan, mutation, player_configs), 
         :Yellow => (mutation) -> T(:Yellow, mutation, player_configs)
-    ])
-    run(player_constructors, configs)
-end
-function run(T::Type, configs::Dict, player_configs::Dict)
-    #global_logger(logger)
-    #global_logger()
-    player_constructors = Dict([
-        :Blue => (mutation) -> T(:Blue, player_configs), 
-        :Green => (mutation) -> T(:Green, player_configs), 
-        :Cyan => (mutation) -> T(:Cyan, player_configs), 
-        :Yellow => (mutation) -> T(:Yellow, player_configs)
     ])
     run(player_constructors, configs)
 end
@@ -85,9 +75,9 @@ function run_explore()
     run(player_constructors, configs)
 end
 
-function run(create_players::Function, configs)
+function run(configs)
     tourney = Tournament(configs, :Sequential)
-    run_tournament(tourney, create_players, configs)
+    run_tournament(tourney, configs)
 end
 
 function run(player_constructors::Dict, configs)

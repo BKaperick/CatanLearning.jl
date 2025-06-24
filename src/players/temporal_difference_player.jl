@@ -31,20 +31,24 @@ function get_transitions(set::ActionSet{Action})::Vector{MarkovTransition}
     return transitions
 end
 
-function Catan.do_post_action_step(board::Board, player::TemporalDifferencePlayer)
+function Catan.do_post_action_step(board::Board, player::MarkovPlayer)
     next_features = compute_features(board, player.player)
-    next_state = MarkovState(next_features)
+    next_state = MarkovState(next_features, player.machine)
+
+    @assert next_state.reward !== nothing
     finish_temporal_difference_step!(player.process, player.current_state, next_state::MarkovState)
 end
 
 
-function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPublicView}, player::TemporalDifferencePlayer, actions::Set{PreAction})::Function
+function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPublicView}, player::MarkovPlayer, actions::Set{PreAction})::ChosenAction
     best_action_index = 0
     best_action_proba = -1
     machine = player.machine
 
     current_features = compute_features(board, player.player)
     current_state = MarkovState(current_features)
+    #current_quantity = 0
+    #current_state.reward = 0
     current_quantity = get_state_optimizing_quantity(player.process, player.policy, current_state)
     player.current_state = current_state
 
@@ -58,7 +62,7 @@ function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPu
     # but we need to think about how temporal_difference_player should take probabilistic actions
     
     if length(reachable_transitions) == 0
-        return Returns(nothing)
+        return ChosenAction(:DoNothing)
     end
     
     next_state_quantity, index, transition = sample_from_policy(player.process, player.policy, current_state, 
@@ -67,12 +71,14 @@ function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPu
     # Two cases: 
     # 1. transition is deterministic, so there is only one action in the set
     # 2. transition is stochastic, so there are multiple actions, but they're all the same func!
-    action_func = transition.action_set.actions[1].func!
+    #action_func = transition.action_set.actions[1].func!
+    best_action = transition.action_set.actions[1]
     
     # Only do an action if it will improve his optimized quantity
     if next_state_quantity > current_quantity
-        return action_func # TODO
+        return ChosenAction(best_action.name, best_action.args...)
+        #return action_func # TODO
     end
 
-    return Returns(nothing)
+    return ChosenAction(:DoNothing)
 end

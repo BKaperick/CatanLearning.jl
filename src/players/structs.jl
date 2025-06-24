@@ -7,6 +7,9 @@ using DelimitedFiles
 abstract type LearningPlayer <: RobotPlayer
 end
 
+abstract type MarkovPlayer <: LearningPlayer
+end
+
 mutable struct EmpathRobotPlayer <: LearningPlayer 
     player::Player
     machine::Machine
@@ -33,7 +36,7 @@ function MutatedEmpathRobotPlayer(team::Symbol, mutation::Dict, configs::Dict)
     configs)
 end
 
-mutable struct TemporalDifferencePlayer <: LearningPlayer
+mutable struct TemporalDifferencePlayer <: MarkovPlayer
     player::Player
     machine::Machine
     machine_public::Machine
@@ -60,6 +63,34 @@ function TemporalDifferencePlayer(TPolicy::Type, team::Symbol, master_state_to_v
     TemporalDifferencePlayer(Player(team, configs), machine, machine_public, process, policy, configs, nothing)
 end
 
+mutable struct HybridPlayer <: MarkovPlayer
+    player::Player
+    machine::DecisionModel
+    machine_public::Machine
+    process::MarkovRewardProcess
+    policy::MarkovPolicy
+    configs::Dict
+    current_state::Union{Nothing, MarkovState}
+end
+
+HybridPlayer(team::Symbol, configs::Dict) = HybridPlayer(team::Symbol, Dict{UInt64, Float64}(), Dict{UInt64, Float64}(), configs)
+#HybridPlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs::Dict) 
+
+function HybridPlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs)
+    model_weights = try_load_linear_model_from_csv(team, configs)::Vector{Float64}
+    model = LinearModel(model_weights)
+    machine_public = try_load_public_model_from_csv(team, configs)
+
+    reward_discount = get_player_config(configs, "REWARD_DISCOUNT", team)
+    learning_rate = get_player_config(configs, "LEARNING_RATE", team)
+    reward_weight = get_player_config(configs, "REWARD_WEIGHT", team)
+    value_weight = get_player_config(configs, "VALUE_WEIGHT", team)
+    process = MarkovRewardProcess(learning_rate, reward_discount, 1.0, 0.0, master_state_to_value, new_state_to_value)
+    policy = WeightsRewardPlusValueMarkovPolicy(model, reward_weight, value_weight)
+    player = Player(team, configs)
+    HybridPlayer(player, model, machine_public, process, policy, configs, nothing)
+end
+
 function Base.deepcopy(player::MutatedEmpathRobotPlayer)
     return MutatedEmpathRobotPlayer(deepcopy(player.player), player.machine, player.machine_public, deepcopy(player.mutation), player.configs) 
 end
@@ -67,6 +98,19 @@ end
 function Base.deepcopy(player::TemporalDifferencePlayer)
     # Note, we deepcopy only the player data, while the RL data should persist in order to pass updates the state info properly
     return TemporalDifferencePlayer(
+        deepcopy(player.player), 
+        player.machine, 
+        player.machine_public, 
+        player.process, 
+        player.policy, 
+        player.configs,
+        deepcopy(player.current_state)
+    )
+end
+
+function Base.deepcopy(player::HybridPlayer)
+    # Note, we deepcopy only the player data, while the RL data should persist in order to pass updates the state info properly
+    return HybridPlayer(
         deepcopy(player.player), 
         player.machine, 
         player.machine_public, 

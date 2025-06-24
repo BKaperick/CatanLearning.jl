@@ -78,30 +78,58 @@ mutable struct MarkovTransition
     action_set::AbstractActionSet
 end
 
+# TODO, replace instances of `machine` with Decision model
+abstract type DecisionModel
+end
+struct MachineModel <: DecisionModel
+    machine::Machine
+end
+struct LinearModel <: DecisionModel
+    weights::Vector{Float64}
+end
+
 abstract type MarkovPolicy end
 
 """
 Samples reachable states by choosing maximum of reward + estimated value
 """
 struct MaxRewardPlusValueMarkovPolicy <: MarkovPolicy
-    machine::Machine
+    model::DecisionModel
+end
+
+"""
+Samples reachable states by choosing maximum of a * reward + b * estimated value
+"""
+struct WeightsRewardPlusValueMarkovPolicy <: MarkovPolicy
+    model::DecisionModel
+    reward_weight::Float64
+    value_weight::Float64
 end
 
 """
 Samples reachable states by choosing maximum reward
 """
 struct MaxRewardMarkovPolicy <: MarkovPolicy
-    machine::Machine
+    model::DecisionModel
 end
 
 """
 Samples reachable states by choosing maximum estimated value
 """
 struct MaxValueMarkovPolicy <: MarkovPolicy
-    machine::Machine
+    model::DecisionModel
 end
 
+MaxValueMarkovPolicy(machine::Machine) = MaxValueMarkovPolicy(MachineModel(machine))
+MaxRewardMarkovPolicy(machine::Machine) = MaxRewardMarkovPolicy(MachineModel(machine))
+
 struct FeatureVector <: AbstractVector{Pair{Symbol, Float64}}
+end
+
+function MarkovState(features::Vector{Pair{Symbol, Float64}}, model::DecisionModel)
+    state = MarkovState(features)
+    state.reward = predict_model(model, features)
+    return state
 end
 
 function MarkovState(features::Vector{Pair{Symbol, Float64}})

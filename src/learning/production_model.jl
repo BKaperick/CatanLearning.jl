@@ -6,6 +6,7 @@ import DataFramesMeta as DFM
 using DelimitedFiles
 using MLJDecisionTreeInterface
 using DecisionTree
+using LinearAlgebra
 
 function load_tree_model()
     return (@load RandomForestClassifier pkg=DecisionTree verbosity=0)()
@@ -13,6 +14,17 @@ end
 
 function try_load_model_from_csv(team::Symbol, configs::Dict)::Machine
     try_load_serialized_model_from_csv(get_player_config(configs, "MODEL", team),  get_player_config(configs, "FEATURES", team))
+end
+
+function try_load_linear_model_from_csv(team::Symbol, configs::Dict)::Vector{Float64}
+    model_path = get_player_config(configs, "MODEL", team)
+    @info "Looking for linear model stored in $model_path"
+    if isfile(model_path)
+        @info "Found model stored in $model_path"
+        weights = CSV.read(model_path, DataFrame)
+        return weights[!, :Weights]
+    end
+    @assert false "Not found"
 end
 
 function try_load_public_model_from_csv(team::Symbol, configs::Dict)::Machine
