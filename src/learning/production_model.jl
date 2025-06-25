@@ -24,7 +24,9 @@ function try_load_linear_model_from_csv(team::Symbol, configs::Dict)::Vector{Flo
         weights = CSV.read(model_path, DataFrame)
         return weights[!, :Weights]
     end
-    @assert false "Not found"
+    features_path = get_player_config(configs, "FEATURES", team)
+    @info "Not found, let's try to train a new model from features in $features_path"
+    train_and_serialize_linear_model(features_path, model_path)
 end
 
 function try_load_public_model_from_csv(team::Symbol, configs::Dict)::Machine
@@ -139,4 +141,30 @@ function train_and_serialize_model(features_csv::String, output_path::String; nu
     tuned_mach = train_model_from_csv(tree, features_csv, num_tuning_iterations = num_tuning_iterations)
     @info "Serializing model trained on $features_csv into $output_path"
     MLJ.save(output_path, tuned_mach)
+end
+
+"""
+    `train_and_serialize_linear_model(features_csv, output_path)`
+
+This is the access point for re-training a model based on new features or engine bug fixes.
+"""
+function train_and_serialize_linear_model(features_csv::String, output_path::String; sv_threshold = 0.01)::Vector{Float64}
+    model = train_linear_model_from_csv(features_csv; sv_threshold = sv_threshold)
+    @info "Serializing linear model trained on $features_csv into $output_path"
+    df = DataFrame(Weights = model)
+    CSV.write(output_path, df)
+    return model
+end
+
+function train_linear_model_from_csv(features_csv; sv_threshold = 0.01)
+    df = CatanLearning.load_typed_features_from_csv(features_csv)
+    y = [value == true ? 1.0 : 0.0 for value in df[:, :WonGame]]
+    # Extract the feature matrix
+    X = Matrix(df[:, Not(:WonGame)])
+    (m,n) = size(X)
+    U,S,Vt = svd(X)
+    N_num = length(filter(x -> x >= sv_threshold, S))
+    pseudo_inv = transpose(Vt)[1:n, 1:N_num] * diagm(1 ./ S[1:N_num]) * transpose(U)[1:N_num, 1:m]
+    model = pseudo_inv * y
+    return model
 end
