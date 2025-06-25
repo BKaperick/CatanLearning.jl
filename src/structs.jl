@@ -152,7 +152,7 @@ function MarkovState(process::MarkovRewardProcess, features::Vector{Pair{Symbol,
 
     # TODO think about - should we also be rounding features for inference?
     # Currently mostly (only?) integer features, so we don't need to think too deeply yet
-    reward = predict_model(model, features)
+    reward = get_combined_reward(process, model, features)
     
     # In order to avoid numerical instability issues in `Float64`, we apply rounding to the featurees first
     # Essentially applying a grid to our feature space, and considering all points the same if they are
@@ -160,4 +160,18 @@ function MarkovState(process::MarkovRewardProcess, features::Vector{Pair{Symbol,
     rounded_features = round.([f.second for f in features], digits=1)
 
     return MarkovState(hash(rounded_features), Dict(features), reward)
+end
+
+function get_combined_reward(process::MarkovRewardProcess, model::DecisionModel, features::Vector{Pair{Symbol, Float64}})::Float64
+    model_proba = predict_model(model, features)
+    
+    # TODO
+    # win or loss feature is too difficult to calculate without passing game to feature computation
+    # win_loss = state.features[:CountVictoryPoint]
+
+    # Make sure return value is approximately on [0, 1] (technically vp can exceed 10)
+    points = Dict(features)[:CountVictoryPoint] / 10
+    @assert process.model_coeff + process.points_coeff == 1.0
+    reward = (process.model_coeff * model_proba) + (process.points_coeff * points)
+    return reward
 end
