@@ -1,40 +1,21 @@
-
-state_to_value = Dict()
-function query_state_value(state_to_value::Dict, state_key, default = 0.5)
-    if haskey(state_to_value, state_key)
-        return state_to_value[state_key]
-    else
-        return default
-    end
-end
-#=
-function query_state_value(process::MarkovRewardProcess, transition::MarkovTransition, default = 0.5)
-    total = 0
-    for state in transition.states
-        total += query_state_value(process, state.key, default = default)
-    end
-    return total / length(transition.states)
-end
-=#
-
 function query_state_value(process::MarkovRewardProcess, transition::MarkovTransition)
     # Get average value from this transition
-    value = sum([query_state_value(process, s.key) for s in transition.states]) / length(transition.states)
+    value = sum([query_state_value(process, s) for s in transition.states]) / length(transition.states)
     return value
 end
 
-function query_state_value(process::MarkovRewardProcess, state_key::UInt, default = 0.5)
-    @info "querying key {$state_key} (searching $(length(keys(process.state_to_value))) + $(length(keys(process.new_state_to_value))) known values...)"
-    if haskey(process.state_to_value, state_key)
-        return process.state_to_value[state_key]
-    elseif haskey(process.new_state_to_value, state_key)
-        return process.new_state_to_value[state_key]
+function query_state_value(process::MarkovRewardProcess, state::MarkovState, default = 0.5)
+    @info "querying key {$(state.key)} (searching $(length(keys(process.state_to_value))) + $(length(keys(process.new_state_to_value))) known values...)"
+    if haskey(process.state_to_value, state.key)
+        return process.state_to_value[state.key]
+    elseif haskey(process.new_state_to_value, state.key)
+        return process.new_state_to_value[state.key]
     else
         return default
     end
 end
 
-function update_state_value(process, state_key, new_value)
+function update_state_value(process::MarkovRewardProcess, state_key::UInt, new_value::Float64)
     @assert ~(haskey(process.state_to_value, state_key) && haskey(process.new_state_to_value, state_key))
     if haskey(process.state_to_value, state_key)
         process.state_to_value[state_key] = new_value
@@ -50,13 +31,13 @@ function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::Max
     return get_combined_reward(process, policy.model, transition) 
 end
 function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::MaxValueMarkovPolicy, state::MarkovState)
-    return query_state_value(process, state.key) 
+    return query_state_value(process, state) 
 end
 function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::MaxValueMarkovPolicy, transition::MarkovTransition)
     return query_state_value(process, transition) 
 end
 function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::MaxRewardPlusValueMarkovPolicy, state::MarkovState)
-    return get_combined_reward(process, policy.model, state) + query_state_value(process, state.key) 
+    return get_combined_reward(process, policy.model, state) + query_state_value(process, state) 
 end
 function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::MaxRewardPlusValueMarkovPolicy, transition::MarkovTransition)
     return get_combined_reward(process, policy.model, transition) + query_state_value(process, transition) 
@@ -68,7 +49,7 @@ function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::Wei
 end
 function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::WeightsRewardPlusValueMarkovPolicy, state::MarkovState)
     reward = policy.reward_weight * get_combined_reward(process, policy.model, state)
-    value = policy.value_weight * query_state_value(process, state.key)
+    value = policy.value_weight * query_state_value(process, state)
     println("$(state.key): $(reward + value)")
     return reward + value
 end
@@ -80,8 +61,9 @@ function get_combined_reward(process::MarkovRewardProcess, model::DecisionModel,
 end
 
 function get_combined_reward(process::MarkovRewardProcess, model::DecisionModel, state::MarkovState)
-    #value = query_state_value(state.key)
+    # TODO is this not already calculated in state.reward ? 
     model_proba = predict_model(model, collect(state.features))
+    
     # TODO
     # win or loss feature is too difficult to calculate without passing game to feature computation
     # win_loss = state.features[:CountVictoryPoint]
@@ -125,9 +107,9 @@ function finish_temporal_difference_step!(process::MarkovRewardProcess,
     @assert next_state.reward !== nothing
     @warn next_state.reward
     # Update current state value
-    current_value = query_state_value(process, current_state.key)
+    current_value = query_state_value(process, current_state)
 
-    next_value = query_state_value(process, next_state.key)
+    next_value = query_state_value(process, next_state)
     new_current_value = get_new_current_value(process, current_value, next_state, 
                                               next_value)
     update_state_value(process, current_state.key, new_current_value)

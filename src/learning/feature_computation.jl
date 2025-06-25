@@ -400,9 +400,15 @@ and use that, or we use the naive model, i.e., we just do a linear scaling of pu
 function predict_public_model(machine::Machine, board::Board, player::PlayerPublicView)
     return predict_model(machine, compute_public_features(board, player))
 end
+function predict_public_model(model::DecisionModel, board::Board, player::PlayerPublicView)
+    return predict_model(model, compute_public_features(board, player))
+end
 
 function predict_model(machine::Machine, board::Board, player::PlayerType)
     return predict_model(machine, compute_features(board, player.player))
+end
+function predict_model(model::DecisionModel, board::Board, player::PlayerType)
+    return predict_model(model, compute_features(board, player.player))
 end
 
 predict_model(model::MachineModel, features) = predict_model(model.machine, features)

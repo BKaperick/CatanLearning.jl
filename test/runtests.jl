@@ -173,7 +173,7 @@ function test_feature_perturbations(features, features_increasing_good, configs,
     value_player = TemporalDifferencePlayer(MaxValueMarkovPolicy, :Blue, state_to_value, Dict{UInt64, Float64}(), configs)
     reward_player = TemporalDifferencePlayer(MaxRewardMarkovPolicy, :Red, state_to_value, Dict{UInt64, Float64}(), configs)
     
-    current_state = MarkovState(feature_vec)
+    current_state = MarkovState(feature_vec, value_player.machine)
     value = get_state_optimizing_quantity(value_player.process, value_player.policy, current_state)
     reward = get_state_optimizing_quantity(reward_player.process, reward_player.policy, current_state)
     model_proba = predict_model(value_player.machine, feature_vec)
@@ -193,16 +193,16 @@ function test_feature_perturbations(features, features_increasing_good, configs,
                 println("ignoring $name")
                 continue
             end
+
+            print(i,name)
             
             feature_values[i] = epsilon
             feature_vec = [Pair(f,v) for (f,v) in zip(features, feature_values)]
-            next_state = MarkovState(feature_vec)
-            feature_values[i] = epsilon
-            feature_vec = [Pair(f,v) for (f,v) in zip(features, feature_values)]
-            next_state = MarkovState(feature_vec)
+            next_state = MarkovState(feature_vec, value_player.machine)
             next_value = get_state_optimizing_quantity(value_player.process, value_player.policy, next_state)
             next_reward = get_state_optimizing_quantity(reward_player.process, reward_player.policy, next_state)
             next_model_proba = predict_model(value_player.machine, feature_vec)
+            @test next_model_proba == next_state.reward == next_reward
             
             #println("evaluating $name + $epsilon")
             if next_value < value
@@ -295,6 +295,10 @@ end
 
 function run_tests(neverend = false)
     configs = parse_configs("Configuration.toml")
+    (fails_m, fails_r, fails_v) = test_feature_perturbations(features, features_increasing_good, configs)
+    println("model fails with +3 perturbation $(length(fails_m[3])): $(fails_m[3])")
+    println("model fails with +2 perturbation $(length(fails_m[2])): $(fails_m[2])")
+    println("model fails with +1 perturbation $(length(fails_m[1])): $(fails_m[1])")
     test_learning_player_base_actions(configs)
     test_stackoverflow_knight(configs)
     test_empath_road_building(configs)
@@ -305,10 +309,7 @@ function run_tests(neverend = false)
     test_player_implementation(TemporalDifferencePlayer, configs)
     test_compute_features(configs)
     test_evolving_robot_game(neverend, configs)
-    (fails_m, fails_r, fails_v) = test_feature_perturbations(features, features_increasing_good, configs)
-    println("model fails with +3 perturbation $(length(fails_m[3])): $(fails_m[3])")
-    println("model fails with +2 perturbation $(length(fails_m[2])): $(fails_m[2])")
-    println("model fails with +1 perturbation $(length(fails_m[1])): $(fails_m[1])")
+    
     #=
     println("reward fails with +3 perturbation: $(fails_r[3])")
     println("reward fails with +2 perturbation: $(fails_r[2])")
