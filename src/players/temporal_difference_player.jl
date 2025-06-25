@@ -1,36 +1,6 @@
 include("../reinforcement.jl")
 using Catan: do_post_action_step, choose_next_action
 
-function get_transitions(process::MarkovRewardProcess, model::DecisionModel, action_sets::Vector{AbstractActionSet})::Vector{MarkovTransition}
-    transitions = Vector{MarkovTransition}([])
-    for (i,set) in enumerate(action_sets)
-        #append!(transitions, get_transitions(set))
-        if set isa ActionSet{SampledAction}
-            append!(transitions, get_transitions(process, model, set))
-        elseif set isa ActionSet{Action}
-            append!(transitions, get_transitions(process, model, set))
-        end
-    end
-    return transitions
-end
-function get_transitions(process::MarkovRewardProcess, model::DecisionModel, set::ActionSet{SampledAction})::Vector{MarkovTransition}
-    states = Vector{MarkovState}([])
-    # One transition for each set of sampled actions
-    for act in set.actions
-        push!(states, MarkovState(process, act.features, model))
-    end
-    return [MarkovTransition(states, set)]
-end
-function get_transitions(process::MarkovRewardProcess, model::DecisionModel, set::ActionSet{Action})::Vector{MarkovTransition}
-    transitions = []
-    # One transition per deterministic action
-    for action in set.actions
-        transition = MarkovTransition([MarkovState(process, action.features, model)], ActionSet(action))
-        push!(transitions, transition)
-    end
-    return transitions
-end
-
 function Catan.do_post_action_step(board::Board, player::MarkovPlayer)
     next_features = compute_features(board, player.player)
     next_state = MarkovState(player.process, next_features, player.machine)
@@ -39,84 +9,21 @@ function Catan.do_post_action_step(board::Board, player::MarkovPlayer)
     finish_temporal_difference_step!(player.process, player.current_state, next_state::MarkovState)
 end
 
-function analyze_and_aggregate_action_sets(board::Board, players::AbstractVector{PlayerPublicView}, player::MarkovPlayer, action_sets::Vector{AbstractActionSet}, depth::Integer)::Action
-    best_actions = ActionSet(:SecondRound)
-    
-    decision_model = player.machine::DecisionModel
-    current_features = compute_features(board, player.player)
-    current_state = MarkovState(player.process, current_features, decision_model)
-    current_quantity = get_state_optimizing_quantity(player.process, player.policy, current_state)
-    
-    # TODO make this a setter function hiding some of the implementation details above
-    player.current_state = current_state
 
-
-    reachable_transitions = get_transitions(player.process, decision_model, action_sets)::Vector{MarkovTransition}
-
-    if length(reachable_transitions) == 0
-        @assert false "$(player.player.team) chooses to do nothing (no reachable transitions with depth $(get_player_config(player, "SEARCH_DEPTH")))"
-    end
-
-    # Enriches the inner actions with `win_proba` and `features` properties
-    analyze_actions!(board, players, player, action_sets, depth)
-    for (i,set) in enumerate(action_sets)
-        # Aggregate chooses the best action from each set, and pushes it into the best_actions set
-        push!(best_actions.actions, aggregate(set))
-    end
-    @debug "$(player.player.team) is now choosing among $(join([a.name for a in best_actions.actions], ", "))"
-    if length(best_actions.actions) == 0
-        @warn "No best actions, starting from $action_sets"
-    end
-    
-
-    next_state_quantity, index, transition = sample_from_policy(player.process, player.policy, 
-                                           reachable_transitions)
-    
-    # Two cases: 
-    # 1. transition is deterministic, so there is only one action in the set
-    # 2. transition is stochastic, so there are multiple actions, but they're all the same func!
-    #action_func = transition.action_set.actions[1].func!
-    best_action = transition.action_set.actions[1]
-    return best_action
+function get_state_score(player::MarkovPlayer, features::Vector{Pair{Symbol, Float64}})::Float64
+    get_combined_reward(player.process, player.machine, features)
 end
 
-function deprecated_choose_next_action(board::Board, players::AbstractVector{PlayerPublicView}, player::MarkovPlayer, actions::Set{PreAction})::ChosenAction
-    decision_model = player.machine::DecisionModel
-
-    current_features = compute_features(board, player.player)
-    current_state = MarkovState(player.process, current_features, decision_model)
-    current_quantity = get_state_optimizing_quantity(player.process, player.policy, current_state)
-    player.current_state = current_state
-
-    # TODO we have already computed win_proba, so we could pass it here and then 
-    # we wouldn't need to worry in reinforcement-learning code about it
-    action_sets = get_legal_action_sets(board, players, player.player, actions)
-    analyze_actions!(board, players, player, action_sets, 1)
-    reachable_transitions = get_transitions(player.process, decision_model, action_sets)::Vector{MarkovTransition}
-
-    # TODO we just return the best reachable state based on the underlying model,
-    # but we need to think about how temporal_difference_player should take probabilistic actions
+function get_combined_reward(process::MarkovRewardProcess, model::DecisionModel, features::Vector{Pair{Symbol, Float64}})::Float64
+    model_proba = predict_model(model, features)
     
-    if length(reachable_transitions) == 0
-        @info "$(player.player.team) chooses to do nothing (no reachable transitions with depth $(get_player_config(player, "SEARCH_DEPTH")))"
-        return ChosenAction(:DoNothing)
-    end
-    
-    next_state_quantity, index, transition = sample_from_policy(player.process, player.policy, 
-                                           reachable_transitions)
+    # TODO
+    # win or loss feature is too difficult to calculate without passing game to feature computation
+    # win_loss = state.features[:CountVictoryPoint]
 
-    # Two cases: 
-    # 1. transition is deterministic, so there is only one action in the set
-    # 2. transition is stochastic, so there are multiple actions, but they're all the same func!
-    #action_func = transition.action_set.actions[1].func!
-    best_action = transition.action_set.actions[1]
-    
-    # Only do an action if it will improve his optimized quantity
-    if next_state_quantity > current_quantity
-        @info "$(player.player.team) chooses to $(best_action.name) $(best_action.args)"
-        return ChosenAction(best_action.name, best_action.args...)
-        #return action_func # TODO
-    end
-    @info "$(player.player.team) chooses to do nothing ($next_state_quantity <= $current_quantity)"
-    return ChosenAction(:DoNothing)
+    # Make sure return value is approximately on [0, 1] (technically vp can exceed 10)
+    points = Dict(features)[:CountVictoryPoint] / 10
+    @assert process.model_coeff + process.points_coeff == 1.0
+    reward = (process.model_coeff * model_proba) + (process.points_coeff * points)
+    return reward
 end

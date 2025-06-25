@@ -1,5 +1,5 @@
 using MLJ
-#import Catan: player_configs
+import Catan: ChosenAction
 
 struct Tournament
     games_per_map::Int
@@ -16,22 +16,19 @@ end
 
 abstract type AbstractActionSet end
 abstract type AbstractAction end
-mutable struct Action <: AbstractAction
+struct Action <: AbstractAction
     args::Tuple
     name::Symbol
     func!::Function
-    win_proba::Union{Nothing, Float64}
-    features::Vector
 end
-mutable struct SampledAction <: AbstractAction
+
+struct SampledAction <: AbstractAction
     args::Tuple
     name::Symbol
     # Deterministic version of `real_func!` that is used to calculate win proba of a deterministic branch
     func!::Function
     # This is the actual stochastic version of `func!` that is called during game play once this action is chosen
     real_func!::Function
-    win_proba::Union{Nothing, Float64}
-    features::Vector
 end
 
 
@@ -41,13 +38,10 @@ mutable struct ActionSet{T<:AbstractAction} <: AbstractActionSet
 end
 
 function Action(name::Symbol, func!::Function, args...) 
-    Action(args, name, func!, nothing, [])
-end
-function Action(name::Symbol, win_proba::Float64, func!::Function, args::Tuple) 
-    Action(args, name, func!, win_proba, [])
+    Action(args, name, func!)
 end
 function SampledAction(name::Symbol, sampling_func!::Function, func!::Function, args...) 
-    SampledAction(args, name, sampling_func!, func!, nothing, [])
+    SampledAction(args, name, sampling_func!, func!)
 end
 ActionSet(name::Symbol) = ActionSet(name, Vector{AbstractAction}([]))
 function ActionSet{T}(name::Symbol) where {T<:AbstractAction}
@@ -65,23 +59,26 @@ struct MarkovState
     reward::Float64
 end
 
-"""
-    `MarkovTransition`
-
-Transitions are used as an intermediary data structure to allow TD-learning on non-deterministic actions, by calculating
-reward/value as an average among the sampled possible actions.
-"""
-struct MarkovTransition
-    #win_proba::Float64
-    #victory_ponts::Int8
-    states::Vector{MarkovState}
-    action_set::AbstractActionSet
-    reward::Float64
+abstract type AbstractMarkovRewardProcess
 end
 
-function MarkovTransition(states::Vector{MarkovState}, action_set::AbstractActionSet)
-    reward = get_combined_reward(states)
-    return MarkovTransition(states, action_set, reward)
+mutable struct MarkovRewardProcess <: AbstractMarkovRewardProcess
+    reward_discount::AbstractFloat
+    learning_rate::AbstractFloat
+    # TODO not activated yet
+    #win_loss_coeff::AbstractFloat
+    
+    # Coefficient for the ML model win probability term in combined reward function 
+    model_coeff::AbstractFloat
+    # Coefficient for the number of victory points term in combined reward function 
+    points_coeff::AbstractFloat
+
+    # Two dictionaries to keep track of state -> value mapping.
+    # Do not access them directly! Use the following helper methods!
+    # Writing: `update_state_value(process, state_key, new_value)`
+    # Reading: `query_state_value(process, state, default = 0.5)`
+    state_to_value::Dict{UInt64, Float64}
+    new_state_to_value::Dict{UInt64, Float64}
 end
 
 # TODO, replace instances of `machine` with Decision model
@@ -92,6 +89,32 @@ struct MachineModel <: DecisionModel
 end
 struct LinearModel <: DecisionModel
     weights::Vector{Float64}
+end
+
+"""
+    `MarkovTransition`
+
+Transitions are used as an intermediary data structure to allow TD-learning on non-deterministic actions, by calculating
+reward/value as an average among the sampled possible actions.
+"""
+struct MarkovTransition
+    #win_proba::Float64
+    #victory_ponts::Int8
+    states::Vector{MarkovState}
+    chosen_action::ChosenAction
+    reward::Float64
+end
+
+#=
+function MarkovTransition(process::MarkovRewardProcess, model::DecisionModel, action::AbstractAction)  
+    states = [MarkovState(process, action.features, model)]
+    return MarkoTransition(states, action)
+end
+=#
+
+function MarkovTransition(states::Vector{MarkovState}, action::AbstractAction)
+    reward = get_combined_reward(states)
+    return MarkovTransition(states, ChosenAction(action.name, action.args...), reward)
 end
 
 abstract type MarkovPolicy end
@@ -132,34 +155,20 @@ MaxRewardMarkovPolicy(machine::Machine) = MaxRewardMarkovPolicy(MachineModel(mac
 struct FeatureVector <: AbstractVector{Pair{Symbol, Float64}}
 end
 
-abstract type AbstractMarkovRewardProcess
-end
-
-mutable struct MarkovRewardProcess <: AbstractMarkovRewardProcess
-    reward_discount::AbstractFloat
-    learning_rate::AbstractFloat
-    # TODO not activated yet
-    #win_loss_coeff::AbstractFloat
-    
-    # Coefficient for the ML model win probability term in combined reward function 
-    model_coeff::AbstractFloat
-    # Coefficient for the number of victory points term in combined reward function 
-    points_coeff::AbstractFloat
-
-    # Two dictionaries to keep track of state -> value mapping.
-    # Do not access them directly! Use the following helper methods!
-    # Writing: `update_state_value(process, state_key, new_value)`
-    # Reading: `query_state_value(process, state, default = 0.5)`
-    state_to_value::Dict{UInt64, Float64}
-    new_state_to_value::Dict{UInt64, Float64}
-end
-
 function MarkovState(process::MarkovRewardProcess, features::Vector{Pair{Symbol, Float64}}, model::DecisionModel)
 
     # TODO think about - should we also be rounding features for inference?
     # Currently mostly (only?) integer features, so we don't need to think too deeply yet
     reward = get_combined_reward(process, model, features)
-    
+    return MarkovState(features, reward)
+end
+
+"""
+    MarkovState(features::Vector{Pair{Symbol, Float64}}, reward::Float64)
+
+This one can be used directly by `LearningPlayer`s.
+"""
+function MarkovState(features::Vector{Pair{Symbol, Float64}}, reward::Float64)
     # In order to avoid numerical instability issues in `Float64`, we apply rounding to the featurees first
     # Essentially applying a grid to our feature space, and considering all points the same if they are
     # within the same box.
@@ -168,19 +177,6 @@ function MarkovState(process::MarkovRewardProcess, features::Vector{Pair{Symbol,
     return MarkovState(hash(rounded_features), Dict(features), reward)
 end
 
-function get_combined_reward(process::MarkovRewardProcess, model::DecisionModel, features::Vector{Pair{Symbol, Float64}})::Float64
-    model_proba = predict_model(model, features)
-    
-    # TODO
-    # win or loss feature is too difficult to calculate without passing game to feature computation
-    # win_loss = state.features[:CountVictoryPoint]
-
-    # Make sure return value is approximately on [0, 1] (technically vp can exceed 10)
-    points = Dict(features)[:CountVictoryPoint] / 10
-    @assert process.model_coeff + process.points_coeff == 1.0
-    reward = (process.model_coeff * model_proba) + (process.points_coeff * points)
-    return reward
-end
 
 function get_combined_reward(states::Vector{MarkovState})
     # Get average reward from this transition
