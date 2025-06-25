@@ -126,20 +126,6 @@ MaxRewardMarkovPolicy(machine::Machine) = MaxRewardMarkovPolicy(MachineModel(mac
 struct FeatureVector <: AbstractVector{Pair{Symbol, Float64}}
 end
 
-function MarkovState(features::Vector{Pair{Symbol, Float64}}, model::DecisionModel)
-
-    # TODO think about - should we also be rounding features for inference?
-    # Currently mostly (only?) integer features, so we don't need to think too deeply yet
-    reward = predict_model(model, features)
-    
-    # In order to avoid numerical instability issues in `Float64`, we apply rounding to the featurees first
-    # Essentially applying a grid to our feature space, and considering all points the same if they are
-    # within the same box.
-    rounded_features = round.([f.second for f in features], digits=1)
-
-    return MarkovState(hash(rounded_features), Dict(features), reward)
-end
-
 abstract type AbstractMarkovRewardProcess
 end
 
@@ -160,4 +146,18 @@ mutable struct MarkovRewardProcess <: AbstractMarkovRewardProcess
     # Reading: `query_state_value(process, state, default = 0.5)`
     state_to_value::Dict{UInt64, Float64}
     new_state_to_value::Dict{UInt64, Float64}
+end
+
+function MarkovState(process::MarkovRewardProcess, features::Vector{Pair{Symbol, Float64}}, model::DecisionModel)
+
+    # TODO think about - should we also be rounding features for inference?
+    # Currently mostly (only?) integer features, so we don't need to think too deeply yet
+    reward = predict_model(model, features)
+    
+    # In order to avoid numerical instability issues in `Float64`, we apply rounding to the featurees first
+    # Essentially applying a grid to our feature space, and considering all points the same if they are
+    # within the same box.
+    rounded_features = round.([f.second for f in features], digits=1)
+
+    return MarkovState(hash(rounded_features), Dict(features), reward)
 end

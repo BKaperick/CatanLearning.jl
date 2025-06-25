@@ -1,32 +1,32 @@
 include("../reinforcement.jl")
 using Catan: do_post_action_step, choose_next_action
 
-function get_transitions(model::DecisionModel, action_sets::Vector{AbstractActionSet})::Vector{MarkovTransition}
+function get_transitions(process::MarkovRewardProcess, model::DecisionModel, action_sets::Vector{AbstractActionSet})::Vector{MarkovTransition}
     transitions = Vector{MarkovTransition}([])
     for (i,set) in enumerate(action_sets)
         #append!(transitions, get_transitions(set))
         if set isa ActionSet{SampledAction}
-            append!(transitions, get_transitions(model, set))
+            append!(transitions, get_transitions(process, model, set))
         elseif set isa ActionSet{Action}
-            append!(transitions, get_transitions(model, set))
+            append!(transitions, get_transitions(process, model, set))
         end
     end
     return transitions
 end
-function get_transitions(model::DecisionModel, set::ActionSet{SampledAction})::Vector{MarkovTransition}
+function get_transitions(process::MarkovRewardProcess, model::DecisionModel, set::ActionSet{SampledAction})::Vector{MarkovTransition}
     transition = MarkovTransition(Vector{MarkovState}([]), set)
     
     # One transition for each set of sampled actions
     for act in set.actions
-        push!(transition.states, MarkovState(act.features, model))
+        push!(transition.states, MarkovState(process, act.features, model))
     end
     return [transition]
 end
-function get_transitions(model::DecisionModel, set::ActionSet{Action})::Vector{MarkovTransition}
+function get_transitions(process::MarkovRewardProcess, model::DecisionModel, set::ActionSet{Action})::Vector{MarkovTransition}
     transitions = []
     # One transition per deterministic action
     for action in set.actions
-        transition = MarkovTransition([MarkovState(action.features, model)], ActionSet(action))
+        transition = MarkovTransition([MarkovState(process, action.features, model)], ActionSet(action))
         push!(transitions, transition)
     end
     return transitions
@@ -34,7 +34,7 @@ end
 
 function Catan.do_post_action_step(board::Board, player::MarkovPlayer)
     next_features = compute_features(board, player.player)
-    next_state = MarkovState(next_features, player.machine)
+    next_state = MarkovState(player.process, next_features, player.machine)
 
     @assert next_state.reward !== nothing
     finish_temporal_difference_step!(player.process, player.current_state, next_state::MarkovState)
@@ -47,7 +47,7 @@ function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPu
     decision_model = player.machine::DecisionModel
 
     current_features = compute_features(board, player.player)
-    current_state = MarkovState(current_features, decision_model)
+    current_state = MarkovState(player.process, current_features, decision_model)
     #current_quantity = 0
     #current_state.reward = 0
     current_quantity = get_state_optimizing_quantity(player.process, player.policy, current_state)
@@ -57,7 +57,7 @@ function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPu
     # we wouldn't need to worry in reinforcement-learning code about it
     action_sets = get_legal_action_sets(board, players, player.player, actions)
     analyze_actions!(board, players, player, action_sets, 0)
-    reachable_transitions = get_transitions(decision_model, action_sets)::Vector{MarkovTransition}
+    reachable_transitions = get_transitions(player.process, decision_model, action_sets)::Vector{MarkovTransition}
 
     # TODO we just return the best reachable state based on the underlying model,
     # but we need to think about how temporal_difference_player should take probabilistic actions
