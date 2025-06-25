@@ -58,7 +58,7 @@ function ActionSet(action::Action)
 end
 #ActionSet{T}(name::Symbol) = ActionSet{T}(name, [], nothing)
 
-mutable struct MarkovState
+struct MarkovState
     # hash of game state to be used to track state value
     key::UInt
     features::Dict{Symbol, Float64}

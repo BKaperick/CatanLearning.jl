@@ -4,14 +4,16 @@ function query_state_value(process::MarkovRewardProcess, transition::MarkovTrans
     return value
 end
 
-function query_state_value(process::MarkovRewardProcess, state::MarkovState, default = 0.5)
+function query_state_value(process::MarkovRewardProcess, state::MarkovState)
     @info "querying key {$(state.key)} (searching $(length(keys(process.state_to_value))) + $(length(keys(process.new_state_to_value))) known values...)"
     if haskey(process.state_to_value, state.key)
         return process.state_to_value[state.key]
     elseif haskey(process.new_state_to_value, state.key)
         return process.new_state_to_value[state.key]
     else
-        return default
+        # Default to the state combined reward
+        @info "defaulting to reward = $(state.reward)"
+        return state.reward
     end
 end
 
