@@ -57,11 +57,11 @@ function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::Wei
 end
 
 """
-    `sample_from_policy(process::MarkovRewardProcess, policy::MarkovPolicy, current_state, reachable_states)`
+    `sample_from_policy(process::MarkovRewardProcess, policy::MarkovPolicy, reachable_states)`
 
 Default implementation simply chooses the next state to maximize the `get_state_optimizing_quantity`.
 """
-function sample_from_policy(process::MarkovRewardProcess, policy::MarkovPolicy, current_state, transitions::Vector{MarkovTransition})
+function sample_from_policy(process::MarkovRewardProcess, policy::MarkovPolicy, transitions::Vector{MarkovTransition})
     rewards = [get_state_optimizing_quantity(process, policy, t) for t in transitions]
     for r in rewards
         @assert r !== nothing
@@ -93,34 +93,3 @@ function finish_temporal_difference_step!(process::MarkovRewardProcess,
     update_state_value(process, current_state.key, new_current_value)
     return next_state, next_state.reward
 end
-
-"""
-    `temporal_difference_step!(process::MarkovRewardProcess, policy::MarkovPolicy, current_state::MarkovState, state_to_value::Dict{UInt64, Float64}, reachable_states::Vector{MarkovState})`
-next_quantity
-Performs one step of tabular temporal difference (0)
-"""
-function temporal_difference_step!(process::MarkovRewardProcess, 
-        policy::MaxRewardMarkovPolicy, current_state::MarkovState, 
-        reachable_transitions::Vector{MarkovTransition})
-    
-    # sample from policy to get next state
-    next_quantity, index, next_state = sample_from_policy(process, policy, current_state, 
-                                           reachable_transitions)
-    
-    return next_quantity, index, next_state
-end
-
-#=
-"""
-    `temporal_difference_step!(process::MarkovRewardProcess, policy::MarkovPolicy, current_state::MarkovState, state_to_value::Dict{UInt64, Float64}, reachable_states::Vector{MarkovState})`
-
-Simply samples according to the policy, without updating states values.
-"""
-function temporal_difference_step!(process::MarkovRewardProcess, policy::MarkovPolicy, current_state::MarkovState, reachable_states::Vector{MarkovState})
-    
-    # sample from policy to get next state
-    index, next_state = sample_from_policy(process, policy, current_state, reachable_states)
-    next_state_quantity = get_state_optimizing_quantity(process, policy, next_state)
-    return next_state_quantity, index, next_state
-end
-=#

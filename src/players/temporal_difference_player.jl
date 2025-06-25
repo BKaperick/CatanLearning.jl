@@ -41,31 +41,28 @@ end
 
 
 function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPublicView}, player::MarkovPlayer, actions::Set{PreAction})::ChosenAction
-    best_action_index = 0
-    best_action_proba = -1
     decision_model = player.machine::DecisionModel
 
     current_features = compute_features(board, player.player)
     current_state = MarkovState(player.process, current_features, decision_model)
-    #current_quantity = 0
-    #current_state.reward = 0
     current_quantity = get_state_optimizing_quantity(player.process, player.policy, current_state)
     player.current_state = current_state
 
     # TODO we have already computed win_proba, so we could pass it here and then 
     # we wouldn't need to worry in reinforcement-learning code about it
     action_sets = get_legal_action_sets(board, players, player.player, actions)
-    analyze_actions!(board, players, player, action_sets, 0)
+    analyze_actions!(board, players, player, action_sets, 1)
     reachable_transitions = get_transitions(player.process, decision_model, action_sets)::Vector{MarkovTransition}
 
     # TODO we just return the best reachable state based on the underlying model,
     # but we need to think about how temporal_difference_player should take probabilistic actions
     
     if length(reachable_transitions) == 0
+        @info "$(player.player.team) chooses to do nothing (no reachable transitions with depth $(get_player_config(player, "SEARCH_DEPTH")))"
         return ChosenAction(:DoNothing)
     end
     
-    next_state_quantity, index, transition = sample_from_policy(player.process, player.policy, current_state, 
+    next_state_quantity, index, transition = sample_from_policy(player.process, player.policy, 
                                            reachable_transitions)
 
     # Two cases: 
@@ -76,9 +73,10 @@ function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPu
     
     # Only do an action if it will improve his optimized quantity
     if next_state_quantity > current_quantity
+        @info "$(player.player.team) chooses to $(best_action.name) $(best_action.args)"
         return ChosenAction(best_action.name, best_action.args...)
         #return action_func # TODO
     end
-
+    @info "$(player.player.team) chooses to do nothing ($next_state_quantity <= $current_quantity)"
     return ChosenAction(:DoNothing)
 end
