@@ -39,8 +39,48 @@ function Catan.do_post_action_step(board::Board, player::MarkovPlayer)
     finish_temporal_difference_step!(player.process, player.current_state, next_state::MarkovState)
 end
 
+function analyze_and_aggregate_action_sets(board::Board, players::AbstractVector{PlayerPublicView}, player::MarkovPlayer, action_sets::Vector{AbstractActionSet}, depth::Integer)::Action
+    best_actions = ActionSet(:SecondRound)
+    
+    decision_model = player.machine::DecisionModel
+    current_features = compute_features(board, player.player)
+    current_state = MarkovState(player.process, current_features, decision_model)
+    current_quantity = get_state_optimizing_quantity(player.process, player.policy, current_state)
+    
+    # TODO make this a setter function hiding some of the implementation details above
+    player.current_state = current_state
 
-function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPublicView}, player::MarkovPlayer, actions::Set{PreAction})::ChosenAction
+
+    reachable_transitions = get_transitions(player.process, decision_model, action_sets)::Vector{MarkovTransition}
+
+    if length(reachable_transitions) == 0
+        @assert false "$(player.player.team) chooses to do nothing (no reachable transitions with depth $(get_player_config(player, "SEARCH_DEPTH")))"
+    end
+
+    # Enriches the inner actions with `win_proba` and `features` properties
+    analyze_actions!(board, players, player, action_sets, depth)
+    for (i,set) in enumerate(action_sets)
+        # Aggregate chooses the best action from each set, and pushes it into the best_actions set
+        push!(best_actions.actions, aggregate(set))
+    end
+    @debug "$(player.player.team) is now choosing among $(join([a.name for a in best_actions.actions], ", "))"
+    if length(best_actions.actions) == 0
+        @warn "No best actions, starting from $action_sets"
+    end
+    
+
+    next_state_quantity, index, transition = sample_from_policy(player.process, player.policy, 
+                                           reachable_transitions)
+    
+    # Two cases: 
+    # 1. transition is deterministic, so there is only one action in the set
+    # 2. transition is stochastic, so there are multiple actions, but they're all the same func!
+    #action_func = transition.action_set.actions[1].func!
+    best_action = transition.action_set.actions[1]
+    return best_action
+end
+
+function deprecated_choose_next_action(board::Board, players::AbstractVector{PlayerPublicView}, player::MarkovPlayer, actions::Set{PreAction})::ChosenAction
     decision_model = player.machine::DecisionModel
 
     current_features = compute_features(board, player.player)

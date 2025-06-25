@@ -230,13 +230,7 @@ function aggregate(set::ActionSet{SampledAction})::Action
     return Action(set.name, avg_proba, func!, args)
 end
 
-
-function analyze_action!(action::AbstractAction, board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, depth::Integer)
-    hypoth_board = deepcopy(board)
-    hypoth_player = deepcopy(player)
-    hypoth_game = Game([DefaultRobotPlayer(p.team, board.configs) for p in players], board.configs)
-    @debug "Entering hypoth game $(hypoth_game.unique_id) with action $(action.name)($(action.args))"
-    
+function enrich_action_with_features!(action::AbstractAction, hypoth_game::Game, hypoth_board::Board, hypoth_player::PlayerType)
     # We control the log-level of 'hypothetical' games separately from the main game.
     main_logger = global_logger()
     #println(board.configs["HypothGameSettings"])
@@ -250,9 +244,11 @@ function analyze_action!(action::AbstractAction, board::Board, players::Abstract
     global_logger(main_logger)
     
     @debug "Leaving hypoth game $(hypoth_game.unique_id)"
-    
+end
+
+function analyze_win_proba(features, hypoth_game::Game, hypoth_board::Board, players::AbstractVector{PlayerPublicView}, hypoth_player::PlayerType, depth::Integer)
     # Look ahead an additional `SEARCH_DEPTH` turns
-    if depth < get_player_config(player, "SEARCH_DEPTH")
+    if depth < get_player_config(hypoth_player, "SEARCH_DEPTH")
         next_legal_actions = Catan.get_legal_actions(hypoth_game, hypoth_board, hypoth_player.player)
 
         #TODO hack to avoid re-calling PlaceRobber
@@ -267,15 +263,24 @@ function analyze_action!(action::AbstractAction, board::Board, players::Abstract
                 push!(filtered_next_legal_actions, a)
             end
         end
-        @debug "after performing $(action.name)($(action.args[1])) at depth $depth, there are $(length(filtered_next_legal_actions)) possibilities"
-        @debug join(["$(a.name)($(a.admissible_args))" for a in filtered_next_legal_actions], "\n")
-        action.win_proba = get_best_action(hypoth_board, players, hypoth_player, filtered_next_legal_actions, depth + 1).win_proba
+        #@debug "after performing $(action.name)($(action.args[1])) at depth $depth, there are $(length(filtered_next_legal_actions)) possibilities"
+        #@debug join(["$(a.name)($(a.admissible_args))" for a in filtered_next_legal_actions], "\n")
+        return get_best_action(hypoth_board, players, hypoth_player, filtered_next_legal_actions, depth + 1).win_proba
     else
         #@warn "getting win_proba for action $(action.name)"
         # TODO Temporal difference algo does this later, so we don't want to double compute
-        action.win_proba = predict_model(player.machine, action.features)
+        return predict_model(hypoth_player.machine, features)
     end
+end
 
+function analyze_action!(action::AbstractAction, board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, depth::Integer)
+    hypoth_board = deepcopy(board)
+    hypoth_player = deepcopy(player)
+    hypoth_game = Game([DefaultRobotPlayer(p.team, board.configs) for p in players], board.configs)
+    @debug "Entering hypoth game $(hypoth_game.unique_id) with action $(action.name)($(action.args))"
+    
+    enrich_action_with_features!(action, hypoth_game, hypoth_board, hypoth_player)
+    action.win_proba = analyze_win_proba(action.features, hypoth_game, hypoth_board, players, hypoth_player, depth)
 
     return action
 end
@@ -292,7 +297,6 @@ function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPu
     best_action = get_best_action(board, players, player, actions)
     @info "$(player.player.team) chooses to $(best_action.name) $(best_action.args)"
     return ChosenAction(best_action.name, best_action.args...)
-    #return best_action.func!
 end
 
 function Catan.choose_road_location(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Tuple{Tuple{TInt, TInt}, Tuple{TInt, TInt}}})::Union{Nothing,Tuple{Tuple{TInt, TInt}, Tuple{TInt, TInt}}} where {TInt <: Integer}
