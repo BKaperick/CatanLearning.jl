@@ -71,11 +71,17 @@ end
 Transitions are used as an intermediary data structure to allow TD-learning on non-deterministic actions, by calculating
 reward/value as an average among the sampled possible actions.
 """
-mutable struct MarkovTransition
+struct MarkovTransition
     #win_proba::Float64
     #victory_ponts::Int8
     states::Vector{MarkovState}
     action_set::AbstractActionSet
+    reward::Float64
+end
+
+function MarkovTransition(states::Vector{MarkovState}, action_set::AbstractActionSet)
+    reward = get_combined_reward(states)
+    return MarkovTransition(states, action_set, reward)
 end
 
 # TODO, replace instances of `machine` with Decision model
@@ -173,5 +179,11 @@ function get_combined_reward(process::MarkovRewardProcess, model::DecisionModel,
     points = Dict(features)[:CountVictoryPoint] / 10
     @assert process.model_coeff + process.points_coeff == 1.0
     reward = (process.model_coeff * model_proba) + (process.points_coeff * points)
+    return reward
+end
+
+function get_combined_reward(states::Vector{MarkovState})
+    # Get average reward from this transition
+    reward = sum([s.reward for s in states]) / length(states)
     return reward
 end

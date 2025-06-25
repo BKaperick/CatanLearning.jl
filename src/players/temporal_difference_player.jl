@@ -14,13 +14,12 @@ function get_transitions(process::MarkovRewardProcess, model::DecisionModel, act
     return transitions
 end
 function get_transitions(process::MarkovRewardProcess, model::DecisionModel, set::ActionSet{SampledAction})::Vector{MarkovTransition}
-    transition = MarkovTransition(Vector{MarkovState}([]), set)
-    
+    states = Vector{MarkovState}([])
     # One transition for each set of sampled actions
     for act in set.actions
-        push!(transition.states, MarkovState(process, act.features, model))
+        push!(states, MarkovState(process, act.features, model))
     end
-    return [transition]
+    return [MarkovTransition(states, set)]
 end
 function get_transitions(process::MarkovRewardProcess, model::DecisionModel, set::ActionSet{Action})::Vector{MarkovTransition}
     transitions = []
