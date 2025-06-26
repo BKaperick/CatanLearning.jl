@@ -123,6 +123,7 @@ abstract type MarkovPolicy end
 Samples reachable states by choosing maximum of reward + estimated value
 """
 struct MaxRewardPlusValueMarkovPolicy <: MarkovPolicy
+    # TODO do we need `model` field in `MarkovPolicy` ?
     model::DecisionModel
 end
 

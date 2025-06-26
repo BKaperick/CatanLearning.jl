@@ -12,25 +12,69 @@ function load_tree_model()
     return (@load RandomForestClassifier pkg=DecisionTree verbosity=0)()
 end
 
+function get_ml_cache_config(configs::Dict, team::Symbol, key::String)
+    if !haskey(configs, "ML_CACHE")
+        configs["ML_CACHE"] = Dict(["PlayerSettings"=>Dict()])
+    end
+    if haskey(configs["ML_CACHE"]["PlayerSettings"], String(team)) && 
+        haskey(configs["ML_CACHE"]["PlayerSettings"][String(team)], key)
+        return configs["ML_CACHE"]["PlayerSettings"][String(team)][key]
+    end
+    return
+end
+
+function update_ml_cache!(configs::Dict, team, key::String, obj)
+    if !haskey(configs, "ML_CACHE")
+        configs["ML_CACHE"] = Dict(["PlayerSettings"=>Dict()])
+    end
+    if !haskey(configs["ML_CACHE"]["PlayerSettings"], String(team))
+        configs["ML_CACHE"]["PlayerSettings"][String(team)] = Dict()
+    end
+    configs["ML_CACHE"]["PlayerSettings"][String(team)][key] = obj
+end
+
 function try_load_model_from_csv(team::Symbol, configs::Dict)::Machine
-    try_load_serialized_model_from_csv(get_player_config(configs, "MODEL", team),  get_player_config(configs, "FEATURES", team))
+    key = "MODEL"
+    cached = get_ml_cache_config(configs, team, key)::Union{Machine, Nothing}
+    if cached !== nothing
+        return cached
+    end
+    machine = try_load_serialized_model_from_csv(get_player_config(configs, key, team),  get_player_config(configs, "FEATURES", team))
+    update_ml_cache!(configs, team, key, machine)
+    return machine
 end
 
 function try_load_linear_model_from_csv(team::Symbol, configs::Dict)::Vector{Float64}
-    model_path = get_player_config(configs, "MODEL", team)
-    @info "Looking for linear model stored in $model_path"
-    if isfile(model_path)
-        @info "Found model stored in $model_path"
-        weights = CSV.read(model_path, DataFrame)
-        return weights[!, :Weights]
+    key = "MODEL"
+    cached = get_ml_cache_config(configs, team, key)::Union{Vector{Float64}, Nothing}
+    if cached !== nothing
+        return cached
     end
-    features_path = get_player_config(configs, "FEATURES", team)
-    @info "Not found, let's try to train a new model from features in $features_path"
-    train_and_serialize_linear_model(features_path, model_path)
+    #println(configs["ML_CACHE"]["PlayerSettings"])
+    #println(configs["ML_CACHE"]["PlayerSettings"][String(team)])
+    model_path = get_player_config(configs, key, team)
+    if isfile(model_path)
+        @info "Found $key model stored in $model_path"
+        weights = CSV.read(model_path, DataFrame)
+        model = weights[!, :Weights]
+    else
+        features_path = get_player_config(configs, "FEATURES", team)
+        @info "$model model not found, let's try to train a new model from features in $features_path"
+        model = train_and_serialize_linear_model(features_path, model_path)
+    end
+    update_ml_cache!(configs, team, key, model)
+    return model
 end
 
 function try_load_public_model_from_csv(team::Symbol, configs::Dict)::Machine
-    try_load_serialized_model_from_csv(get_player_config(configs, "PUBLIC_MODEL", team),  get_player_config(configs, "PUBLIC_FEATURES", team))
+    key = "PUBLIC_MODEL"
+    cached = get_ml_cache_config(configs, team, key)#::Union{Vector{Float64}, Nothing}
+    if cached !== nothing
+        return cached
+    end
+    machine = try_load_serialized_model_from_csv(get_player_config(configs, key, team),  get_player_config(configs, "PUBLIC_FEATURES", team))
+    update_ml_cache!(configs, team, key, machine)
+    return machine
 end
 
 """
@@ -40,12 +84,12 @@ If the serialized file exists, then load it.  If not, train a new model and
 serialize it before returning it to caller.
 """
 function try_load_serialized_model_from_csv(model_file_name::String, features_file_name::String)::Machine
-    @info "Looking for model stored in $model_file_name"
+    
     if isfile(model_file_name)
         @info "Found model stored in $model_file_name"
         return load_model_from_csv(model_file_name)
     end
-    @info "Not found, let's try to train a new model from features in $features_file_name"
+    @info "Model not found, let's try to train a new model from features in $features_file_name"
     train_and_serialize_model(features_file_name, model_file_name; num_tuning_iterations = 100)
 end
 
@@ -141,6 +185,7 @@ function train_and_serialize_model(features_csv::String, output_path::String; nu
     tuned_mach = train_model_from_csv(tree, features_csv, num_tuning_iterations = num_tuning_iterations)
     @info "Serializing model trained on $features_csv into $output_path"
     MLJ.save(output_path, tuned_mach)
+    return tuned_mach
 end
 
 """

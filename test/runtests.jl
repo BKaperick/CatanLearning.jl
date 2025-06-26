@@ -59,6 +59,13 @@ function empath_player(configs)
     return player, board, p
 end
 
+function test_model_caching(configs)
+    @test CatanLearning.get_ml_cache_config(configs, :blue, "TEST_KEY") === nothing
+    CatanLearning.update_ml_cache!(configs, :blue, "TEST_KEY", 50)
+    CatanLearning.get_ml_cache_config(configs, :blue, "TEST_KEY") == 50
+    CatanLearning.get_ml_cache_config(configs, :green, "TEST_KEY") === nothing
+end
+
 
 function test_learning_player_base_actions(configs)
     player = EmpathRobotPlayer(:Red, configs)
@@ -294,6 +301,7 @@ end
 
 function run_tests(neverend = false)
     configs = parse_configs("Configuration.toml")
+    test_model_caching(configs)
     test_learning_player_base_actions(configs)
     test_stackoverflow_knight(configs)
     test_empath_road_building(configs)

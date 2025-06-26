@@ -87,7 +87,6 @@ function consume_channel!(channel, file_name)
 end
 
 function Catan.do_post_game_action(game::Game, board::Board, players::AbstractVector{PlayerType}, player::MarkovPlayer, winner::Union{PlayerType, Nothing})
-    println("writing values")
     return write_values_file(players, player)
 end
 

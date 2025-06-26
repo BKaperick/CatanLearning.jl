@@ -68,7 +68,12 @@ end
 function do_tournament_one_game!(winners, map, players, configs)
     game = Game(players, configs)
     board = Catan.read_map(configs, map)
+
+    main_logger = global_logger()
+    global_logger(NullLogger())
     _,winner = Catan.run(game)
+    global_logger(main_logger)
+    @debug "finished game $(game.unique_id)"
 
     w = winner
     if winner !== nothing
@@ -187,17 +192,19 @@ function run_state_space_tournament(configs)
     master_state_to_value = read_values_file(configs["PlayerSettings"]["STATE_VALUES"])::Dict{UInt64, Float64}
     new_state_to_value = Dict{UInt64, Float64}()
     start_length = length(master_state_to_value)
-    println("starting states known: $(start_length)")
     teams = [Symbol(t) for t in configs["TEAMS"]]
-    with_enrichment = conf -> create_enriched_players(conf, master_state_to_value, new_state_to_value)
     winners = init_winners(teams)
     for k=1:tourney.epochs
+
+        @info "Enriching MarkovPlayers with $(length(master_state_to_value)) pre-explored states"
+        # TODO Create 4 x num_features mutation matrix
+        with_enrichment = conf -> create_enriched_players(conf, master_state_to_value, new_state_to_value)
         epoch_winners = do_tournament_one_epoch(tourney, teams, configs; create_players = with_enrichment)
-        #toggleprint(epoch_winners)
         for (w,n) in collect(epoch_winners)
             winners[w] += n
         end
     end
+    println(winners)
 end
 
 function create_enriched_players(configs, state_values::Dict{UInt64, Float64}, new_state_values::Dict{UInt64, Float64})
@@ -206,7 +213,6 @@ function create_enriched_players(configs, state_values::Dict{UInt64, Float64}, n
     # Enrich players if needed
     for p in players
         if typeof(p) <: MarkovPlayer
-            @info "Enriching player $(p.player.team) with $(length(state_values)) pre-explored states"
             p.process.state_to_value = state_values
             p.process.new_state_to_value = new_state_values
         end
