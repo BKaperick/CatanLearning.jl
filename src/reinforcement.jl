@@ -5,14 +5,14 @@ function query_state_value(process::MarkovRewardProcess, transition::MarkovTrans
 end
 
 function query_state_value(process::MarkovRewardProcess, state::MarkovState)
-    @info "querying key {$(state.key)} (searching $(length(keys(process.state_to_value))) + $(length(keys(process.new_state_to_value))) known values...)"
+    @debug "querying key {$(state.key)} (searching $(length(keys(process.state_to_value))) + $(length(keys(process.new_state_to_value))) known values...)"
     if haskey(process.state_to_value, state.key)
         return process.state_to_value[state.key]
     elseif haskey(process.new_state_to_value, state.key)
         return process.new_state_to_value[state.key]
     else
         # Default to the state combined reward
-        @info "defaulting to reward = $(state.reward)"
+        @debug "defaulting to reward = $(state.reward)"
         return state.reward
     end
 end
@@ -83,7 +83,7 @@ end
 function finish_temporal_difference_step!(process::MarkovRewardProcess, 
         current_state::MarkovState, next_state::MarkovState)
     @assert next_state.reward !== nothing
-    @warn next_state.reward
+    
     # Update current state value
     current_value = query_state_value(process, current_state)
 
