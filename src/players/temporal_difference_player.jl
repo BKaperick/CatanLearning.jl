@@ -11,7 +11,8 @@ end
 
 
 function get_state_score(player::MarkovPlayer, features::Vector{Pair{Symbol, Float64}})::Float64
-    get_combined_reward(player.process, player.machine, features)
+    reward = get_combined_reward(player.process, player.machine, features)
+    return reward
 end
 
 function get_combined_reward(process::MarkovRewardProcess, model::DecisionModel, features::Vector{Pair{Symbol, Float64}})::Float64
