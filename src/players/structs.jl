@@ -38,8 +38,8 @@ end
 
 mutable struct TemporalDifferencePlayer <: MarkovPlayer
     player::Player
-    machine::Machine
-    machine_public::Machine
+    machine::DecisionModel
+    machine_public::DecisionModel
     process::MarkovRewardProcess
     policy::MarkovPolicy
     configs::Dict
@@ -57,10 +57,9 @@ TemporalDifferencePlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float
 function TemporalDifferencePlayer(TPolicy::Type, team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs)
     machine = try_load_model_from_csv(team, configs)
     machine_public = try_load_public_model_from_csv(team, configs)
-
     process = MarkovRewardProcess(0.5, 0.1, 0.5, 0.5, master_state_to_value, new_state_to_value)
     policy = TPolicy(machine)
-    TemporalDifferencePlayer(Player(team, configs), machine, machine_public, process, policy, configs, nothing)
+    TemporalDifferencePlayer(Player(team, configs), MachineModel(machine), MachineModel(machine_public), process, policy, configs, nothing)
 end
 
 mutable struct HybridPlayer <: MarkovPlayer
