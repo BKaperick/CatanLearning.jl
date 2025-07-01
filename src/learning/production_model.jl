@@ -34,20 +34,20 @@ function update_ml_cache!(configs::Dict, team, key::String, obj)
     configs["ML_CACHE"]["PlayerSettings"][String(team)][key] = obj
 end
 
-function try_load_model_from_csv(team::Symbol, configs::Dict)::Machine
+function try_load_model_from_csv(team::Symbol, configs::Dict)::DecisionModel
     key = "MODEL"
-    cached = get_ml_cache_config(configs, team, key)::Union{Machine, Nothing}
+    cached = get_ml_cache_config(configs, team, key)::Union{DecisionModel, Nothing}
     if cached !== nothing
         return cached
     end
-    machine = try_load_serialized_model_from_csv(get_player_config(configs, key, team),  get_player_config(configs, "FEATURES", team))
-    update_ml_cache!(configs, team, key, machine)
-    return machine
+    model = try_load_serialized_model_from_csv(get_player_config(configs, key, team),  get_player_config(configs, "FEATURES", team))
+    update_ml_cache!(configs, team, key, model)
+    return model
 end
 
-function try_load_linear_model_from_csv(team::Symbol, configs::Dict)::Vector{Float64}
+function try_load_linear_model_from_csv(team::Symbol, configs::Dict)::LinearModel
     key = "MODEL"
-    cached = get_ml_cache_config(configs, team, key)::Union{Vector{Float64}, Nothing}
+    cached = get_ml_cache_config(configs, team, key)::Union{LinearModel, Nothing}
     if cached !== nothing
         return cached
     end
@@ -55,7 +55,7 @@ function try_load_linear_model_from_csv(team::Symbol, configs::Dict)::Vector{Flo
     if isfile(model_path)
         @info "Found $key model stored in $model_path"
         weights = CSV.read(model_path, DataFrame)
-        model = weights[!, :Weights]
+        model = LinearModel(weights[!, :Weights])
     else
         features_path = get_player_config(configs, "FEATURES", team)
         @info "$model model not found, let's try to train a new model from features in $features_path"
@@ -65,15 +65,15 @@ function try_load_linear_model_from_csv(team::Symbol, configs::Dict)::Vector{Flo
     return model
 end
 
-function try_load_public_model_from_csv(team::Symbol, configs::Dict)::Machine
+function try_load_public_model_from_csv(team::Symbol, configs::Dict)::MachineModel
     key = "PUBLIC_MODEL"
     cached = get_ml_cache_config(configs, team, key)#::Union{Vector{Float64}, Nothing}
     if cached !== nothing
         return cached
     end
-    machine = try_load_serialized_model_from_csv(get_player_config(configs, key, team),  get_player_config(configs, "PUBLIC_FEATURES", team))
-    update_ml_cache!(configs, team, key, machine)
-    return machine
+    model = try_load_serialized_model_from_csv(get_player_config(configs, key, team),  get_player_config(configs, "PUBLIC_FEATURES", team))
+    update_ml_cache!(configs, team, key, model)
+    return model
 end
 
 """
@@ -82,7 +82,7 @@ end
 If the serialized file exists, then load it.  If not, train a new model and 
 serialize it before returning it to caller.
 """
-function try_load_serialized_model_from_csv(model_file_name::String, features_file_name::String)::Machine
+function try_load_serialized_model_from_csv(model_file_name::String, features_file_name::String)::MachineModel
     
     if isfile(model_file_name)
         @info "Found model stored in $model_file_name"
@@ -92,8 +92,8 @@ function try_load_serialized_model_from_csv(model_file_name::String, features_fi
     train_and_serialize_model(features_file_name, model_file_name; num_tuning_iterations = 100)
 end
 
-function load_model_from_csv(model_file_name)::Machine
-    return machine(model_file_name)
+function load_model_from_csv(model_file_name)::MachineModel
+    return MachineModel(machine(model_file_name))
 end
 
 function coerce_feature_types!(df)
@@ -179,12 +179,12 @@ end
 
 This is the access point for re-training a model based on new features or engine bug fixes.
 """
-function train_and_serialize_model(features_csv::String, output_path::String; num_tuning_iterations = 100)
+function train_and_serialize_model(features_csv::String, output_path::String; num_tuning_iterations = 100)::DecisionModel
     tree = load_tree_model()
     tuned_mach = train_model_from_csv(tree, features_csv, num_tuning_iterations = num_tuning_iterations)
     @info "Serializing model trained on $features_csv into $output_path"
     MLJ.save(output_path, tuned_mach)
-    return tuned_mach
+    return MachineModel(tuned_mach)
 end
 
 """

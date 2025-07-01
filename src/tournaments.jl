@@ -223,10 +223,8 @@ function initialize_epoch(configs, tourney_path, epoch_num, teams)::Dict{Symbol,
     team_to_perturb = Dict{Symbol, LinearModel}()
     
     for team in teams
-        weights = try_load_linear_model_from_csv(team, configs)
-        #model = LinearModel(weights)
-        #add_perturbation!(p.machine)
-        new_model = get_perturbed(LinearModel(weights))
+        model = try_load_linear_model_from_csv(team, configs)
+        new_model = get_perturbed(model)
         write_perturbed_linear_model(tourney_path, epoch_num, team, new_model, get_player_config(configs, "MODELS_DIR", team))
         team_to_perturb[team] = new_model
     end
@@ -241,7 +239,7 @@ function create_enriched_players(configs, state_values::Dict{UInt64, Float64}, n
         if typeof(p) <: MarkovPlayer
             p.process.state_to_value = state_values
             p.process.new_state_to_value = new_state_values
-            p.machine.weights = team_to_perturb[p.player.team].weights - p.machine.weights
+            p.model.weights = team_to_perturb[p.player.team].weights - p.model.weights
         end
     end
     return players

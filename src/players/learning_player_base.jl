@@ -192,7 +192,7 @@ end
 
 function do_current_state_calculation(player::MarkovPlayer, board::Board, players::AbstractVector{PlayerPublicView})::Nothing
     features = compute_features(board, player.player)
-    player.current_state = MarkovState(player.process, features, player.machine)
+    player.current_state = MarkovState(player.process, features, player.model)
     return
 end
 
@@ -264,7 +264,7 @@ function calculate_state_score(features, hypoth_game::Game, hypoth_board::Board,
 end
 
 function get_state_score(player::LearningPlayer, features::Vector{Pair{Symbol, Float64}})::Float64
-    predict_model(player.machine, features)
+    predict_model(player.model, features)
 end
 
 function analyze_action!(action::AbstractAction, board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, depth::Integer)::MarkovState
@@ -282,7 +282,7 @@ end
     `choose_next_action(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, actions::Set{Symbol})`
 
 Gathers all legal actions, and chooses the one that most increases the player's 
-probability of victory, based on his `player.machine` model.  If no action 
+probability of victory, based on his `player.model` model.  If no action 
 increases the probability of victory, then do nothing.
 """
 function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, actions::Set{PreAction})::ChosenAction
@@ -343,20 +343,20 @@ end
 """
     `Catan.choose_who_to_trade_with(board::Board, player::LearningPlayer, players::AbstractVector{PlayerPublicView})::Symbol`
 
-Use public model (stored in `player.player.machine_public`) to choose a trading partner as the weakest among the options
+Use public model (stored in `player.player.model_public`) to choose a trading partner as the weakest among the options
 """
 function Catan.choose_who_to_trade_with(board::Board, player::LearningPlayer, players::AbstractVector{PlayerPublicView})::Symbol
-    return argmin(p -> predict_public_model(player.machine_public, board, p), players).team
+    return argmin(p -> predict_public_model(player.model_public, board, p), players).team
 end
 
 """
     choose_robber_victim(board::Board, player::RobotPlayer, 
     potential_victims::PlayerPublicView...)::PlayerPublicView
 
-Use public model (stored in `player.player.machine_public`) to choose a trading partner as the strongest among the options
+Use public model (stored in `player.player.model_public`) to choose a trading partner as the strongest among the options
 """
 function Catan.choose_robber_victim(board::Board, player::LearningPlayer, potential_victims::PlayerPublicView...)::PlayerPublicView
-    return argmax(p -> predict_public_model(player.machine_public, board, p), potential_victims)
+    return argmax(p -> predict_public_model(player.model_public, board, p), potential_victims)
     @info "$(player.player.team) decided it is wisest to steal from the $(max_ind.team) player"
     return max_ind
 end

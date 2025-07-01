@@ -3,7 +3,7 @@ using Catan: do_post_action_step, choose_next_action
 
 function Catan.do_post_action_step(board::Board, player::MarkovPlayer)
     next_features = compute_features(board, player.player)
-    next_state = MarkovState(player.process, next_features, player.machine)
+    next_state = MarkovState(player.process, next_features, player.model)
 
     @assert next_state.reward !== nothing
     finish_temporal_difference_step!(player.process, player.current_state, next_state::MarkovState)
@@ -11,7 +11,7 @@ end
 
 
 function get_state_score(player::MarkovPlayer, features::Vector{Pair{Symbol, Float64}})::Float64
-    reward = get_combined_reward(player.process, player.machine, features)
+    reward = get_combined_reward(player.process, player.model, features)
     return reward
 end
 

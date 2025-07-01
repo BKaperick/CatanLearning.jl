@@ -83,7 +83,6 @@ mutable struct MarkovRewardProcess <: AbstractMarkovRewardProcess
     new_state_to_value::Dict{UInt64, Float64}
 end
 
-# TODO, replace instances of `machine` with Decision model
 abstract type DecisionModel
 end
 mutable struct MachineModel <: DecisionModel
@@ -151,9 +150,6 @@ Samples reachable states by choosing maximum estimated value
 struct MaxValueMarkovPolicy <: MarkovPolicy
     model::DecisionModel
 end
-
-MaxValueMarkovPolicy(machine::Machine) = MaxValueMarkovPolicy(MachineModel(machine))
-MaxRewardMarkovPolicy(machine::Machine) = MaxRewardMarkovPolicy(MachineModel(machine))
 
 struct FeatureVector <: AbstractVector{Pair{Symbol, Float64}}
 end
