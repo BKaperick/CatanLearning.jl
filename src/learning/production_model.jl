@@ -213,19 +213,12 @@ function train_linear_model_from_csv(features_csv; sv_threshold = 0.01)
     return model
 end
 
-function get_perturbed(model::LinearModel)::LinearModel
+function get_perturbation(model::LinearModel, magnitude)::LinearModel
     new_weights = copy(model.weights)
 
-    d = Normal(0.0, 0.1)
+    d = magnitude * Normal(0.0, 0.1)
     new_weights += rand(d, size(new_weights))
     return LinearModel(new_weights)
-end
-function add_perturbation!(model::LinearModel)
-    d = Normal(0.0, 0.1)
-    model.weights += rand(d, size(model.weights))
-end
-function add_perturbation!(model::MachineModel)
-    # TODO implement later if needed
 end
 
 function read_perturbed_linear_model(tourney_id, epoch_num, team, output_dir)::LinearModel
