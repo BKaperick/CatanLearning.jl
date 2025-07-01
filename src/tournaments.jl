@@ -187,6 +187,11 @@ function run_tournament(tourney, configs)
     end
 end
 
+"""
+    run_state_space_tournament(configs)
+
+Run a tournament parameterized by `configs` which keeps track of the exploration of state space and mutations.
+"""
 function run_state_space_tournament(configs)
     tourney = Tournament(configs, :Sequential)
     master_state_to_value = read_values_file(configs["PlayerSettings"]["STATE_VALUES"])::Dict{UInt64, Float64}
@@ -194,11 +199,18 @@ function run_state_space_tournament(configs)
     start_length = length(master_state_to_value)
     teams = [Symbol(t) for t in configs["TEAMS"]]
     winners = init_winners(teams)
-    for k=1:tourney.epochs
+    @info "Starting tournament $(tourney.unique_id)"
 
+    models_dir = get_player_config(configs, "MODELS_DIR", teams[1])
+    tournament_path = joinpath(models_dir, "tournament_$(tourney.unique_id)")
+    ~isdir(tournament_path) && mkdir(tournament_path)
+
+    for k=1:tourney.epochs
+        team_to_perturb = initialize_epoch(configs, tournament_path, k, teams)
         @info "Enriching MarkovPlayers with $(length(master_state_to_value)) pre-explored states"
         # TODO Create 4 x num_features mutation matrix
-        with_enrichment = conf -> create_enriched_players(conf, master_state_to_value, new_state_to_value)
+
+        with_enrichment = conf -> create_enriched_players(conf, master_state_to_value, new_state_to_value, team_to_perturb)
         epoch_winners = do_tournament_one_epoch(tourney, teams, configs; create_players = with_enrichment)
         for (w,n) in collect(epoch_winners)
             winners[w] += n
@@ -207,7 +219,21 @@ function run_state_space_tournament(configs)
     println(winners)
 end
 
-function create_enriched_players(configs, state_values::Dict{UInt64, Float64}, new_state_values::Dict{UInt64, Float64})
+function initialize_epoch(configs, tourney_path, epoch_num, teams)::Dict{Symbol, LinearModel}
+    team_to_perturb = Dict{Symbol, LinearModel}()
+    
+    for team in teams
+        weights = try_load_linear_model_from_csv(team, configs)
+        #model = LinearModel(weights)
+        #add_perturbation!(p.machine)
+        new_model = get_perturbed(LinearModel(weights))
+        write_perturbed_linear_model(tourney_path, epoch_num, team, new_model, get_player_config(configs, "MODELS_DIR", team))
+        team_to_perturb[team] = new_model
+    end
+    return team_to_perturb
+end
+
+function create_enriched_players(configs, state_values::Dict{UInt64, Float64}, new_state_values::Dict{UInt64, Float64}, team_to_perturb::Dict{Symbol, LinearModel})
     players = Catan.create_players(configs)
 
     # Enrich players if needed
@@ -215,6 +241,7 @@ function create_enriched_players(configs, state_values::Dict{UInt64, Float64}, n
         if typeof(p) <: MarkovPlayer
             p.process.state_to_value = state_values
             p.process.new_state_to_value = new_state_values
+            p.machine.weights = team_to_perturb[p.player.team].weights - p.machine.weights
         end
     end
     return players

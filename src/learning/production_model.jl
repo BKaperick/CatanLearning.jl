@@ -7,6 +7,7 @@ using DelimitedFiles
 using MLJDecisionTreeInterface
 using DecisionTree
 using LinearAlgebra
+using Distributions
 
 function load_tree_model()
     return (@load RandomForestClassifier pkg=DecisionTree verbosity=0)()
@@ -50,8 +51,6 @@ function try_load_linear_model_from_csv(team::Symbol, configs::Dict)::Vector{Flo
     if cached !== nothing
         return cached
     end
-    #println(configs["ML_CACHE"]["PlayerSettings"])
-    #println(configs["ML_CACHE"]["PlayerSettings"][String(team)])
     model_path = get_player_config(configs, key, team)
     if isfile(model_path)
         @info "Found $key model stored in $model_path"
@@ -212,4 +211,33 @@ function train_linear_model_from_csv(features_csv; sv_threshold = 0.01)
     pseudo_inv = transpose(Vt)[1:n, 1:N_num] * diagm(1 ./ S[1:N_num]) * transpose(U)[1:N_num, 1:m]
     model = pseudo_inv * y
     return model
+end
+
+function get_perturbed(model::LinearModel)::LinearModel
+    new_weights = copy(model.weights)
+
+    d = Normal(0.0, 0.1)
+    new_weights += rand(d, size(new_weights))
+    return LinearModel(new_weights)
+end
+function add_perturbation!(model::LinearModel)
+    d = Normal(0.0, 0.1)
+    model.weights += rand(d, size(model.weights))
+end
+function add_perturbation!(model::MachineModel)
+    # TODO implement later if needed
+end
+
+function read_perturbed_linear_model(tourney_id, epoch_num, team, output_dir)::LinearModel
+    file_name = "linear_model_$(tourney_id)_team_$(epoch_num).csv"
+    model_path = "$output_dir/$file_name"
+    weights = CSV.read(model_path, DataFrame)
+    model = weights[!, :Weights]
+    return LinearModel(model)
+end
+function write_perturbed_linear_model(tourney_path, epoch_num, team, model::LinearModel, models_dir)
+    df = DataFrame(Weights = model.weights)
+    file_name = "$(epoch_num)_$team.csv"
+    output_path = joinpath(tourney_path, file_name)
+    weights = CSV.write(output_path, df)
 end

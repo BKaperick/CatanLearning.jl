@@ -6,11 +6,13 @@ struct Tournament
     maps_per_epoch::Int
     epochs::Int
     mutation_rule::Symbol
+    unique_id::Int
 end
 
 function Tournament(configs::Dict, mutation_rule::Symbol) 
     @debug "$(configs["Tournament"]) $mutation_rule"
-    Tournament(configs["Tournament"]["GAMES_PER_MAP"], configs["Tournament"]["MAPS_PER_EPOCH"], configs["Tournament"]["NUM_EPOCHS"], mutation_rule)
+    id = rand(range(1,100_000))
+    Tournament(configs["Tournament"]["GAMES_PER_MAP"], configs["Tournament"]["MAPS_PER_EPOCH"], configs["Tournament"]["NUM_EPOCHS"], mutation_rule, id)
 end
 
 
@@ -84,10 +86,10 @@ end
 # TODO, replace instances of `machine` with Decision model
 abstract type DecisionModel
 end
-struct MachineModel <: DecisionModel
+mutable struct MachineModel <: DecisionModel
     machine::Machine
 end
-struct LinearModel <: DecisionModel
+mutable struct LinearModel <: DecisionModel
     weights::Vector{Float64}
 end
 
