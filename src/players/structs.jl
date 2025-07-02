@@ -58,7 +58,7 @@ function TemporalDifferencePlayer(TPolicy::Type, team::Symbol, master_state_to_v
     model = try_load_model_from_csv(team, configs)
     model_public = try_load_public_model_from_csv(team, configs)
     process = MarkovRewardProcess(0.5, 0.1, 0.5, 0.5, master_state_to_value, new_state_to_value)
-    policy = TPolicy(machine)
+    policy = TPolicy(model)
     TemporalDifferencePlayer(Player(team, configs), model, model_public, process, policy, configs, nothing)
 end
 
