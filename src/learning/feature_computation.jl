@@ -144,9 +144,7 @@ compute_has_most_points = (game, board, player) -> get_has_most_points(game, boa
 register_feature(:NumberOfTurns, Int32, 0, 10_000)
 compute_number_of_turns = (game, board, player) -> game.turn_num
 
-
-function get_features()::Vector{Pair{Symbol, Function}}
-    raw_features = [
+const _raw_features = [
         :CountSettlement => compute_count_settlement,
         :CountTotalSettlement => compute_count_total_settlement,
         :CountCity => compute_count_city,
@@ -184,12 +182,8 @@ function get_features()::Vector{Pair{Symbol, Function}}
         :HasLargestArmy => compute_has_largest_army,
         :HasLongestRoad => compute_has_longest_road,
         :CountVictoryPoint => compute_count_victory_points
-       ]
-end
-
-
-function get_public_features()::Vector{Pair{Symbol, Function}}
-    return [
+]
+const _public_features = [
         :CountSettlement => compute_count_settlement,
         :CountTotalSettlement => compute_count_total_settlement,
         :CountCity => compute_count_city,
@@ -227,6 +221,14 @@ function get_public_features()::Vector{Pair{Symbol, Function}}
         :HasLongestRoad => compute_has_longest_road,
         :CountVisibleVictoryPoint => compute_count_public_victory_points
        ]
+
+function get_features()::Vector{Pair{Symbol, Function}}
+    return _raw_features
+end
+
+
+function get_public_features()::Vector{Pair{Symbol, Function}}
+    return _public_features
 end
 
 """
