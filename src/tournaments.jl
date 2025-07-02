@@ -68,7 +68,12 @@ end
 function do_tournament_one_game!(winners, map, players, configs)
     game = Game(players, configs)
     board = Catan.read_map(configs, map)
+
+    main_logger = global_logger()
+    global_logger(NullLogger())
     _,winner = Catan.run(game)
+    global_logger(main_logger)
+    @debug "finished game $(game.unique_id)"
 
     w = winner
     if winner !== nothing
@@ -182,33 +187,81 @@ function run_tournament(tourney, configs)
     end
 end
 
+"""
+    run_state_space_tournament(configs)
+
+Run a tournament parameterized by `configs` which keeps track of the exploration of state space and mutations.
+"""
 function run_state_space_tournament(configs)
     tourney = Tournament(configs, :Sequential)
     master_state_to_value = read_values_file(configs["PlayerSettings"]["STATE_VALUES"])::Dict{UInt64, Float64}
     new_state_to_value = Dict{UInt64, Float64}()
     start_length = length(master_state_to_value)
-    println("starting states known: $(start_length)")
     teams = [Symbol(t) for t in configs["TEAMS"]]
-    with_enrichment = conf -> create_enriched_players(conf, master_state_to_value, new_state_to_value)
+    @info "Starting tournament $(tourney.unique_id)"
+
+    models_dir = get_player_config(configs, "MODELS_DIR", teams[1])
+    tournament_path = joinpath(models_dir, "tournament_$(tourney.unique_id)")
+    ~isdir(tournament_path) && mkdir(tournament_path)
+    team_to_perturb = Dict{Symbol, LinearModel}()
+    
     winners = init_winners(teams)
     for k=1:tourney.epochs
+        @info "epoch $k / $(tourney.epochs)"
+        # Add a new perturbation to player's model weights
+        team_to_perturb = initialize_epoch!(team_to_perturb, configs, tournament_path, k, teams)
+        @info "Enriching MarkovPlayers with $(length(master_state_to_value)) pre-explored states"
+
+        with_enrichment = conf -> create_enriched_players(conf, master_state_to_value, new_state_to_value, team_to_perturb)
         epoch_winners = do_tournament_one_epoch(tourney, teams, configs; create_players = with_enrichment)
-        #toggleprint(epoch_winners)
         for (w,n) in collect(epoch_winners)
             winners[w] += n
         end
+
+        # Choose a perturbation to keep and update team_to_perturb for all players 
+        # to take the best perturbation
+        biggest_winner = argmax(x -> x[2], epoch_winners)[1]
+
+        # Don't keep the mutation if `nothing` wins more than anyone else
+        if biggest_winner === nothing
+            println(epoch_winners)
+            continue
+        else
+            for team in teams
+                team_to_perturb[team].weights = copy(team_to_perturb[biggest_winner].weights)
+            end
+        end
+        println(epoch_winners)
     end
+    println(winners)
 end
 
-function create_enriched_players(configs, state_values::Dict{UInt64, Float64}, new_state_values::Dict{UInt64, Float64})
+function initialize_epoch!(team_to_perturb::Dict{Symbol, LinearModel}, configs, tourney_path, epoch_num, teams)::Dict{Symbol, LinearModel}
+
+    for team in teams
+        if haskey(team_to_perturb, team)
+            # Every other iteration, start with perturbed model
+            model = team_to_perturb[team]
+        else
+            # First iteration, start with stored model
+            model = try_load_linear_model_from_csv(team, configs)
+        end
+        new_model = get_perturbation(model, 1.0)
+        write_perturbed_linear_model(tourney_path, epoch_num, team, new_model, get_player_config(configs, "MODELS_DIR", team))
+        team_to_perturb[team] = new_model
+    end
+    return team_to_perturb
+end
+
+function create_enriched_players(configs, state_values::Dict{UInt64, Float64}, new_state_values::Dict{UInt64, Float64}, team_to_perturb::Dict{Symbol, LinearModel})
     players = Catan.create_players(configs)
 
     # Enrich players if needed
     for p in players
         if typeof(p) <: MarkovPlayer
-            @info "Enriching player $(p.player.team) with $(length(state_values)) pre-explored states"
             p.process.state_to_value = state_values
             p.process.new_state_to_value = new_state_values
+            p.model.weights += team_to_perturb[p.player.team].weights
         end
     end
     return players

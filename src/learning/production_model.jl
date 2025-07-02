@@ -7,28 +7,73 @@ using DelimitedFiles
 using MLJDecisionTreeInterface
 using DecisionTree
 using LinearAlgebra
+using Distributions
 
 function load_tree_model()
     return (@load RandomForestClassifier pkg=DecisionTree verbosity=0)()
 end
 
-function try_load_model_from_csv(team::Symbol, configs::Dict)::Machine
-    try_load_serialized_model_from_csv(get_player_config(configs, "MODEL", team),  get_player_config(configs, "FEATURES", team))
-end
-
-function try_load_linear_model_from_csv(team::Symbol, configs::Dict)::Vector{Float64}
-    model_path = get_player_config(configs, "MODEL", team)
-    @info "Looking for linear model stored in $model_path"
-    if isfile(model_path)
-        @info "Found model stored in $model_path"
-        weights = CSV.read(model_path, DataFrame)
-        return weights[!, :Weights]
+function get_ml_cache_config(configs::Dict, team::Symbol, key::String)
+    if !haskey(configs, "ML_CACHE")
+        configs["ML_CACHE"] = Dict(["PlayerSettings"=>Dict()])
     end
-    @assert false "Not found"
+    if haskey(configs["ML_CACHE"]["PlayerSettings"], String(team)) && 
+        haskey(configs["ML_CACHE"]["PlayerSettings"][String(team)], key)
+        return configs["ML_CACHE"]["PlayerSettings"][String(team)][key]
+    end
+    return
 end
 
-function try_load_public_model_from_csv(team::Symbol, configs::Dict)::Machine
-    try_load_serialized_model_from_csv(get_player_config(configs, "PUBLIC_MODEL", team),  get_player_config(configs, "PUBLIC_FEATURES", team))
+function update_ml_cache!(configs::Dict, team, key::String, obj)
+    if !haskey(configs, "ML_CACHE")
+        configs["ML_CACHE"] = Dict(["PlayerSettings"=>Dict()])
+    end
+    if !haskey(configs["ML_CACHE"]["PlayerSettings"], String(team))
+        configs["ML_CACHE"]["PlayerSettings"][String(team)] = Dict()
+    end
+    configs["ML_CACHE"]["PlayerSettings"][String(team)][key] = obj
+end
+
+function try_load_model_from_csv(team::Symbol, configs::Dict)::DecisionModel
+    key = "MODEL"
+    cached = get_ml_cache_config(configs, team, key)::Union{DecisionModel, Nothing}
+    if cached !== nothing
+        return cached
+    end
+    model = try_load_serialized_model_from_csv(get_player_config(configs, key, team),  get_player_config(configs, "FEATURES", team))
+    update_ml_cache!(configs, team, key, model)
+    return model
+end
+
+function try_load_linear_model_from_csv(team::Symbol, configs::Dict)::LinearModel
+    key = "MODEL"
+    cached = get_ml_cache_config(configs, team, key)::Union{LinearModel, Nothing}
+    if cached !== nothing
+        return cached
+    end
+    model_path = get_player_config(configs, key, team)
+    if isfile(model_path)
+        @info "Found $key model stored in $model_path"
+        weights = CSV.read(model_path, DataFrame)
+        model = LinearModel(weights[!, :Weights])
+    else
+        features_path = get_player_config(configs, "FEATURES", team)
+        @info "$model model not found, let's try to train a new model from features in $features_path"
+        model = train_and_serialize_linear_model(features_path, model_path)
+    end
+    update_ml_cache!(configs, team, key, model)
+    return model
+end
+
+function try_load_public_model_from_csv(team::Symbol, configs::Dict)::MachineModel
+    key = "PUBLIC_MODEL"
+    cached = get_ml_cache_config(configs, team, key)#::Union{Vector{Float64}, Nothing}
+    if cached !== nothing
+        return cached
+    end
+    model = try_load_serialized_model_from_csv(get_player_config(configs, key, team),  get_player_config(configs, "PUBLIC_FEATURES", team))
+    update_ml_cache!(configs, team, key, model)
+    return model
 end
 
 """
@@ -37,18 +82,18 @@ end
 If the serialized file exists, then load it.  If not, train a new model and 
 serialize it before returning it to caller.
 """
-function try_load_serialized_model_from_csv(model_file_name::String, features_file_name::String)::Machine
-    @info "Looking for model stored in $model_file_name"
+function try_load_serialized_model_from_csv(model_file_name::String, features_file_name::String)::MachineModel
+    
     if isfile(model_file_name)
         @info "Found model stored in $model_file_name"
         return load_model_from_csv(model_file_name)
     end
-    @info "Not found, let's try to train a new model from features in $features_file_name"
+    @info "Model not found, let's try to train a new model from features in $features_file_name"
     train_and_serialize_model(features_file_name, model_file_name; num_tuning_iterations = 100)
 end
 
-function load_model_from_csv(model_file_name)::Machine
-    return machine(model_file_name)
+function load_model_from_csv(model_file_name)::MachineModel
+    return MachineModel(machine(model_file_name))
 end
 
 function coerce_feature_types!(df)
@@ -134,9 +179,58 @@ end
 
 This is the access point for re-training a model based on new features or engine bug fixes.
 """
-function train_and_serialize_model(features_csv::String, output_path::String; num_tuning_iterations = 100)
+function train_and_serialize_model(features_csv::String, output_path::String; num_tuning_iterations = 100)::DecisionModel
     tree = load_tree_model()
     tuned_mach = train_model_from_csv(tree, features_csv, num_tuning_iterations = num_tuning_iterations)
     @info "Serializing model trained on $features_csv into $output_path"
     MLJ.save(output_path, tuned_mach)
+    return MachineModel(tuned_mach)
+end
+
+"""
+    `train_and_serialize_linear_model(features_csv, output_path)`
+
+This is the access point for re-training a model based on new features or engine bug fixes.
+"""
+function train_and_serialize_linear_model(features_csv::String, output_path::String; sv_threshold = 0.01)::Vector{Float64}
+    model = train_linear_model_from_csv(features_csv; sv_threshold = sv_threshold)
+    @info "Serializing linear model trained on $features_csv into $output_path"
+    df = DataFrame(Weights = model)
+    CSV.write(output_path, df)
+    return model
+end
+
+function train_linear_model_from_csv(features_csv; sv_threshold = 0.01)
+    df = CatanLearning.load_typed_features_from_csv(features_csv)
+    y = [value == true ? 1.0 : 0.0 for value in df[:, :WonGame]]
+    # Extract the feature matrix
+    X = Matrix(df[:, Not(:WonGame)])
+    (m,n) = size(X)
+    U,S,Vt = svd(X)
+    N_num = length(filter(x -> x >= sv_threshold, S))
+    pseudo_inv = transpose(Vt)[1:n, 1:N_num] * diagm(1 ./ S[1:N_num]) * transpose(U)[1:N_num, 1:m]
+    model = pseudo_inv * y
+    return model
+end
+
+function get_perturbation(model::LinearModel, magnitude)::LinearModel
+    new_weights = copy(model.weights)
+
+    d = magnitude * Normal(0.0, 0.1)
+    new_weights += rand(d, size(new_weights))
+    return LinearModel(new_weights)
+end
+
+function read_perturbed_linear_model(tourney_id, epoch_num, team, output_dir)::LinearModel
+    file_name = "linear_model_$(tourney_id)_team_$(epoch_num).csv"
+    model_path = "$output_dir/$file_name"
+    weights = CSV.read(model_path, DataFrame)
+    model = weights[!, :Weights]
+    return LinearModel(model)
+end
+function write_perturbed_linear_model(tourney_path, epoch_num, team, model::LinearModel, models_dir)
+    df = DataFrame(Weights = model.weights)
+    file_name = "$(epoch_num)_$team.csv"
+    output_path = joinpath(tourney_path, file_name)
+    weights = CSV.write(output_path, df)
 end

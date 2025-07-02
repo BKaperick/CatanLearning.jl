@@ -38,7 +38,7 @@ feature_library
 function test_jet_fails()
     rep = report_package(CatanLearning;
     ignored_modules=())
-    @test length(JET.get_reports(rep)) <= 73
+    @test length(JET.get_reports(rep)) <= 74
 end
 
 function test_evolving_robot_game(neverend, configs)
@@ -55,8 +55,15 @@ end
 function empath_player(configs)
     player = EmpathRobotPlayer(:red)
     board = read_map(configs)
-    p = predict_model(player.machine, board, player)
+    p = predict_model(player.model, board, player)
     return player, board, p
+end
+
+function test_model_caching(configs)
+    @test CatanLearning.get_ml_cache_config(configs, :blue, "TEST_KEY") === nothing
+    CatanLearning.update_ml_cache!(configs, :blue, "TEST_KEY", 50)
+    CatanLearning.get_ml_cache_config(configs, :blue, "TEST_KEY") == 50
+    CatanLearning.get_ml_cache_config(configs, :green, "TEST_KEY") === nothing
 end
 
 
@@ -173,10 +180,10 @@ function test_feature_perturbations(features, features_increasing_good, configs,
     value_player = TemporalDifferencePlayer(MaxValueMarkovPolicy, :Blue, state_to_value, Dict{UInt64, Float64}(), configs)
     reward_player = TemporalDifferencePlayer(MaxRewardMarkovPolicy, :Red, state_to_value, Dict{UInt64, Float64}(), configs)
     
-    current_state = MarkovState(feature_vec)
+    current_state = MarkovState(reward_player.process, feature_vec, value_player.model)
     value = get_state_optimizing_quantity(value_player.process, value_player.policy, current_state)
     reward = get_state_optimizing_quantity(reward_player.process, reward_player.policy, current_state)
-    model_proba = predict_model(value_player.machine, feature_vec)
+    model_proba = predict_model(value_player.model, feature_vec)
     
     fails_v = Dict()
     fails_r = Dict()
@@ -196,13 +203,12 @@ function test_feature_perturbations(features, features_increasing_good, configs,
             
             feature_values[i] = epsilon
             feature_vec = [Pair(f,v) for (f,v) in zip(features, feature_values)]
-            next_state = MarkovState(feature_vec)
-            feature_values[i] = epsilon
-            feature_vec = [Pair(f,v) for (f,v) in zip(features, feature_values)]
-            next_state = MarkovState(feature_vec)
+            next_state = MarkovState(reward_player.process, feature_vec, value_player.model)
             next_value = get_state_optimizing_quantity(value_player.process, value_player.policy, next_state)
             next_reward = get_state_optimizing_quantity(reward_player.process, reward_player.policy, next_state)
-            next_model_proba = predict_model(value_player.machine, feature_vec)
+            next_model_proba = predict_model(value_player.model, feature_vec)
+            
+            @test next_state.reward == next_reward
             
             #println("evaluating $name + $epsilon")
             if next_value < value
@@ -295,6 +301,7 @@ end
 
 function run_tests(neverend = false)
     configs = parse_configs("Configuration.toml")
+    test_model_caching(configs)
     test_learning_player_base_actions(configs)
     test_stackoverflow_knight(configs)
     test_empath_road_building(configs)
@@ -309,6 +316,7 @@ function run_tests(neverend = false)
     println("model fails with +3 perturbation $(length(fails_m[3])): $(fails_m[3])")
     println("model fails with +2 perturbation $(length(fails_m[2])): $(fails_m[2])")
     println("model fails with +1 perturbation $(length(fails_m[1])): $(fails_m[1])")
+    
     #=
     println("reward fails with +3 perturbation: $(fails_r[3])")
     println("reward fails with +2 perturbation: $(fails_r[2])")

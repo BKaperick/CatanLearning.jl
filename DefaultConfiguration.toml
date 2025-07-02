@@ -20,6 +20,9 @@ LOG_LEVEL = "Warn"
 
 [GameSettings]
 [PlayerSettings]
+PLAYERS = ["blue", "cyan", "green", "yellow"]
+MODELS_DIR = "../CatanLearning.jl/models"
+MODELS = ["decision", "public"]
 MODEL = "./models/model.jls"
 PUBLIC_MODEL = "./models/public_model.jls"
 FEATURES = "./data/features.csv"
@@ -29,3 +32,7 @@ SEARCH_DEPTH = 2
 [PlayerSettings.cyan]
 [PlayerSettings.green]
 [PlayerSettings.yellow]
+[PlayerSettings.decision]
+FILE = "model.jls"
+[PlayerSettings.public]
+FILE = "public_model.jls"

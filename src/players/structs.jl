@@ -12,14 +12,14 @@ end
 
 mutable struct EmpathRobotPlayer <: LearningPlayer 
     player::Player
-    machine::Machine
-    machine_public::Machine
+    model::DecisionModel
+    model_public::DecisionModel
 end
 
 mutable struct MutatedEmpathRobotPlayer <: LearningPlayer 
     player::Player
-    machine::Machine
-    machine_public::Machine
+    model::DecisionModel
+    model_public::DecisionModel
     mutation::Dict #{Symbol, AbstractFloat}
     configs::Dict
 end
@@ -38,8 +38,8 @@ end
 
 mutable struct TemporalDifferencePlayer <: MarkovPlayer
     player::Player
-    machine::Machine
-    machine_public::Machine
+    model::DecisionModel
+    model_public::DecisionModel
     process::MarkovRewardProcess
     policy::MarkovPolicy
     configs::Dict
@@ -55,18 +55,17 @@ TemporalDifferencePlayer(team::Symbol, configs::Dict) = TemporalDifferencePlayer
 TemporalDifferencePlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs::Dict) = TemporalDifferencePlayer(MaxRewardMarkovPolicy, team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs)
 
 function TemporalDifferencePlayer(TPolicy::Type, team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs)
-    machine = try_load_model_from_csv(team, configs)
-    machine_public = try_load_public_model_from_csv(team, configs)
-
+    model = try_load_model_from_csv(team, configs)
+    model_public = try_load_public_model_from_csv(team, configs)
     process = MarkovRewardProcess(0.5, 0.1, 0.5, 0.5, master_state_to_value, new_state_to_value)
-    policy = TPolicy(machine)
-    TemporalDifferencePlayer(Player(team, configs), machine, machine_public, process, policy, configs, nothing)
+    policy = TPolicy(model)
+    TemporalDifferencePlayer(Player(team, configs), model, model_public, process, policy, configs, nothing)
 end
 
 mutable struct HybridPlayer <: MarkovPlayer
     player::Player
-    machine::DecisionModel
-    machine_public::Machine
+    model::DecisionModel
+    model_public::DecisionModel
     process::MarkovRewardProcess
     policy::MarkovPolicy
     configs::Dict
@@ -77,9 +76,8 @@ HybridPlayer(team::Symbol, configs::Dict) = HybridPlayer(team::Symbol, Dict{UInt
 #HybridPlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs::Dict) 
 
 function HybridPlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs)
-    model_weights = try_load_linear_model_from_csv(team, configs)::Vector{Float64}
-    model = LinearModel(model_weights)
-    machine_public = try_load_public_model_from_csv(team, configs)
+    model = try_load_linear_model_from_csv(team, configs)::LinearModel
+    model_public = try_load_public_model_from_csv(team, configs)
 
     reward_discount = get_player_config(configs, "REWARD_DISCOUNT", team)
     learning_rate = get_player_config(configs, "LEARNING_RATE", team)
@@ -88,19 +86,19 @@ function HybridPlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}
     process = MarkovRewardProcess(learning_rate, reward_discount, 1.0, 0.0, master_state_to_value, new_state_to_value)
     policy = WeightsRewardPlusValueMarkovPolicy(model, reward_weight, value_weight)
     player = Player(team, configs)
-    HybridPlayer(player, model, machine_public, process, policy, configs, nothing)
+    HybridPlayer(player, model, model_public, process, policy, configs, nothing)
 end
 
 function Base.deepcopy(player::MutatedEmpathRobotPlayer)
-    return MutatedEmpathRobotPlayer(deepcopy(player.player), player.machine, player.machine_public, deepcopy(player.mutation), player.configs) 
+    return MutatedEmpathRobotPlayer(deepcopy(player.player), player.model, player.model_public, deepcopy(player.mutation), player.configs) 
 end
 
 function Base.deepcopy(player::TemporalDifferencePlayer)
     # Note, we deepcopy only the player data, while the RL data should persist in order to pass updates the state info properly
     return TemporalDifferencePlayer(
         deepcopy(player.player), 
-        player.machine, 
-        player.machine_public, 
+        player.model, 
+        player.model_public, 
         player.process, 
         player.policy, 
         player.configs,
@@ -112,8 +110,8 @@ function Base.deepcopy(player::HybridPlayer)
     # Note, we deepcopy only the player data, while the RL data should persist in order to pass updates the state info properly
     return HybridPlayer(
         deepcopy(player.player), 
-        player.machine, 
-        player.machine_public, 
+        player.model, 
+        player.model_public, 
         player.process, 
         player.policy, 
         player.configs,
@@ -130,6 +128,6 @@ function EmpathRobotPlayer(team::Symbol, configs::Dict)
 end
 
 function Base.deepcopy(player::EmpathRobotPlayer)
-    return EmpathRobotPlayer(deepcopy(player.player), player.machine, player.machine_public)
+    return EmpathRobotPlayer(deepcopy(player.player), player.model, player.model_public)
 end
 

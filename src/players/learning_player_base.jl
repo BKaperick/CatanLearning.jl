@@ -174,69 +174,55 @@ function inner_do_robber_move_theft_from_knight(b, players, p, team, candidate_t
 end
 
 """
-    `get_best_action(board::Board, players::AbstractVector{PlayerPublicView}, 
+    `get_best_transition(board::Board, players::AbstractVector{PlayerPublicView}, 
                               player::PlayerType, actions::Set{Symbol})`
 
 Gets the legal action functions for the player at this board state, and 
 computes the feature vector for each resulting state.  This is a critical 
 helper function for all the machine-learning players.
 """
-function get_best_action(board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, actions::Set, depth::Int=1)::Action
+function get_best_transition(board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, actions::Set, depth::Int=1)::MarkovTransition
+    do_current_state_calculation(player, board, players)
     action_sets = get_legal_action_sets(board, players, player.player, actions)
     return analyze_and_aggregate_action_sets(board, players, player, action_sets, depth)
 end
 
-function analyze_and_aggregate_action_sets(board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, action_sets::Vector{AbstractActionSet}, depth::Integer)::Action
-    best_actions = ActionSet(:SecondRound)
-
-    # Enriches the inner actions with `win_proba` and `features` properties
-    analyze_actions!(board, players, player, action_sets, depth)
-    for (i,set) in enumerate(action_sets)
-        # Aggregate chooses the best action from each set, and pushes it into the best_actions set
-        push!(best_actions.actions, aggregate(set))
-    end
-    @debug "$(player.player.team) is now choosing among $(join([a.name for a in best_actions.actions], ", "))"
-    if length(best_actions.actions) == 0
-        @warn "No best actions, starting from $action_sets"
-    end
-    # Aggregate chooses the best action from the `best_actions` set
-    return aggregate(best_actions)
+function do_current_state_calculation(player::LearningPlayer, board::Board, players::AbstractVector{PlayerPublicView})::Nothing
 end
 
-function analyze_actions!(board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, action_sets::Vector{AbstractActionSet}, depth::Integer)
-    for (i,set) in enumerate(action_sets)
+function do_current_state_calculation(player::MarkovPlayer, board::Board, players::AbstractVector{PlayerPublicView})::Nothing
+    features = compute_features(board, player.player)
+    player.current_state = MarkovState(player.process, features, player.model)
+    return
+end
+
+function analyze_and_aggregate_action_sets(board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, action_sets::Vector{AbstractActionSet}, depth::Integer)::MarkovTransition
+    # Converts the inner actions to MarkovTransitions with `reward` and `features` properties
+    transitions = analyze_actions!(board, players, player, action_sets, depth)
+    return aggregate(transitions)
+end
+
+function analyze_actions!(board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, action_sets::Vector{AbstractActionSet}, depth::Integer)::Vector{MarkovTransition}
+    transitions = Vector{MarkovTransition}([])
+    for set in action_sets
         @debug "analyzing action set ($(length(set.actions)) actions): \n$(join(["$(a.name)($(a.args))" for a in set.actions], "\n"))"
+        
+        states = Vector{MarkovState}([])
         for action in set.actions
-            analyze_action!(action, board, players, player, depth)
+            state = analyze_action!(action, board, players, player, depth)
+            push!(states, state)
         end
+        transition = MarkovTransition(states, set.actions[1])
+        push!(transitions, transition)
     end
+    return transitions
 end
 
-"""
-    `aggregate(set::ActionSet)`
-
-Identifies the best parameters to use for this action
-"""
-function aggregate(set::ActionSet)::Action
-    return argmax(a -> a.win_proba, set.actions)
+function aggregate(ts::Vector{MarkovTransition})::MarkovTransition
+    return argmax(t -> t.reward, ts)
 end
 
-function aggregate(set::ActionSet{SampledAction})::Action
-    avg_proba = sum([a.win_proba for a in set.actions]) / length(set.actions)
-    # an ActionSet{SampledAction} contains only actions with the same `real_func!` (they differ only in Sampling Func `func!`)
-    # TODO some way to enforce this in the code?
-    func! = set.actions[1].real_func!
-    args = set.actions[1].args
-    return Action(set.name, avg_proba, func!, args)
-end
-
-
-function analyze_action!(action::AbstractAction, board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, depth::Integer)
-    hypoth_board = deepcopy(board)
-    hypoth_player = deepcopy(player)
-    hypoth_game = Game([DefaultRobotPlayer(p.team, board.configs) for p in players], board.configs)
-    @debug "Entering hypoth game $(hypoth_game.unique_id) with action $(action.name)($(action.args))"
-    
+function compute_features_from_hypoth(action::AbstractAction, hypoth_game::Game, hypoth_board::Board, hypoth_player::PlayerType)
     # We control the log-level of 'hypothetical' games separately from the main game.
     main_logger = global_logger()
     #println(board.configs["HypothGameSettings"])
@@ -244,15 +230,18 @@ function analyze_action!(action::AbstractAction, board::Board, players::Abstract
     #Catan.parse_logging_configs!(board.configs["HypothGameSettings"])
     #global_logger(board.configs["HypothGameSettings"]["LOGGER"])
     action.func!(hypoth_game, hypoth_board, hypoth_player)
-    action.features = compute_features(hypoth_board, hypoth_player.player)
+    features = compute_features(hypoth_board, hypoth_player.player)
 
     #Catan.parse_logging_configs!(board.configs)
     global_logger(main_logger)
     
     @debug "Leaving hypoth game $(hypoth_game.unique_id)"
-    
+    return features
+end
+
+function calculate_state_score(features, hypoth_game::Game, hypoth_board::Board, players::AbstractVector{PlayerPublicView}, hypoth_player::PlayerType, depth::Integer)
     # Look ahead an additional `SEARCH_DEPTH` turns
-    if depth < get_player_config(player, "SEARCH_DEPTH")
+    if depth < get_player_config(hypoth_player, "SEARCH_DEPTH")
         next_legal_actions = Catan.get_legal_actions(hypoth_game, hypoth_board, hypoth_player.player)
 
         #TODO hack to avoid re-calling PlaceRobber
@@ -267,62 +256,70 @@ function analyze_action!(action::AbstractAction, board::Board, players::Abstract
                 push!(filtered_next_legal_actions, a)
             end
         end
-        @debug "after performing $(action.name)($(action.args[1])) at depth $depth, there are $(length(filtered_next_legal_actions)) possibilities"
-        @debug join(["$(a.name)($(a.admissible_args))" for a in filtered_next_legal_actions], "\n")
-        action.win_proba = get_best_action(hypoth_board, players, hypoth_player, filtered_next_legal_actions, depth + 1).win_proba
+        return get_best_transition(hypoth_board, players, hypoth_player, filtered_next_legal_actions, depth + 1).reward
     else
-        #@warn "getting win_proba for action $(action.name)"
         # TODO Temporal difference algo does this later, so we don't want to double compute
-        action.win_proba = predict_model(player.machine, action.features)
+        return get_state_score(hypoth_player, features)
     end
+end
 
+function get_state_score(player::LearningPlayer, features::Vector{Pair{Symbol, Float64}})::Float64
+    predict_model(player.model, features)
+end
 
-    return action
+function analyze_action!(action::AbstractAction, board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, depth::Integer)::MarkovState
+    hypoth_board = deepcopy(board)
+    hypoth_player = deepcopy(player)
+    hypoth_game = Game([DefaultRobotPlayer(p.team, board.configs) for p in players], board.configs)
+    @debug "Entering hypoth game $(hypoth_game.unique_id) with action $(action.name)($(action.args))"
+    
+    features = compute_features_from_hypoth(action, hypoth_game, hypoth_board, hypoth_player)
+    state_score = calculate_state_score(features, hypoth_game, hypoth_board, players, hypoth_player, depth)
+    return MarkovState(features, state_score)
 end
 
 """    
     `choose_next_action(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, actions::Set{Symbol})`
 
 Gathers all legal actions, and chooses the one that most increases the player's 
-probability of victory, based on his `player.machine` model.  If no action 
+probability of victory, based on his `player.model` model.  If no action 
 increases the probability of victory, then do nothing.
 """
 function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, actions::Set{PreAction})::ChosenAction
     @debug "$(player.player.team) considers $(collect(actions))"
-    best_action = get_best_action(board, players, player, actions)
+    best_action = get_best_transition(board, players, player, actions).chosen_action
     @info "$(player.player.team) chooses to $(best_action.name) $(best_action.args)"
-    return ChosenAction(best_action.name, best_action.args...)
-    #return best_action.func!
+    return best_action #ChosenAction(best_action.name, best_action.args...)
 end
 
 function Catan.choose_road_location(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Tuple{Tuple{TInt, TInt}, Tuple{TInt, TInt}}})::Union{Nothing,Tuple{Tuple{TInt, TInt}, Tuple{TInt, TInt}}} where {TInt <: Integer}
-    best_action = get_best_action(board, players, player, Set([PreAction(:ConstructRoad, candidates)]))
-    return best_action.args
+    best_action = get_best_transition(board, players, player, Set([PreAction(:ConstructRoad, candidates)]))
+    return best_action.chosen_action.args
 end
 
 function Catan.choose_building_location(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Tuple{TInt, TInt}}, building_type::Symbol)::Union{Nothing,Tuple{TInt,TInt}} where {TInt <: Integer}
     @debug "learning player has $candidates as choices to build"
     pre_action_name = building_type == :City ? :ConstructCity : :ConstructSettlement
     pre_actions = Set([PreAction(pre_action_name, candidates)])
-    action = get_best_action(board, players, player, pre_actions)
-    return action.args
+    action = get_best_transition(board, players, player, pre_actions)
+    return action.chosen_action.args
 end
 
 function Catan.choose_place_robber(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidate_tiles::Vector{Symbol})::Symbol
-    return get_best_action(board, players, player, Set([PreAction(:PlaceRobber, candidate_tiles)])).args[2]
+    return get_best_transition(board, players, player, Set([PreAction(:PlaceRobber, candidate_tiles)])).chosen_action.args[2]
 end
 
 function Catan.choose_resource_to_draw(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer)::Symbol
     resources = collect(keys(Dict((k,v) for (k,v) in board.resources if v > 0)))
-    return get_best_action(board, players, player, Set([PreAction(:GainResource, resources)])).args[1]
+    return get_best_transition(board, players, player, Set([PreAction(:GainResource, resources)])).chosen_action.args[1]
 end
 
 function Catan.choose_one_resource_to_discard(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer)::Symbol
     isempty(player.player.resources) && throw(ArgumentError("Player has no resources"))
     resources = [r for (r,v) in player.player.resources if v > 0]
     pre_actions = Set([PreAction(:LoseResource, resources)])
-    action = get_best_action(board, players, player, pre_actions)
-    return action.args[1]
+    action = get_best_transition(board, players, player, pre_actions)
+    return action.chosen_action.args[1]
 end
 
 """
@@ -339,27 +336,27 @@ end
 
 function Catan.choose_accept_trade(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, from_player::Player, from_goods::Vector{Symbol}, to_goods::Vector{Symbol})::Bool
     actions = Set([PreAction(:DoNothing), PreAction(:AcceptTrade, [(from_player, from_goods, to_goods)])])
-    best_action = get_best_action(board, players, player, actions)
-    return best_action.args !== nothing
+    best_action = get_best_transition(board, players, player, actions)
+    return best_action.chosen_action.args !== nothing
 end
 
 """
     `Catan.choose_who_to_trade_with(board::Board, player::LearningPlayer, players::AbstractVector{PlayerPublicView})::Symbol`
 
-Use public model (stored in `player.player.machine_public`) to choose a trading partner as the weakest among the options
+Use public model (stored in `player.player.model_public`) to choose a trading partner as the weakest among the options
 """
 function Catan.choose_who_to_trade_with(board::Board, player::LearningPlayer, players::AbstractVector{PlayerPublicView})::Symbol
-    return argmin(p -> predict_public_model(player.machine_public, board, p), players).team
+    return argmin(p -> predict_public_model(player.model_public, board, p), players).team
 end
 
 """
     choose_robber_victim(board::Board, player::RobotPlayer, 
     potential_victims::PlayerPublicView...)::PlayerPublicView
 
-Use public model (stored in `player.player.machine_public`) to choose a trading partner as the strongest among the options
+Use public model (stored in `player.player.model_public`) to choose a trading partner as the strongest among the options
 """
 function Catan.choose_robber_victim(board::Board, player::LearningPlayer, potential_victims::PlayerPublicView...)::PlayerPublicView
-    return argmax(p -> predict_public_model(player.machine_public, board, p), potential_victims)
+    return argmax(p -> predict_public_model(player.model_public, board, p), potential_victims)
     @info "$(player.player.team) decided it is wisest to steal from the $(max_ind.team) player"
     return max_ind
 end
@@ -376,5 +373,5 @@ function choose_monopoly_resource(board::Board, players::AbstractVector{PlayerPu
         get_estimated_resources(board, players, target)::Dict{Symbol, Int}
     end
     =#
-    return get_best_action(board, players, player, Set([PreAction(:GainResource, r) for r in Catan.RESOURCES])).args[1]
+    return get_best_transition(board, players, player, Set([PreAction(:GainResource, r) for r in Catan.RESOURCES])).chosen_action.args[1]
 end

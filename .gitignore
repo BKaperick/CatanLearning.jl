@@ -10,3 +10,4 @@ test/data/*
 .CondaPkg/*
 src/learning/.ipynb_checkpoints/
 *.mem
+models/tournament_*
