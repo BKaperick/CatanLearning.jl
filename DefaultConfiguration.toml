@@ -1,5 +1,6 @@
 SAVE_MAP = ""
 WRITE_FEATURES = false
+TEAMS = ["blue", "cyan", "green", "yellow"]
 
 [Tournament]
 GAMES_PER_MAP = 100
@@ -20,7 +21,6 @@ LOG_LEVEL = "Warn"
 
 [GameSettings]
 [PlayerSettings]
-PLAYERS = ["blue", "cyan", "green", "yellow"]
 MODELS_DIR = "../CatanLearning.jl/models"
 MODELS = ["decision", "public"]
 MODEL = "./models/model.jls"
