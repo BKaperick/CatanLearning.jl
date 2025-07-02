@@ -422,14 +422,10 @@ function predict_model(machine::Machine, features)
     return pdf(pred[1], 1)
 end
 
-
-function predict_model(weights::Vector{Float64}, features)
-    X_new = DataFrame(features)
-    CatanLearning.coerce_feature_types!(X_new)
-    CatanLearning.filter_bad_features!(X_new)
-    X_new = Matrix(X_new)
-    pred = X_new * weights
-    @assert pred[1] !== nothing
+function predict_model(weights::Vector{Float64}, features::Vector{Pair{Symbol, Float64}})
+    features = CatanLearning.filter_bad_features(features)
+    X_new = [x.second for x in features]
+    pred = X_new'weights
     @debug "pred = $(pred[1])"
     return pred[1]
 end
