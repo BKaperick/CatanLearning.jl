@@ -1,7 +1,7 @@
 using MLJ
 using DataFrames
 import DataFramesMeta as DFM
-import Base: deepcopy,hash
+import Base: hash
 using DelimitedFiles
 
 abstract type LearningPlayer <: RobotPlayer
@@ -89,33 +89,33 @@ function HybridPlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}
     HybridPlayer(player, model, model_public, process, policy, configs, nothing)
 end
 
-function Base.deepcopy(player::MutatedEmpathRobotPlayer)
-    return MutatedEmpathRobotPlayer(deepcopy(player.player), player.model, player.model_public, deepcopy(player.mutation), player.configs) 
+function Base.copy(player::MutatedEmpathRobotPlayer)
+    return MutatedEmpathRobotPlayer(copy(player.player), player.model, player.model_public, copy(player.mutation), player.configs) 
 end
 
-function Base.deepcopy(player::TemporalDifferencePlayer)
-    # Note, we deepcopy only the player data, while the RL data should persist in order to pass updates the state info properly
+function Base.copy(player::TemporalDifferencePlayer)
+    # Note, we `copy` only the player data, while the RL data should persist in order to pass updates the state info properly
     return TemporalDifferencePlayer(
-        deepcopy(player.player), 
+        copy(player.player), 
         player.model, 
         player.model_public, 
         player.process, 
         player.policy, 
         player.configs,
-        deepcopy(player.current_state)
+        player.current_state
     )
 end
 
-function Base.deepcopy(player::HybridPlayer)
-    # Note, we deepcopy only the player data, while the RL data should persist in order to pass updates the state info properly
+function Base.copy(player::HybridPlayer)
+    # Note, we `copy` only the player data, while the RL data should persist in order to pass updates the state info properly
     return HybridPlayer(
-        deepcopy(player.player), 
+        copy(player.player), 
         player.model, 
         player.model_public, 
         player.process, 
         player.policy, 
         player.configs,
-        deepcopy(player.current_state)
+        player.current_state
     )
 end
 
@@ -127,7 +127,7 @@ function EmpathRobotPlayer(team::Symbol, configs::Dict)
     )
 end
 
-function Base.deepcopy(player::EmpathRobotPlayer)
-    return EmpathRobotPlayer(deepcopy(player.player), player.model, player.model_public)
+function Base.copy(player::EmpathRobotPlayer)
+    return EmpathRobotPlayer(copy(player.player), player.model, player.model_public)
 end
 

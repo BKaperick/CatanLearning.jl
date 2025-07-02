@@ -108,23 +108,27 @@ function coerce_feature_types!(df)
     end
     coerce!(df, :WonGame => OrderedFactor{2})
 end
-function filter_bad_features!(df)
-    features_to_exclude = [
-        :CountHandWood,
-        :CountHandBrick,
-        :CountHandPasture,
-        :CountHandStone,
-        :CountHandGrain,
-        :HasMostPoints,
-        :NumberOfTurns,
-        :CountVictoryPoint
-        ]
-    for feat in features_to_exclude
-        if String(feat) in names(df)
-            #@debug "removing $feat from features while loading"
-            select!(df, Not([feat]))
-        end
-    end
+
+const features_to_exclude = Set([String(f) for f in [
+    :CountHandWood,
+    :CountHandBrick,
+    :CountHandPasture,
+    :CountHandStone,
+    :CountHandGrain,
+    :HasMostPoints,
+    :NumberOfTurns,
+    :CountVictoryPoint
+]
+])
+
+function filter_bad_features!(df::DataFrame)
+    bad_features = intersect(names(df), features_to_exclude)
+    #@warn "Remove $bad_features from features !"
+    #@debug "removing $feat from features while loading"
+    select!(df, Not(bad_features))
+end
+function filter_bad_features(features::Vector)
+    return filter(pair -> !(String(pair.first) in features_to_exclude), features)
 end
 
 function load_typed_features_from_csv(features_csv)

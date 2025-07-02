@@ -144,9 +144,7 @@ compute_has_most_points = (game, board, player) -> get_has_most_points(game, boa
 register_feature(:NumberOfTurns, Int32, 0, 10_000)
 compute_number_of_turns = (game, board, player) -> game.turn_num
 
-
-function get_features()::Vector{Pair{Symbol, Function}}
-    raw_features = [
+const _raw_features = [
         :CountSettlement => compute_count_settlement,
         :CountTotalSettlement => compute_count_total_settlement,
         :CountCity => compute_count_city,
@@ -184,12 +182,8 @@ function get_features()::Vector{Pair{Symbol, Function}}
         :HasLargestArmy => compute_has_largest_army,
         :HasLongestRoad => compute_has_longest_road,
         :CountVictoryPoint => compute_count_victory_points
-       ]
-end
-
-
-function get_public_features()::Vector{Pair{Symbol, Function}}
-    return [
+]
+const _public_features = [
         :CountSettlement => compute_count_settlement,
         :CountTotalSettlement => compute_count_total_settlement,
         :CountCity => compute_count_city,
@@ -227,6 +221,14 @@ function get_public_features()::Vector{Pair{Symbol, Function}}
         :HasLongestRoad => compute_has_longest_road,
         :CountVisibleVictoryPoint => compute_count_public_victory_points
        ]
+
+function get_features()::Vector{Pair{Symbol, Function}}
+    return _raw_features
+end
+
+
+function get_public_features()::Vector{Pair{Symbol, Function}}
+    return _public_features
 end
 
 """
@@ -422,14 +424,10 @@ function predict_model(machine::Machine, features)
     return pdf(pred[1], 1)
 end
 
-
-function predict_model(weights::Vector{Float64}, features)
-    X_new = DataFrame(features)
-    CatanLearning.coerce_feature_types!(X_new)
-    CatanLearning.filter_bad_features!(X_new)
-    X_new = Matrix(X_new)
-    pred = X_new * weights
-    @assert pred[1] !== nothing
+function predict_model(weights::Vector{Float64}, features::Vector{Pair{Symbol, Float64}})
+    features = CatanLearning.filter_bad_features(features)
+    X_new = [x.second for x in features]
+    pred = X_new'weights
     @debug "pred = $(pred[1])"
     return pred[1]
 end

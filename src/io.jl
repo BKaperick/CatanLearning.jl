@@ -20,19 +20,6 @@ function Catan.do_post_game_action(game::Game, board::Board, players::AbstractVe
 end
 
 function Catan.initialize_player(board::Board, player::DefaultRobotPlayer)
-    #=
-    if board.configs["WRITE_FEATURES"] == true
-        @info "Intializing player feature files"
-        @debug "getting features"
-        f = get_features()
-        @debug "writing features header"
-        write_features_header_if_needed(get_player_config(player, "FEATURES"), f, board.configs)
-        @debug "getting public features"
-        pf = get_public_features()
-        @debug "writing public features header"
-        write_features_header_if_needed(get_player_config(player, "PUBLIC_FEATURES"), pf, board.configs)
-    end
-    =#
 end
 
 function Catan.do_post_game_action(game::Game, board::Board, players::AbstractVector{PlayerType}, player::EmpathRobotPlayer, winner::Union{PlayerType, Nothing})

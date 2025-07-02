@@ -268,8 +268,8 @@ function get_state_score(player::LearningPlayer, features::Vector{Pair{Symbol, F
 end
 
 function analyze_action!(action::AbstractAction, board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, depth::Integer)::MarkovState
-    hypoth_board = deepcopy(board)
-    hypoth_player = deepcopy(player)
+    hypoth_board = copy(board)
+    hypoth_player = copy(player)
     hypoth_game = Game([DefaultRobotPlayer(p.team, board.configs) for p in players], board.configs)
     @debug "Entering hypoth game $(hypoth_game.unique_id) with action $(action.name)($(action.args))"
     
