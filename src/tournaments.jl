@@ -207,6 +207,7 @@ function run_state_space_tournament(configs)
     
     winners = init_winners(teams)
     for k=1:tourney.epochs
+        @info "epoch $k / $(tourney.epochs)"
         # Add a new perturbation to player's model weights
         team_to_perturb = initialize_epoch!(team_to_perturb, configs, tournament_path, k, teams)
         @info "Enriching MarkovPlayers with $(length(master_state_to_value)) pre-explored states"
@@ -223,6 +224,7 @@ function run_state_space_tournament(configs)
 
         # Don't keep the mutation if `nothing` wins more than anyone else
         if biggest_winner === nothing
+            println(epoch_winners)
             continue
         else
             for team in teams
