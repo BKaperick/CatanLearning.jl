@@ -231,6 +231,7 @@ function run_state_space_tournament(configs)
             println(epoch_winners)
             continue
         else
+            @info "$biggest_winner won the epoch, so all players copy his mutation"
             for team in markov_teams
                 team_to_perturb[team].weights = copy(team_to_perturb[biggest_winner].weights)
             end
@@ -251,6 +252,9 @@ function initialize_epoch!(team_to_perturb::Dict{Symbol, LinearModel}, configs, 
             model = try_load_linear_model_from_csv(team, configs)
         end
         new_model = get_perturbation(model, 1.0)
+        if haskey(team_to_perturb, team)
+            new_model.weights .+= team_to_perturb[team].weights
+        end
         write_perturbed_linear_model(tourney_path, epoch_num, team, new_model, get_player_config(configs, "MODELS_DIR", team))
         team_to_perturb[team] = new_model
     end
