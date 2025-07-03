@@ -58,7 +58,7 @@ function try_load_linear_model_from_csv(team::Symbol, configs::Dict)::LinearMode
         model = LinearModel(weights[!, :Weights])
     else
         features_path = get_player_config(configs, "FEATURES", team)
-        @info "$model model not found, let's try to train a new model from features in $features_path"
+        @info "Serialized model not found at $model_path, let's try to train a new model from features in $features_path"
         model = train_and_serialize_linear_model(features_path, model_path)
     end
     update_ml_cache!(configs, team, key, model)
@@ -196,12 +196,12 @@ end
 
 This is the access point for re-training a model based on new features or engine bug fixes.
 """
-function train_and_serialize_linear_model(features_csv::String, output_path::String; sv_threshold = 0.01)::Vector{Float64}
+function train_and_serialize_linear_model(features_csv::String, output_path::String; sv_threshold = 0.01)::LinearModel
     model = train_linear_model_from_csv(features_csv; sv_threshold = sv_threshold)
     @info "Serializing linear model trained on $features_csv into $output_path"
     df = DataFrame(Weights = model)
     CSV.write(output_path, df)
-    return model
+    return LinearModel(model)
 end
 
 function train_linear_model_from_csv(features_csv; sv_threshold = 0.01)
