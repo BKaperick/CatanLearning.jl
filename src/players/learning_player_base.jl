@@ -289,9 +289,8 @@ function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPu
     return best_action #ChosenAction(best_action.name, best_action.args...)
 end
 
-#function Catan.choose_road_location(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Tuple{Tuple{TInt, TInt}, Tuple{TInt, TInt}}}, is_first_turn::Bool = false)::Union{Nothing,Tuple{Tuple{TInt, TInt}, Tuple{TInt, TInt}}} where {TInt <: Integer}
-function Catan.choose_road_location(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Tuple{Tuple{TInt, TInt}, Tuple{TInt, TInt}}}, is_first_turn::Bool = false, is_dev_card::Bool = false)::Union{Nothing,Tuple{Tuple{TInt, TInt}, Tuple{TInt, TInt}}} where {TInt <: Integer}
-    args = Vector{Tuple}([(c...,is_first_turn) for c in candidates])
+function Catan.choose_road_location(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Tuple{Tuple{TInt, TInt}, Tuple{TInt, TInt}}}, do_pay_cost::Bool = true)::Union{Nothing,Tuple{Tuple{TInt, TInt}, Tuple{TInt, TInt}}} where {TInt <: Integer}
+    args = Vector{Tuple}([(c...,do_pay_cost) for c in candidates])
     best_action = get_best_transition(board, players, player, Set([PreAction(:ConstructRoad, args)]))
     return Tuple(best_action.chosen_action.args[1:2])
 end
