@@ -60,11 +60,7 @@ function get_legal_action_sets(board::Board, players::AbstractVector{PlayerPubli
                     func! = (g, b, p) -> construct_city(b, p.player, args)
                 end
             elseif action == :ConstructSettlement
-                if typeof(args) <: Tuple{Tuple}
-                    func! = (g, b, p) -> construct_settlement(b, p.player, args...)
-                else
-                    func! = (g, b, p) -> construct_settlement(b, p.player, args)
-                end
+                func! = (g, b, p) -> construct_settlement(b, p.player, args...)
             elseif action == :ConstructRoad
                 func! = (g, b, p) -> construct_road(b, p.player, args...)
             elseif action == :PlayDevCard
@@ -226,7 +222,8 @@ function compute_features_from_hypoth(action::AbstractAction, hypoth_game::Game,
     # We control the log-level of 'hypothetical' games separately from the main game.
     main_logger = global_logger()
     #println(board.configs["HypothGameSettings"])
-    global_logger(ConsoleLogger(Logging.Warn))
+    @info "Entering hypoth game for $action"
+    #global_logger(ConsoleLogger(Logging.Warn))
     #Catan.parse_logging_configs!(board.configs["HypothGameSettings"])
     #global_logger(board.configs["HypothGameSettings"]["LOGGER"])
     action.func!(hypoth_game, hypoth_board, hypoth_player)
@@ -292,17 +289,18 @@ function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPu
     return best_action #ChosenAction(best_action.name, best_action.args...)
 end
 
-function Catan.choose_road_location(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Tuple{Tuple{TInt, TInt}, Tuple{TInt, TInt}}})::Union{Nothing,Tuple{Tuple{TInt, TInt}, Tuple{TInt, TInt}}} where {TInt <: Integer}
-    best_action = get_best_transition(board, players, player, Set([PreAction(:ConstructRoad, candidates)]))
-    return best_action.chosen_action.args
+function Catan.choose_road_location(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Tuple{Tuple{TInt, TInt}, Tuple{TInt, TInt}}}, do_pay_cost::Bool = true)::Union{Nothing,Tuple{Tuple{TInt, TInt}, Tuple{TInt, TInt}}} where {TInt <: Integer}
+    args = Vector{Tuple}([(c...,do_pay_cost) for c in candidates])
+    best_action = get_best_transition(board, players, player, Set([PreAction(:ConstructRoad, args)]))
+    return Tuple(best_action.chosen_action.args[1:2])
 end
 
-function Catan.choose_building_location(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Tuple{TInt, TInt}}, building_type::Symbol)::Union{Nothing,Tuple{TInt,TInt}} where {TInt <: Integer}
+function Catan.choose_building_location(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Tuple{TInt, TInt}}, building_type::Symbol, is_first_turn::Bool = false)::Union{Nothing,Tuple{TInt,TInt}} where {TInt <: Integer}
     @debug "learning player has $candidates as choices to build"
     pre_action_name = building_type == :City ? :ConstructCity : :ConstructSettlement
-    pre_actions = Set([PreAction(pre_action_name, candidates)])
+    pre_actions = Set([PreAction(pre_action_name, Vector{Tuple}([(c,is_first_turn) for c in candidates]))])
     action = get_best_transition(board, players, player, pre_actions)
-    return action.chosen_action.args
+    return action.chosen_action.args[1]
 end
 
 function Catan.choose_place_robber(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, candidate_tiles::Vector{Symbol})::Symbol

@@ -1,5 +1,6 @@
 using MLJ
 import Catan: ChosenAction
+import Base: show
 
 struct Tournament
     games_per_map::Int
@@ -31,6 +32,15 @@ struct SampledAction <: AbstractAction
     func!::Function
     # This is the actual stochastic version of `func!` that is called during game play once this action is chosen
     real_func!::Function
+end
+
+function Base.show(io::IO, a::AbstractAction)
+    compact = get(io, :compact, false)
+    if compact
+        print(io, "$(a.name)(...)")
+    else
+        print(io, "$(a.name)$(a.args)\n")
+    end
 end
 
 
