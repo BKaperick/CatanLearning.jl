@@ -222,7 +222,7 @@ function compute_features_from_hypoth(action::AbstractAction, hypoth_game::Game,
     # We control the log-level of 'hypothetical' games separately from the main game.
     main_logger = global_logger()
     #println(board.configs["HypothGameSettings"])
-    @info "Entering hypoth game for $action"
+    @debug "Entering hypoth game for $action"
     global_logger(ConsoleLogger(Logging.Warn))
     #Catan.parse_logging_configs!(board.configs["HypothGameSettings"])
     #global_logger(board.configs["HypothGameSettings"]["LOGGER"])

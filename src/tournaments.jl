@@ -68,7 +68,7 @@ end
 function do_tournament_one_game!(winners, map, players, configs)
     game = Game(players, configs)
     board = Catan.read_map(configs, map)
-    level = get(configs["Tournament"], "GAME_LOG_LEVEL", configs["LOG_LEVEL"])
+    level = get(configs["Tournament"], "GAME_LOG_LEVEL", "Warn")
     out = get(configs["Tournament"], "GAME_LOG_OUTPUT", configs["LOG_OUTPUT"])
     game_logger,_,__ = Catan.make_logger(level, out)
 
