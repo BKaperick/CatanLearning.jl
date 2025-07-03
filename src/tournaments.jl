@@ -204,12 +204,13 @@ function run_state_space_tournament(configs)
     tournament_path = joinpath(models_dir, "tournament_$(tourney.unique_id)")
     ~isdir(tournament_path) && mkdir(tournament_path)
     team_to_perturb = Dict{Symbol, LinearModel}()
+    markov_teams = [t for t in teams if get_player_config(configs, "TYPE", t) == "HybridPlayer"]
     
     winners = init_winners(teams)
     for k=1:tourney.epochs
         @info "epoch $k / $(tourney.epochs)"
         # Add a new perturbation to player's model weights
-        team_to_perturb = initialize_epoch!(team_to_perturb, configs, tournament_path, k, teams)
+        team_to_perturb = initialize_epoch!(team_to_perturb, configs, tournament_path, k, markov_teams)
         @info "Enriching MarkovPlayers with $(length(master_state_to_value)) pre-explored states"
 
         with_enrichment = conf -> create_enriched_players(conf, master_state_to_value, new_state_to_value, team_to_perturb)
@@ -223,11 +224,11 @@ function run_state_space_tournament(configs)
         biggest_winner = argmax(x -> x[2], epoch_winners)[1]
 
         # Don't keep the mutation if `nothing` wins more than anyone else
-        if biggest_winner === nothing
+        if biggest_winner === nothing || !(biggest_winner in markov_teams)
             println(epoch_winners)
             continue
         else
-            for team in teams
+            for team in markov_teams
                 team_to_perturb[team].weights = copy(team_to_perturb[biggest_winner].weights)
             end
         end
