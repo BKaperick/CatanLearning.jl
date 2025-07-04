@@ -224,10 +224,12 @@ function run_state_space_tournament(configs)
 
         # Choose a perturbation to keep and update team_to_perturb for all players 
         # to take the best perturbation
-        biggest_winner = argmax(x -> x[2], epoch_winners)[1]
+        biggest_winner = argmax(x -> x[2], [y for y in epoch_winners if y[1] !== nothing])[1]
 
         # Don't keep the mutation if `nothing` wins more than anyone else
-        if biggest_winner === nothing || !(biggest_winner in markov_teams)
+        #if biggest_winner === nothing || !(biggest_winner in markov_teams)
+        if !(biggest_winner in markov_teams)
+            @info "skipping mutation since $biggest_winner won epoch"
             println(epoch_winners)
             continue
         else
