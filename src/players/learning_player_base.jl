@@ -53,12 +53,7 @@ function get_legal_action_sets(board::Board, players::AbstractVector{PlayerPubli
         for args in candidates
             func! = nothing
             if action == :ConstructCity
-                # TODO this is a hack, sometimes we pass Tuple{Tuple{Int8,Int8}}, sometimes Tuple{Int8,Int8}
-                if typeof(args) <: Tuple{Tuple}
-                    func! = (g, b, p) -> construct_city(b, p.player, args...)
-                else
-                    func! = (g, b, p) -> construct_city(b, p.player, args)
-                end
+                func! = (g, b, p) -> construct_city(b, p.player, args...)
             elseif action == :ConstructSettlement
                 func! = (g, b, p) -> construct_settlement(b, p.player, args...)
             elseif action == :ConstructRoad

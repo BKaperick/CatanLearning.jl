@@ -20,7 +20,6 @@ include("learning/production_model.jl")
 include("players/structs.jl")
 include("helpers.jl")
 include("mutation_rule_library.jl")
-include("evolution.jl")
 
 include("learning/feature_computation.jl")
 
