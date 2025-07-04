@@ -197,6 +197,7 @@ Run a tournament parameterized by `configs` which keeps track of the exploration
 """
 function run_state_space_tournament(configs)
     tourney = Tournament(configs, :Sequential)
+    @info "Starting tournament $(tourney.unique_id)"
     master_state_to_value = read_values_file(configs["PlayerSettings"]["STATE_VALUES"])::Dict{UInt64, Float64}
     new_state_to_value = Dict{UInt64, Float64}()
     start_length = length(master_state_to_value)
@@ -208,13 +209,16 @@ function run_state_space_tournament(configs)
     ~isdir(tournament_path) && mkdir(tournament_path)
     team_to_perturb = Dict{Symbol, LinearModel}()
     markov_teams = [t for t in teams if get_player_config(configs, "TYPE", t) == "HybridPlayer"]
-    
+    for team in markov_teams
+        # First iteration, start with stored model
+        team_to_perturb[team] = try_load_linear_model_from_csv(team, configs)
+    end
     winners = init_winners(teams)
+    @info "Enriching MarkovPlayers with $(length(master_state_to_value)) pre-explored states"
     for k=1:tourney.epochs
         @info "epoch $k / $(tourney.epochs)"
         # Add a new perturbation to player's model weights
-        team_to_perturb = initialize_epoch!(team_to_perturb, configs, tournament_path, k, markov_teams)
-        @info "Enriching MarkovPlayers with $(length(master_state_to_value)) pre-explored states"
+        initialize_epoch!(team_to_perturb, configs, tournament_path, k, markov_teams)
 
         with_enrichment = conf -> create_enriched_players(conf, master_state_to_value, new_state_to_value, team_to_perturb)
         epoch_winners = do_tournament_one_epoch(tourney, teams, configs; create_players = with_enrichment)
@@ -233,34 +237,26 @@ function run_state_space_tournament(configs)
             println(epoch_winners)
             continue
         else
-            @info "$biggest_winner won the epoch, so all players copy his mutation"
-            for team in markov_teams
-                team_to_perturb[team].weights = copy(team_to_perturb[biggest_winner].weights)
-            end
+            validate_and_apply_mutation!(team_to_perturb, markov_teams, biggest_winner)
         end
         println(epoch_winners)
     end
     println(winners)
 end
 
-function initialize_epoch!(team_to_perturb::Dict{Symbol, LinearModel}, configs, tourney_path, epoch_num, teams)::Dict{Symbol, LinearModel}
-
+function initialize_epoch!(team_to_perturb::Dict{Symbol, LinearModel}, configs, tourney_path, epoch_num, teams)
     for team in teams
-        if haskey(team_to_perturb, team)
-            # Every other iteration, start with perturbed model
-            model = team_to_perturb[team]
-        else
-            # First iteration, start with stored model
-            model = try_load_linear_model_from_csv(team, configs)
-        end
-        new_model = get_perturbation(model, 1.0)
-        if haskey(team_to_perturb, team)
-            new_model.weights .+= team_to_perturb[team].weights
-        end
-        write_perturbed_linear_model(tourney_path, epoch_num, team, new_model, get_player_config(configs, "MODELS_DIR", team))
-        team_to_perturb[team] = new_model
+        # Every other iteration, start with perturbed model
+        add_perturbation!(team_to_perturb[team], 0.1)
+        write_perturbed_linear_model(tourney_path, epoch_num, team, team_to_perturb[team], get_player_config(configs, "MODELS_DIR", team))
     end
-    return team_to_perturb
+end
+
+function validate_and_apply_mutation!(team_to_perturb, teams, winner)
+    @info "$winner won the epoch, so all players copy his mutation"
+    for team in teams
+        team_to_perturb[team].weights = copy(team_to_perturb[winner].weights)
+    end
 end
 
 function create_enriched_players(configs, state_values::Dict{UInt64, Float64}, new_state_values::Dict{UInt64, Float64}, team_to_perturb::Dict{Symbol, LinearModel})
@@ -271,7 +267,7 @@ function create_enriched_players(configs, state_values::Dict{UInt64, Float64}, n
         if typeof(p) <: MarkovPlayer
             p.process.state_to_value = state_values
             p.process.new_state_to_value = new_state_values
-            p.model.weights += team_to_perturb[p.player.team].weights
+            p.model = team_to_perturb[p.player.team]
         end
     end
     return players
