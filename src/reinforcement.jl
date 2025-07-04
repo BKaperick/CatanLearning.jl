@@ -4,9 +4,15 @@ function query_state_value(process::MarkovRewardProcess, transition::MarkovTrans
     return value
 end
 
+value_counter = Dict{UInt64, Int}()
+
 function query_state_value(process::MarkovRewardProcess, state::MarkovState)
     @debug "querying key {$(state.key)} (searching $(length(keys(process.state_to_value))) + $(length(keys(process.new_state_to_value))) known values...)"
     if haskey(process.state_to_value, state.key)
+        if !haskey(value_counter, state.key)
+            value_counter[state.key] = 0
+        end
+        value_counter[state.key] += 1
         return process.state_to_value[state.key]
     elseif haskey(process.new_state_to_value, state.key)
         return process.new_state_to_value[state.key]
@@ -72,12 +78,13 @@ end
 """
     `get_new_current_value(process, current_value, next_state, next_value)`
 
+Apply the TD-learning step, i.e. V(t) ← (1-α)V(t) + α [R(t+1) + δ V(t+1)]
 """
 function get_new_current_value(process, current_value, next_state, next_value)
     next_discounted = (process.reward_discount * next_value)
     step = next_state.reward + next_discounted
-    delta = step - current_value
-    return current_value + (process.learning_rate * delta)
+    α = process.learning_rate
+    return (1 - α) * current_value + (α * step)
 end
 
 function finish_temporal_difference_step!(process::MarkovRewardProcess, 

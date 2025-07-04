@@ -175,7 +175,8 @@ end
 """
     MarkovState(features::Vector{Pair{Symbol, Float64}}, reward::Float64)
 
-This one can be used directly by `LearningPlayer`s.
+Represents one game state.  `Markov` because it maintains a key and reward,
+which can be used in its modeling as a Markov Reward Process.
 """
 function MarkovState(features::Vector{Pair{Symbol, Float64}}, reward::Float64)
     # In order to avoid numerical instability issues in `Float64`, we apply rounding to the featurees first
@@ -183,7 +184,15 @@ function MarkovState(features::Vector{Pair{Symbol, Float64}}, reward::Float64)
     # within the same box.
     rounded_features = round.([f.second for f in features], digits=1)
 
-    return MarkovState(hash(rounded_features), Dict(features), reward)
+    return MarkovState(persistent_hash(rounded_features), Dict(features), reward)
+end
+
+function persistent_hash(feats)
+    hash = UInt64(17)
+    for f in feats
+        hash = hash * UInt64(23) + UInt64(f * 100)
+    end
+    return UInt64(hash)
 end
 
 

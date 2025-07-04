@@ -200,6 +200,7 @@ function run_state_space_tournament(configs)
     @info "Starting tournament $(tourney.unique_id)"
     master_state_to_value = read_values_file(configs["PlayerSettings"]["STATE_VALUES"])::Dict{UInt64, Float64}
     new_state_to_value = Dict{UInt64, Float64}()
+
     start_length = length(master_state_to_value)
     teams = [Symbol(t) for t in configs["TEAMS"]]
     @info "Starting tournament $(tourney.unique_id)"
@@ -217,6 +218,7 @@ function run_state_space_tournament(configs)
     @info "Enriching MarkovPlayers with $(length(master_state_to_value)) pre-explored states"
     for k=1:tourney.epochs
         @info "epoch $k / $(tourney.epochs)"
+        @info "states: $(length(keys(master_state_to_value))) | $(length(keys(new_state_to_value)))"
         # Add a new perturbation to player's model weights
         initialize_epoch!(team_to_perturb, configs, tournament_path, k, markov_teams)
 
@@ -240,6 +242,7 @@ function run_state_space_tournament(configs)
             validate_and_apply_mutation!(team_to_perturb, markov_teams, biggest_winner)
         end
         println(epoch_winners)
+        @info "Seen (and updated) $(sum(values(value_counter))) pre-serialized states"
     end
     println(winners)
 end
