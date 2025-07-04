@@ -2,7 +2,7 @@
 
 julia_version = "1.11.5"
 manifest_format = "2.0"
-project_hash = "9c79f3b2c91d3e76998e1ebcc508fab6a5ed1cc7"
+project_hash = "93e29c74df0c8d437525e52e7182f8997cec224b"
 
 [[deps.ANSIColoredPrinters]]
 git-tree-sha1 = "574baf8110975760d391c710b6341da1afa48d8c"
@@ -222,7 +222,7 @@ version = "1.18.4+0"
 deps = ["Crayons", "Dates", "DocStringExtensions", "Documenter", "JET", "Logging", "Random", "Revise", "StaticArrays", "StatsBase", "TOML", "Test", "TestItemRunner", "TestItems"]
 path = "../CatanEngine.jl"
 uuid = "f5a9156a-9005-488a-a606-ecf760a1f632"
-version = "0.2.0"
+version = "0.3.1"
 
 [[deps.CategoricalArrays]]
 deps = ["DataAPI", "Future", "Missings", "Printf", "Requires", "Statistics", "Unicode"]
