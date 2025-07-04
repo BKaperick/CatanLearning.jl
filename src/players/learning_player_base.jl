@@ -172,7 +172,7 @@ Gets the legal action functions for the player at this board state, and
 computes the feature vector for each resulting state.  This is a critical 
 helper function for all the machine-learning players.
 """
-function get_best_transition(board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, actions::Set, depth::Int=1)::MarkovTransition
+function get_best_transition(board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, actions::Set, depth::UInt8=UInt8(1))::MarkovTransition
     do_current_state_calculation(player, board, players)
     action_sets = get_legal_action_sets(board, players, player.player, actions)
     return analyze_and_aggregate_action_sets(board, players, player, action_sets, depth)
@@ -187,13 +187,13 @@ function do_current_state_calculation(player::MarkovPlayer, board::Board, player
     return
 end
 
-function analyze_and_aggregate_action_sets(board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, action_sets::Vector{AbstractActionSet}, depth::Integer)::MarkovTransition
+function analyze_and_aggregate_action_sets(board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, action_sets::Vector{AbstractActionSet}, depth::UInt8)::MarkovTransition
     # Converts the inner actions to MarkovTransitions with `reward` and `features` properties
     transitions = analyze_actions!(board, players, player, action_sets, depth)
     return aggregate(transitions)
 end
 
-function analyze_actions!(board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, action_sets::Vector{AbstractActionSet}, depth::Integer)::Vector{MarkovTransition}
+function analyze_actions!(board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, action_sets::Vector{AbstractActionSet}, depth::UInt8)::Vector{MarkovTransition}
     transitions = Vector{MarkovTransition}([])
     for set in action_sets
         @debug "analyzing action set ($(length(set.actions)) actions): \n$(join(["$(a.name)($(a.args))" for a in set.actions], "\n"))"
@@ -231,7 +231,7 @@ function compute_features_from_hypoth(action::AbstractAction, hypoth_game::Game,
     return features
 end
 
-function calculate_state_score(features, hypoth_game::Game, hypoth_board::Board, players::AbstractVector{PlayerPublicView}, hypoth_player::PlayerType, depth::Integer)
+function calculate_state_score(features, hypoth_game::Game, hypoth_board::Board, players::AbstractVector{PlayerPublicView}, hypoth_player::PlayerType, depth::UInt8)
     # Look ahead an additional `SEARCH_DEPTH` turns
     if depth < get_player_config(hypoth_player, "SEARCH_DEPTH")
         next_legal_actions = Catan.get_legal_actions(hypoth_game, hypoth_board, hypoth_player.player)
@@ -248,7 +248,7 @@ function calculate_state_score(features, hypoth_game::Game, hypoth_board::Board,
                 push!(filtered_next_legal_actions, a)
             end
         end
-        return get_best_transition(hypoth_board, players, hypoth_player, filtered_next_legal_actions, depth + 1).reward
+        return get_best_transition(hypoth_board, players, hypoth_player, filtered_next_legal_actions, depth + UInt8(1)).reward
     else
         # TODO Temporal difference algo does this later, so we don't want to double compute
         return get_state_score(hypoth_player, features)
@@ -259,7 +259,7 @@ function get_state_score(player::LearningPlayer, features::Vector{Pair{Symbol, F
     predict_model(player.model, features)
 end
 
-function analyze_action!(action::AbstractAction, board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, depth::Integer)::MarkovState
+function analyze_action!(action::AbstractAction, board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, depth::UInt8)::MarkovState
     hypoth_board = copy(board)
     hypoth_player = copy(player)
     hypoth_game = Game([DefaultRobotPlayer(p.team, board.configs) for p in players], board.configs)
