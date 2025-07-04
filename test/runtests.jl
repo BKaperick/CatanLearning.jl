@@ -38,7 +38,12 @@ feature_library
 function test_jet_fails()
     rep = report_package(CatanLearning;
     ignored_modules=())
-    @test length(JET.get_reports(rep)) <= 74
+
+    #@show length(JET.get_reports(rep))
+    #@show rep
+    reports = JET.get_reports(rep)
+    println("length(JET.get_reports(rep)) = $(length(reports))")
+    @test length(reports) <= 69
 end
 
 function test_evolving_robot_game(neverend, configs)
@@ -302,8 +307,19 @@ function test_action_interface(configs)
     #best_action = get_best_action(board, players, player, actions)
 end
 
+function test_perturbations()
+    feats = [1.0, 2.0, 3.0]
+    model = CatanLearning.LinearModel(feats)
+
+    CatanLearning.add_perturbation!(model, 0.1)
+    @test model.weights[1] != feats[1]
+    @test model.weights[2] != feats[2]
+    @test model.weights[3] != feats[3]
+end
+
 function run_tests(neverend = false)
     configs = parse_configs("Configuration.toml")
+    test_perturbations()
     test_model_caching(configs)
     test_learning_player_base_actions(configs)
     test_stackoverflow_knight(configs)
