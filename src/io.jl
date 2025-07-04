@@ -74,6 +74,10 @@ function consume_channel!(channel, file_name)
 end
 
 function Catan.do_post_game_action(game::Game, board::Board, players::AbstractVector{PlayerType}, player::MarkovPlayer, winner::Union{PlayerType, Nothing})
+    if game.configs["WRITE_FEATURES"] == true
+        write_public_features_file(game, board, players, player, winner)
+        write_main_features_file(game, board, players, player, winner)
+    end
     return write_values_file(players, player)
 end
 
@@ -121,12 +125,14 @@ function write_values_file(players::AbstractVector{PlayerType}, player::MarkovPl
     # and clear the new state to values learned
     empty!(player.process.new_state_to_value)
     
+    #=
     for other_player in players
         if hasproperty(other_player, :process)
             empty!(other_player.process.new_state_to_value)
             other_player.process.state_to_value = player.process.state_to_value
         end
     end
+    =#
 end
 
 function write_values_file(values_file::String, state_to_value)

@@ -242,7 +242,6 @@ function run_state_space_tournament(configs)
             validate_and_apply_mutation!(team_to_perturb, markov_teams, biggest_winner)
         end
         println(epoch_winners)
-        @info "Seen (and updated) $(sum(values(value_counter))) pre-serialized states"
     end
     println(winners)
 end

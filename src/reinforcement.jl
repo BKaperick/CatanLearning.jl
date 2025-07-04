@@ -4,15 +4,20 @@ function query_state_value(process::MarkovRewardProcess, transition::MarkovTrans
     return value
 end
 
+#=
 value_counter = Dict{UInt64, Int}()
+function log_value_counts()
+    if !haskey(value_counter, state.key)
+        value_counter[state.key] = 0
+    end
+    value_counter[state.key] += 1
+end
+=#
+
 
 function query_state_value(process::MarkovRewardProcess, state::MarkovState)
     @debug "querying key {$(state.key)} (searching $(length(keys(process.state_to_value))) + $(length(keys(process.new_state_to_value))) known values...)"
     if haskey(process.state_to_value, state.key)
-        if !haskey(value_counter, state.key)
-            value_counter[state.key] = 0
-        end
-        value_counter[state.key] += 1
         return process.state_to_value[state.key]
     elseif haskey(process.new_state_to_value, state.key)
         return process.new_state_to_value[state.key]
