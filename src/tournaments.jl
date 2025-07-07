@@ -7,9 +7,9 @@ function initialize_tournament(configs::Dict)
         for team in configs["TEAMS"]
             f_file_name = get_player_config(configs, "FEATURES", team)
             pf_file_name = get_player_config(configs, "PUBLIC_FEATURES", team)
-            println("checking in $f_file_name")
+            @debug "checking in $f_file_name"
             write_features_header_if_needed(f_file_name, f, configs)
-            println("checking in $pf_file_name")
+            @debug "checking in $pf_file_name"
             write_features_header_if_needed(pf_file_name, pf, configs)
         end
     end
@@ -68,12 +68,10 @@ end
 function do_tournament_one_game!(winners, map, players, configs)
     game = Game(players, configs)
     board = Catan.read_map(configs, map)
-    level = get(configs["Tournament"], "GAME_LOG_LEVEL", "Warn")
-    out = get(configs["Tournament"], "GAME_LOG_OUTPUT", configs["LOG_OUTPUT"])
-    game_logger,_,__ = Catan.make_logger(level, out)
-
-    main_logger = global_logger()
-    global_logger(game_logger)
+    for kvp in configs
+        println(kvp)
+    end
+    main_logger = descend_logger(configs, "GAME")
     _,winner = Catan.run(game)
     global_logger(main_logger)
     @debug "finished game $(game.unique_id)"

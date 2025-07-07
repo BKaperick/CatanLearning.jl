@@ -85,4 +85,15 @@ function run(player_constructors::Dict, configs)
         run_mutating_tournament(tourney, player_constructors, configs)
     end
 end
+
+function descend_logger(configs, logger_prefix)
+    logging_config = configs["LogSettings"]
+    level = get(logging_config, "$(logger_prefix)_LOG_LEVEL", "Warn")
+    out = get(logging_config, "$(logger_prefix)_LOG_OUTPUT", logging_config["LOG_OUTPUT"])
+    descended_logger,_,__ = Catan.make_logger(level, out)
+
+    main_logger = global_logger()
+    global_logger(descended_logger)
+    return main_logger
+end
 end

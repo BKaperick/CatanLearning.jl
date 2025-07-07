@@ -1,11 +1,13 @@
 SAVE_GAME_TO_FILE = true
 SAVE_FILE = "./data/savefile.txt"
 LOAD_MAP = "./data/sample.csv"
-#LOG_OUTPUT = "./data/oneoff_test_log.txt"
-LOG_OUTPUT = ""
-LOG_LEVEL = "Debug"
 PRINT_BOARD = false
 MAX_TURNS = 500
+
+[LogSettings]
+#LOG_OUTPUT = "./data/oneoff_test_log.txt"
+LOG_LEVEL = "Logging.Warn"
+LOG_OUTPUT = ""
 
 [GameSettings]
 [PlayerSettings]

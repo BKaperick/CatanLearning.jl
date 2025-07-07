@@ -2,6 +2,12 @@ SAVE_MAP = ""
 WRITE_FEATURES = false
 TEAMS = ["blue", "cyan", "green", "yellow"]
 
+[LogSettings]
+GAME_LOG_OUTPUT = "stderr"
+GAME_LOG_LEVEL = "Info"
+HYPOTH_LOG_OUTPUT = "stderr"
+HYPOTH_LOG_LEVEL = "Warn"
+
 [Tournament]
 GAMES_PER_MAP = 100
 MAPS_PER_EPOCH = 2
@@ -14,10 +20,6 @@ CHANNELS = ["main", "public"]
 SIZE = 32
 [Async.public]
 SIZE = 32
-
-[HypothGameSettings]
-LOG_OUTPUT = "stderr"
-LOG_LEVEL = "Warn"
 
 [GameSettings]
 [PlayerSettings]

@@ -414,12 +414,14 @@ function predict_model(model::DecisionModel, board::Board, player::PlayerType)
 end
 
 predict_model(model::MachineModel, features) = predict_model(model.machine, features)
-predict_model(model::LinearModel, features) = predict_model(model.weights, features)
+predict_model(model::LinearModel, features) = predict_model(model.weights, features::Vector{Pair{Symbol, Float64}})
 
 function predict_model(machine::Machine, features)
     X_new = DataFrame(features)
     CatanLearning.coerce_feature_types!(X_new)
     CatanLearning.filter_bad_features!(X_new)
+
+    @debug "$X_new"
     pred = MLJ.predict(machine, X_new)
     return pdf(pred[1], 1)
 end
@@ -427,8 +429,9 @@ end
 function predict_model(weights::Vector{Float64}, features::Vector{Pair{Symbol, Float64}})
     features = CatanLearning.filter_bad_features(features)
     X_new = [x.second for x in features]
+    @debug "$X_new ^T * $weights"
     pred = X_new'weights
-    @debug "pred = $(pred[1])"
+    @info "pred = $(pred[1])"
     return pred[1]
 end
 

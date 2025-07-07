@@ -36,7 +36,7 @@ end
 
 function get_legal_action_sets(board::Board, players::AbstractVector{PlayerPublicView}, player::Player, pre_actions::Set{PreAction})::Vector{AbstractActionSet}
 
-    main_action_set = ActionSet(:Deterministic)
+    main_action_set = ActionSet{Action}(:Deterministic)
     action_sets = Vector{AbstractActionSet}([])
 
     actions = Dict([(p.name, p.admissible_args) for p in pre_actions])
@@ -202,10 +202,28 @@ function analyze_actions!(board::Board, players::AbstractVector{PlayerPublicView
             state = analyze_action!(action, board, players, player, depth)
             push!(states, state)
         end
-        transition = MarkovTransition(states, set.actions[1])
-        push!(transitions, transition)
+
+        if set isa ActionSet{SampledAction}
+            update_transitions!(transitions, set::ActionSet{SampledAction}, states)
+        else
+            update_transitions!(transitions, set::ActionSet{Action}, states)
+        end
     end
     return transitions
+end
+
+function update_transitions!(transitions, set::ActionSet{SampledAction}, states)
+    transition = MarkovTransition(states, set.actions[1])
+    @info "sampled: $transition"
+    push!(transitions, transition)
+end
+
+function update_transitions!(transitions, set::ActionSet{Action}, states)
+    for (state,action) in zip(states, set.actions)
+        transition = MarkovTransition([state], action)
+        @info "deterministic: $transition"
+        push!(transitions, transition)
+    end
 end
 
 function aggregate(ts::Vector{MarkovTransition})::MarkovTransition
@@ -214,13 +232,12 @@ end
 
 function compute_features_from_hypoth(action::AbstractAction, hypoth_game::Game, hypoth_board::Board, hypoth_player::PlayerType)
     # We control the log-level of 'hypothetical' games separately from the main game.
-    main_logger = global_logger()
+    
     @debug "Entering hypoth game for $action"
-    global_logger(ConsoleLogger(Logging.Warn))
+    main_logger = descend_logger(hypoth_player.player.configs, "HYPOTH")
     action.func!(hypoth_game, hypoth_board, hypoth_player)
     features = compute_features(hypoth_board, hypoth_player.player)
 
-    #Catan.parse_logging_configs!(board.configs)
     global_logger(main_logger)
     
     @debug "Leaving hypoth game $(hypoth_game.unique_id)"
@@ -243,6 +260,7 @@ function calculate_state_score(features, hypoth_game::Game, hypoth_board::Board,
 end
 
 function get_state_score(player::LearningPlayer, features::Vector{Pair{Symbol, Float64}})::Float64
+    @info "predicting model($(typeof(player.model)))"
     predict_model(player.model, features)
 end
 
@@ -254,7 +272,6 @@ function analyze_action!(action::AbstractAction, board::Board, players::Abstract
     
     features = compute_features_from_hypoth(action, hypoth_game, hypoth_board, hypoth_player)
     state_score = calculate_state_score(features, hypoth_game, hypoth_board, players, hypoth_player, depth)
-    @info "$action => $state_score"
     return MarkovState(features, state_score)
 end
 

@@ -47,6 +47,20 @@ function Base.show(io::IO, a::AbstractAction)
     end
 end
 
+function Base.show(io::IO, a::AbstractActionSet)
+    compact = get(io, :compact, false)
+    if length(a.actions) == 0
+        print(io, "set $(a.name)()")
+        return
+    end
+    if compact
+        print(io, "$(a.name)($(length(a.actions)) actions)")
+    else
+        #  println(io, "$(a.name)($(length(a.actions)) actions)")
+        print(io, "$(a.name)(\n$(join(["\ta: $a" for a in a.actions], "\n")))")
+    end
+end
+
 
 mutable struct ActionSet{T<:AbstractAction} <: AbstractActionSet
     name::Symbol
@@ -118,6 +132,15 @@ struct MarkovTransition
     states::Vector{MarkovState}
     chosen_action::ChosenAction
     reward::Float64
+end
+
+function Base.show(io::IO, t::MarkovTransition)
+    compact = get(io, :compact, false)
+    if compact
+        print(io, "$(t.chosen_action) => $(t.reward)")
+    else
+        print(io, "$(length(t.states)) states | $(t.chosen_action) => $(t.reward)")
+    end
 end
 
 #=
