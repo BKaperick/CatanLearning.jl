@@ -138,7 +138,7 @@ function run_tournament(configs::Dict)
             winners[w] += n
         end
     end
-    @debug winners
+    @info winners
 end
 
 function run_tournament_async(configs)

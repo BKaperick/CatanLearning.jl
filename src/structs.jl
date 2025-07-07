@@ -31,15 +31,19 @@ struct SampledAction <: AbstractAction
     # Deterministic version of `real_func!` that is used to calculate win proba of a deterministic branch
     func!::Function
     # This is the actual stochastic version of `func!` that is called during game play once this action is chosen
-    real_func!::Function
+    #real_func!::Function
 end
 
 function Base.show(io::IO, a::AbstractAction)
     compact = get(io, :compact, false)
+    if length(a.args) == 0
+        print(io, "$(a.name)()")
+        return
+    end
     if compact
         print(io, "$(a.name)(...)")
     else
-        print(io, "$(a.name)$(a.args)\n")
+        print(io, "$(a.name)$(a.args)")
     end
 end
 
@@ -52,8 +56,8 @@ end
 function Action(name::Symbol, func!::Function, args...) 
     Action(args, name, func!)
 end
-function SampledAction(name::Symbol, sampling_func!::Function, func!::Function, args...) 
-    SampledAction(args, name, sampling_func!, func!)
+function SampledAction(name::Symbol, sampling_func!::Function, args...) 
+    SampledAction(args, name, sampling_func!)
 end
 ActionSet(name::Symbol) = ActionSet(name, Vector{AbstractAction}([]))
 function ActionSet{T}(name::Symbol) where {T<:AbstractAction}

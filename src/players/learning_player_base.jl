@@ -46,7 +46,7 @@ function get_legal_action_sets(board::Board, players::AbstractVector{PlayerPubli
 
         # This is because `PreAction` currently doesn't have any way to represent an 
         # action passing in candidates, and *then* sampling
-        if action == :PlaceRobber #FromKnight || action == :PlaceRobberFromSeven
+        if action == :PlaceRobber
             continue
         end
 
@@ -83,8 +83,7 @@ function get_legal_action_sets(board::Board, players::AbstractVector{PlayerPubli
         sampled_devcards = Catan.random_sample_resources(estimated_remaining_devcards, 5, true)
         for card in sampled_devcards 
             push!(action_set.actions, SampledAction(:BuyDevCard, 
-                                             (g, b, p) -> deterministic_draw_devcard(g, b, p, card),
-                                             (g, b, p) -> Catan.draw_devcard(g, b, p.player)))
+                                             (g, b, p) -> deterministic_draw_devcard(g, b, p, card)))
         end
         if length(action_set.actions) > 0
             push!(action_sets, action_set)
@@ -111,11 +110,11 @@ function get_legal_action_sets(board::Board, players::AbstractVector{PlayerPubli
                                                       rand_resource_from, 
                                                       rand_resource_to), 
                      rand_resource_from, rand_resource_to))
-        #push!(action_sets, action_set)
     end
 
     if haskey(actions, :PlaceRobber)
         candidates = actions[:PlaceRobber]
+        num_isolated_robber_actions = UInt8(1)
         # Get candidates
         for candidate_tiles = candidates
             candidate_tile = candidate_tiles[1]
@@ -134,16 +133,16 @@ function get_legal_action_sets(board::Board, players::AbstractVector{PlayerPubli
                                                                    p, victim.team, 
                                                                    candidate_tile, 
                                                                    r), 
-                                 (g, b, p) -> do_robber_move_choose_victim_theft(b, p, victim.team, candidate_tile),
                                  victim, candidate_tile))
                 end
                 push!(action_sets, action_set)
             end
-            if length(candidate_victims) == 0
+            if length(candidate_victims) == 0 && num_isolated_robber_actions > 0
                 push!(main_action_set.actions, 
                       Action(:PlaceRobber, 
                              (g, b, p) -> inner_do_robber_move_theft(b, g.players, p, nothing, candidate_tile, nothing), 
                              nothing, candidate_tile))
+                num_isolated_robber_actions -= UInt8(1)
             end
         end
     end
@@ -196,7 +195,7 @@ end
 function analyze_actions!(board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, action_sets::Vector{AbstractActionSet}, depth::UInt8)::Vector{MarkovTransition}
     transitions = Vector{MarkovTransition}([])
     for set in action_sets
-        @debug "analyzing action set ($(length(set.actions)) actions): \n$(join(["$(a.name)($(a.args))" for a in set.actions], "\n"))"
+        @debug "analyzing action set ($(length(set.actions)) actions): \n$(join(set.actions, "\n"))"
         
         states = Vector{MarkovState}([])
         for action in set.actions
@@ -216,11 +215,8 @@ end
 function compute_features_from_hypoth(action::AbstractAction, hypoth_game::Game, hypoth_board::Board, hypoth_player::PlayerType)
     # We control the log-level of 'hypothetical' games separately from the main game.
     main_logger = global_logger()
-    #println(board.configs["HypothGameSettings"])
     @debug "Entering hypoth game for $action"
     global_logger(ConsoleLogger(Logging.Warn))
-    #Catan.parse_logging_configs!(board.configs["HypothGameSettings"])
-    #global_logger(board.configs["HypothGameSettings"]["LOGGER"])
     action.func!(hypoth_game, hypoth_board, hypoth_player)
     features = compute_features(hypoth_board, hypoth_player.player)
 
@@ -236,21 +232,12 @@ function calculate_state_score(features, hypoth_game::Game, hypoth_board::Board,
     if depth < get_player_config(hypoth_player, "SEARCH_DEPTH")
         next_legal_actions = Catan.get_legal_actions(hypoth_game, hypoth_board, hypoth_player.player)
 
-        #TODO hack to avoid re-calling PlaceRobber
         filtered_next_legal_actions = Set{PreAction}()
         for a in next_legal_actions
-            if a.name == :PlaceRobber
-                continue
-            elseif a.name == :PlayDevCard
-                new_a = PreAction(:PlayDevCard, [arg for arg in a.admissible_args if arg != :Knight])
-                push!(filtered_next_legal_actions, new_a)
-            else
-                push!(filtered_next_legal_actions, a)
-            end
+            push!(filtered_next_legal_actions, a)
         end
         return get_best_transition(hypoth_board, players, hypoth_player, filtered_next_legal_actions, depth + UInt8(1)).reward
     else
-        # TODO Temporal difference algo does this later, so we don't want to double compute
         return get_state_score(hypoth_player, features)
     end
 end
@@ -267,6 +254,7 @@ function analyze_action!(action::AbstractAction, board::Board, players::Abstract
     
     features = compute_features_from_hypoth(action, hypoth_game, hypoth_board, hypoth_player)
     state_score = calculate_state_score(features, hypoth_game, hypoth_board, players, hypoth_player, depth)
+    @info "$action => $state_score"
     return MarkovState(features, state_score)
 end
 
@@ -278,9 +266,9 @@ probability of victory, based on his `player.model` model.  If no action
 increases the probability of victory, then do nothing.
 """
 function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, actions::Set{PreAction})::ChosenAction
-    @debug "$(player.player.team) considers $(collect(actions))"
+    @info "$(player.player.team) considers $(collect(actions))"
     best_action = get_best_transition(board, players, player, actions).chosen_action
-    @info "$(player.player.team) chooses to $(best_action.name) $(best_action.args)"
+    @info "$(player.player.team) chooses to $(best_action)"
     return best_action #ChosenAction(best_action.name, best_action.args...)
 end
 
