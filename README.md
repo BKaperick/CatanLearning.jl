@@ -51,9 +51,17 @@ Interesting (and slightly suspicious) that only two fail on each of RF model and
 
 
 # Benchmarks
-Player type | mean game time
--|-
-Catan.DefaultRobotPlayer | 332 ms
+
+Player type | Parameters | Model class | Win percentage
+-|-|-|-
+EmpathRobotPlayer | `SEARCH_DEPTH = 2` | Linear | 39.5%
+EmpathRobotPlayer | `SEARCH_DEPTH = 3` | Random Forest | 9.5%
+HybridPlayer | `SEARCH_DEPTH = 1; VALUE_WEIGHT = 0.6` | Linear | 25.5%
+DefaultRobotPlayer | | | 18%
+
+(Note: the remaining 7.5% of games were drawn after 500 turns.)
+
+For performance benchmarks, see [./benchmarks](./benchmarks)
 
 # Useful scripts
 From `CatanLearning.jl/` directory:

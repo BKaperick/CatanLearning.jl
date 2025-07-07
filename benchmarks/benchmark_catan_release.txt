@@ -1,0 +1,36 @@
+4 EmpathRobotPlayer - DEPTH 2 - LINEAR
+BenchmarkTools.Trial: 8 samples with 1 evaluation per sample.
+ Range (min … max):  2.873 s … 13.062 s  ┊ GC (min … max): 7.36% … 7.60%
+ Time  (median):     6.296 s             ┊ GC (median):    7.79%
+ Time  (mean ± σ):   7.673 s ±  4.049 s  ┊ GC (mean ± σ):  7.99% ± 0.41%
+
+  █   █        █   █ █                          █      █ █  
+  █▁▁▁█▁▁▁▁▁▁▁▁█▁▁▁█▁█▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁█▁▁▁▁▁▁█▁█ ▁
+  2.87 s        Histogram: frequency by time        13.1 s <
+
+ Memory estimate: 2.30 GiB, allocs estimate: 38657047.
+
+4 EmpathRobotPlayer - DEPTH 1 - RF
+BenchmarkTools.Trial: 8 samples with 1 evaluation per sample.
+ Range (min … max):  3.609 s … 10.915 s  ┊ GC (min … max): 6.84% … 7.01%
+ Time  (median):     7.205 s             ┊ GC (median):    6.69%
+ Time  (mean ± σ):   7.515 s ±  2.403 s  ┊ GC (mean ± σ):  6.92% ± 0.21%
+
+  ▁                   ▁▁     █   ▁                      ▁▁  
+  █▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁██▁▁▁▁▁█▁▁▁█▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁██ ▁
+  3.61 s        Histogram: frequency by time        10.9 s <
+
+ Memory estimate: 2.34 GiB, allocs estimate: 46048299.
+
+4 EmpathRobotPlayer - DEPTH 1 - LINEAR
+BenchmarkTools.Trial: 51 samples with 1 evaluation per sample.
+ Range (min … max):  214.646 ms …    3.834 s  ┊ GC (min … max): 9.03% … 8.86%
+ Time  (median):     809.502 ms               ┊ GC (median):    8.50%
+ Time  (mean ± σ):      1.211 s ± 945.354 ms  ┊ GC (mean ± σ):  8.58% ± 0.83%
+
+   ▅ ▂    █ ▂▅                                                   
+  █████▅▁▅█▅██▁▁▅▅▁▅█▅▁▅▅▁▁▁▅▁▁▁▁▁▅▁▁▅▅█▁█▁▁▁▁▅▅▁▅▁▁▁▁▁▁▁▅▁▁▁▁█ ▁
+  215 ms           Histogram: frequency by time          3.34 s <
+
+ Memory estimate: 196.03 MiB, allocs estimate: 2878413.
+
