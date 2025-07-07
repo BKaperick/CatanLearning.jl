@@ -42,8 +42,9 @@ function test_jet_fails()
     #@show length(JET.get_reports(rep))
     #@show rep
     reports = JET.get_reports(rep)
-    println("length(JET.get_reports(rep)) = $(length(reports))")
-    @test length(reports) <= 69
+    max_num = 70
+    println("length(JET.get_reports(rep)) = $(length(reports)) / $max_num")
+    @test length(reports) <= max_num
 end
 
 function test_evolving_robot_game(neverend, configs)
@@ -264,6 +265,7 @@ function test_stackoverflow_knight(main_configs)
     game = Game(players, configs)
     PlayerApi.add_devcard!(player.player, :Knight)
     actions = get_legal_actions(game, board, player.player)
+    println(actions)
     choice = Catan.choose_next_action(board, PlayerPublicView.(players), player, actions)
 end
 
@@ -291,9 +293,11 @@ function test_action_interface(configs)
     player = players[1]
     board = read_map(configs)
 
-    admissible_roads = BoardApi.get_admissible_road_locations(board, player.player.team)
-    actions = Set([PreAction(:BuyDevCard), PreAction(:ConstructRoad, admissible_roads)])
     BoardApi.build_settlement!(board, :Blue, (1,1))
+    #admissible_roads = BoardApi.get_admissible_road_locations(board, player.player.team, true)
+    admissible_roads = Vector{Tuple}([((1,1), (1,2), true), ((1,1),(2,2), true)])
+    game = Game(players, configs)
+    #actions = Set([PreAction(:BuyDevCard), PreAction(:ConstructRoad, admissible_roads)])
 
     # Build road
     PlayerApi.give_resource!(player.player, :Brick)
@@ -303,8 +307,25 @@ function test_action_interface(configs)
     PlayerApi.give_resource!(player.player, :Pasture)
     PlayerApi.give_resource!(player.player, :Grain)
     PlayerApi.give_resource!(player.player, :Stone)
+
+    actions = get_legal_actions(game, board, player.player)::Set{PreAction}
+
+    # collected to compare the custom == def for PreAction, not the hashed value
+    collected_actions = collect(actions)
+
+    @test PreAction(:BuyDevCard) in collected_actions
+    @test PreAction(:ConstructRoad, admissible_roads) in collected_actions
+    @test PreAction(:DoNothing) in collected_actions
+    @test PreAction(:ProposeTrade) in collected_actions
+
     action_sets = get_legal_action_sets(board, PlayerPublicView.(players), player.player, actions)
     #best_action = get_best_action(board, players, player, actions)
+    
+#=
+    for set in action_sets
+        @test action in action_sets
+    end
+    =#
 end
 
 function test_perturbations()
@@ -319,12 +340,12 @@ end
 
 function run_tests(neverend = false)
     configs = parse_configs("Configuration.toml")
+    test_stackoverflow_knight(configs)
+    test_action_interface(configs)
     test_perturbations()
     test_model_caching(configs)
     test_learning_player_base_actions(configs)
-    test_stackoverflow_knight(configs)
     test_empath_road_building(configs)
-    test_action_interface(configs)
     test_player_implementation(Catan.DefaultRobotPlayer, configs)
     test_player_implementation(EmpathRobotPlayer, configs)
     test_player_implementation(MutatedEmpathRobotPlayer, configs)

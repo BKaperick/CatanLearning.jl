@@ -27,6 +27,7 @@ function do_tournament_one_epoch(tourney, teams, configs; create_players = Catan
     for j=1:tourney.maps_per_epoch
         @info "map $j / $(tourney.maps_per_epoch)"
         do_tournament_one_map!(winners, tourney, configs, j; create_players = create_players)
+        @info winners
     end
     order_winners(winners)
 end
@@ -68,9 +69,6 @@ end
 function do_tournament_one_game!(winners, map, players, configs)
     game = Game(players, configs)
     board = Catan.read_map(configs, map)
-    for kvp in configs
-        @debug kvp
-    end
     main_logger = descend_logger(configs, "GAME")
     _,winner = Catan.run(game)
     global_logger(main_logger)
@@ -131,7 +129,6 @@ function run_tournament(configs::Dict)
     for k=1:tourney.epochs
         @info "epoch $k / $(tourney.epochs)"
         epoch_winners = do_tournament_one_epoch(tourney, teams, configs)
-        #toggleprint(epoch_winners)
         for (w,n) in collect(epoch_winners)
             winners[w] += n
         end

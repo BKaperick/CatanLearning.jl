@@ -39,7 +39,6 @@ function __init__()
 
     # Upsert the configs from this package
     default_config_path = joinpath(@__DIR__, "..", "DefaultConfiguration.toml")
-    @info "Adding new configs: $default_config_path"
     Catan.update_default_configs(default_config_path)
 end
 

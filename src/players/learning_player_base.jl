@@ -36,7 +36,6 @@ function get_estimated_remaining_devcards(board::Board, players::AbstractVector{
 end
 
 function get_legal_action_sets(board::Board, players::AbstractVector{PlayerPublicView}, player::Player, pre_actions::Set{PreAction})::Vector{AbstractActionSet}
-
     main_action_set = ActionSet{Action}(:Deterministic)
     action_sets = Vector{AbstractActionSet}([])
 
@@ -196,7 +195,7 @@ end
 function analyze_actions!(board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, action_sets::Vector{AbstractActionSet}, depth::UInt8)::Vector{MarkovTransition}
     transitions = Vector{MarkovTransition}([])
     for set in action_sets
-        @debug "analyzing action set ($(length(set.actions)) actions): \n$(join(set.actions, "\n"))"
+        @debug "analyzing $set"
         
         states = Vector{MarkovState}([])
         for action in set.actions
@@ -215,14 +214,14 @@ end
 
 function update_transitions!(transitions, set::ActionSet{SampledAction}, states)
     transition = MarkovTransition(states, set.actions[1])
-    @info "sampled: $transition"
+    @debug "sampled: $transition"
     push!(transitions, transition)
 end
 
 function update_transitions!(transitions, set::ActionSet{Action}, states)
     for (state,action) in zip(states, set.actions)
         transition = MarkovTransition([state], action)
-        @info "$(state.key): $transition"
+        @debug "$(state.key): $transition"
         push!(transitions, transition)
     end
 end
@@ -234,7 +233,7 @@ end
 function compute_features_from_hypoth(action::AbstractAction, hypoth_game::Game, hypoth_board::Board, hypoth_player::PlayerType)
     # We control the log-level of 'hypothetical' games separately from the main game.
     
-    @debug "Entering hypoth game for $action"
+    @debug "Entering game $(hypoth_game.unique_id) with action $(action) and log level $(configs["LogSettings"]["HYPOTH_LOG_LEVEL"])"
     main_logger = descend_logger(hypoth_player.player.configs, "HYPOTH")
     action.func!(hypoth_game, hypoth_board, hypoth_player)
     features = compute_features(hypoth_board, hypoth_player.player)
@@ -247,8 +246,10 @@ end
 function calculate_state_score(features, hypoth_game::Game, hypoth_board::Board, players::AbstractVector{PlayerPublicView}, hypoth_player::PlayerType, depth::UInt8)
     # Look ahead an additional `SEARCH_DEPTH` turns
     if depth < get_player_config(hypoth_player, "SEARCH_DEPTH")
+        # Don't apply first turn calculations here
+        # Not exactly the correct condition, since technically first turn happens a few times (2 settlements, 2 roads)
+        hypoth_game.turn_num = 2
         next_legal_actions = Catan.get_legal_actions(hypoth_game, hypoth_board, hypoth_player.player)
-
         filtered_next_legal_actions = Set{PreAction}()
         for a in next_legal_actions
             push!(filtered_next_legal_actions, a)
@@ -264,12 +265,12 @@ function get_state_score(player::LearningPlayer, features::Vector{Pair{Symbol, F
 end
 
 function create_hypoth_other_players(board::Board, players::AbstractVector{PlayerPublicView})::AbstractVector{PlayerType}
-    out = []
-    for p in players
+    out = Vector{PlayerType}(undef, length(players))
+    for (i,p) in enumerate(players)
         r = get_estimated_resources(board, players, p)
         player = DefaultRobotPlayer(p.team, board.configs)
         player.player.resources = r
-        push!(out, player)
+        out[i] = player
     end
     return out
 end
@@ -277,9 +278,7 @@ end
 function analyze_action!(action::AbstractAction, board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, depth::UInt8)::MarkovState
     hypoth_board = copy(board)
     hypoth_player = copy(player)
-    # TODO test perf changing players to static array
     hypoth_game = Game(create_hypoth_other_players(board, players), board.configs)
-    @debug "Entering hypoth game $(hypoth_game.unique_id) with action $(action)"
     
     features = compute_features_from_hypoth(action, hypoth_game, hypoth_board, hypoth_player)
     state_score = calculate_state_score(features, hypoth_game, hypoth_board, players, hypoth_player, depth)
