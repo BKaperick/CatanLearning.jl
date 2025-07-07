@@ -10,7 +10,8 @@ using Catan: choose_next_action, choose_who_to_trade_with,
              choose_robber_victim, inner_do_robber_move_theft
 
 function get_estimated_resources(board::Board, players::AbstractVector{PlayerPublicView}, target::PlayerPublicView)::Dict{Symbol, Int}
-    return Dict([(r,1) for r in Catan.RESOURCES])
+    resources = random_sample_resources(Catan.RESOURCE_TO_COUNT, target.resource_count)
+    return Dict(counter(resources))
 end
 """
     `get_estimated_remaining_devcards`
@@ -221,7 +222,7 @@ end
 function update_transitions!(transitions, set::ActionSet{Action}, states)
     for (state,action) in zip(states, set.actions)
         transition = MarkovTransition([state], action)
-        @info "deterministic: $transition"
+        @info "$(state.key): $transition"
         push!(transitions, transition)
     end
 end
@@ -239,8 +240,7 @@ function compute_features_from_hypoth(action::AbstractAction, hypoth_game::Game,
     features = compute_features(hypoth_board, hypoth_player.player)
 
     global_logger(main_logger)
-    
-    @debug "Leaving hypoth game $(hypoth_game.unique_id)"
+    @debug "Reverting to global logger as we exit HYPOTH environment $(hypoth_game.unique_id)"
     return features
 end
 
@@ -260,15 +260,26 @@ function calculate_state_score(features, hypoth_game::Game, hypoth_board::Board,
 end
 
 function get_state_score(player::LearningPlayer, features::Vector{Pair{Symbol, Float64}})::Float64
-    @info "predicting model($(typeof(player.model)))"
     predict_model(player.model, features)
+end
+
+function create_hypoth_other_players(board::Board, players::AbstractVector{PlayerPublicView})::AbstractVector{PlayerType}
+    out = []
+    for p in players
+        r = get_estimated_resources(board, players, p)
+        player = DefaultRobotPlayer(p.team, board.configs)
+        player.player.resources = r
+        push!(out, player)
+    end
+    return out
 end
 
 function analyze_action!(action::AbstractAction, board::Board, players::AbstractVector{PlayerPublicView}, player::PlayerType, depth::UInt8)::MarkovState
     hypoth_board = copy(board)
     hypoth_player = copy(player)
-    hypoth_game = Game([DefaultRobotPlayer(p.team, board.configs) for p in players], board.configs)
-    @debug "Entering hypoth game $(hypoth_game.unique_id) with action $(action.name)($(action.args))"
+    # TODO test perf changing players to static array
+    hypoth_game = Game(create_hypoth_other_players(board, players), board.configs)
+    @debug "Entering hypoth game $(hypoth_game.unique_id) with action $(action)"
     
     features = compute_features_from_hypoth(action, hypoth_game, hypoth_board, hypoth_player)
     state_score = calculate_state_score(features, hypoth_game, hypoth_board, players, hypoth_player, depth)

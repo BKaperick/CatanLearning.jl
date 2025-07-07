@@ -69,7 +69,7 @@ function do_tournament_one_game!(winners, map, players, configs)
     game = Game(players, configs)
     board = Catan.read_map(configs, map)
     for kvp in configs
-        println(kvp)
+        @debug kvp
     end
     main_logger = descend_logger(configs, "GAME")
     _,winner = Catan.run(game)

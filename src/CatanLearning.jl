@@ -2,6 +2,7 @@ module CatanLearning
 using Logging
 using Profile
 using BenchmarkTools
+using DataStructures
 
 import MLJModelInterface
 const MMI = MLJModelInterface
@@ -91,7 +92,7 @@ function descend_logger(configs, logger_prefix)
     level = get(logging_config, "$(logger_prefix)_LOG_LEVEL", "Warn")
     out = get(logging_config, "$(logger_prefix)_LOG_OUTPUT", logging_config["LOG_OUTPUT"])
     descended_logger,_,__ = Catan.make_logger(level, out)
-
+    @debug "setting logger to $level as we enter $logger_prefix environment"
     main_logger = global_logger()
     global_logger(descended_logger)
     return main_logger
