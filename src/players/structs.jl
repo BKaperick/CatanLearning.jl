@@ -30,8 +30,8 @@ MutatedEmpathRobotPlayer(team::Symbol, configs::Dict) = MutatedEmpathRobotPlayer
 function MutatedEmpathRobotPlayer(team::Symbol, mutation::Dict, configs::Dict) 
     MutatedEmpathRobotPlayer(
     Player(team, configs), 
-    try_load_model_from_csv(team, configs),
-    try_load_public_model_from_csv(team, configs),
+    try_load_serialized_model(team, configs),
+    try_load_serialized_public_model(team, configs),
     mutation,
     configs)
 end
@@ -55,8 +55,8 @@ TemporalDifferencePlayer(team::Symbol, configs::Dict) = TemporalDifferencePlayer
 TemporalDifferencePlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs::Dict) = TemporalDifferencePlayer(MaxRewardMarkovPolicy, team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs)
 
 function TemporalDifferencePlayer(TPolicy::Type, team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs)
-    model = try_load_model_from_csv(team, configs)
-    model_public = try_load_public_model_from_csv(team, configs)
+    model = try_load_serialized_model(team, configs)
+    model_public = try_load_serialized_public_model(team, configs)
     process = MarkovRewardProcess(0.5, 0.1, 0.5, 0.5, master_state_to_value, new_state_to_value)
     policy = TPolicy(model)
     TemporalDifferencePlayer(Player(team, configs), model, model_public, process, policy, configs, nothing)
@@ -76,8 +76,8 @@ HybridPlayer(team::Symbol, configs::Dict) = HybridPlayer(team::Symbol, Dict{UInt
 #HybridPlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs::Dict) 
 
 function HybridPlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs)
-    model = try_load_linear_model_from_csv(team, configs)::LinearModel
-    model_public = try_load_public_model_from_csv(team, configs)
+    model = try_load_serialized_model(team, configs)::DecisionModel
+    model_public = try_load_serialized_public_model(team, configs)
 
     reward_discount = get_player_config(configs, "REWARD_DISCOUNT", team)
     learning_rate = get_player_config(configs, "LEARNING_RATE", team)
@@ -122,8 +122,8 @@ end
 function EmpathRobotPlayer(team::Symbol, configs::Dict) 
     EmpathRobotPlayer(
         Player(team, configs), 
-        try_load_model_from_csv(team, configs),
-        try_load_public_model_from_csv(team, configs)
+        try_load_serialized_model(team, configs),
+        try_load_serialized_public_model(team, configs)
     )
 end
 

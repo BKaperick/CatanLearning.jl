@@ -203,11 +203,11 @@ function run_state_space_tournament(configs)
     models_dir = get_player_config(configs, "MODELS_DIR", teams[1])
     tournament_path = joinpath(models_dir, "tournament_$(tourney.unique_id)")
     ~isdir(tournament_path) && mkdir(tournament_path)
-    team_to_perturb = Dict{Symbol, LinearModel}()
+    team_to_perturb = Dict{Symbol, DecisionModel}()
     markov_teams = [t for t in teams if get_player_config(configs, "TYPE", t) == "HybridPlayer"]
     for team in markov_teams
         # First iteration, start with stored model
-        team_to_perturb[team] = try_load_linear_model_from_csv(team, configs)
+        team_to_perturb[team] = try_load_serialized_model(team, configs)::DecisionModel
     end
     winners = init_winners(teams)
     @info "Enriching MarkovPlayers with $(length(master_state_to_value)) pre-explored states"
@@ -241,7 +241,7 @@ function run_state_space_tournament(configs)
     println(winners)
 end
 
-function initialize_epoch!(team_to_perturb::Dict{Symbol, LinearModel}, configs, tourney_path, epoch_num, teams)
+function initialize_epoch!(team_to_perturb::Dict{Symbol, DecisionModel}, configs, tourney_path, epoch_num, teams)
     for team in teams
         # Every other iteration, start with perturbed model
         add_perturbation!(team_to_perturb[team], 0.1)

@@ -34,65 +34,58 @@ function update_ml_cache!(configs::Dict, team, key::String, obj)
     configs["ML_CACHE"]["PlayerSettings"][String(team)][key] = obj
 end
 
-function try_load_model_from_csv(team::Symbol, configs::Dict)::DecisionModel
-    key = "MODEL"
-    cached = get_ml_cache_config(configs, team, key)::Union{DecisionModel, Nothing}
+function try_load_serialized_model(team::Symbol, configs::Dict, model_key="MODEL", features_key = "FEATURES")::DecisionModel
+    cached = get_ml_cache_config(configs, team, model_key)::Union{DecisionModel, Nothing}
     if cached !== nothing
         return cached
     end
-    model = try_load_serialized_model_from_csv(get_player_config(configs, key, team),  get_player_config(configs, "FEATURES", team))
-    update_ml_cache!(configs, team, key, model)
+    model_path = get_player_config(configs, model_key, team)
+    features_path = get_player_config(configs, features_key, team)
+    model = load_or_train_serialized_model(model_path, features_path)
+    update_ml_cache!(configs, team, model_key, model)
     return model
 end
 
-function try_load_linear_model_from_csv(team::Symbol, configs::Dict)::LinearModel
-    key = "MODEL"
-    cached = get_ml_cache_config(configs, team, key)::Union{LinearModel, Nothing}
-    if cached !== nothing
-        return cached
+function try_load_serialized_public_model(team::Symbol, configs::Dict)::MachineModel
+    try_load_serialized_model(team, configs, "PUBLIC_MODEL", "PUBLIC_FEATURES")
+end
+
+function load_or_train_serialized_model(model_path::String, features_path::String)::DecisionModel
+    if endswith(lowercase(model_path), "csv")
+        return load_or_train_serialized_model_from_csv(model_path, features_path)
+    else
+        return load_or_train_serialized_model_from_jls(model_path, features_path)
     end
-    model_path = get_player_config(configs, key, team)
+end
+
+function load_or_train_serialized_model_from_csv(model_path::String, features_path::String)
     if isfile(model_path)
-        @info "Found $key model stored in $model_path"
+        @info "Found CSV model stored in $model_path"
         weights = CSV.read(model_path, DataFrame)
         model = LinearModel(weights[!, :Weights])
     else
-        features_path = get_player_config(configs, "FEATURES", team)
         @info "Serialized model not found at $model_path, let's try to train a new model from features in $features_path"
         model = train_and_serialize_linear_model(features_path, model_path)
     end
-    update_ml_cache!(configs, team, key, model)
-    return model
-end
-
-function try_load_public_model_from_csv(team::Symbol, configs::Dict)::MachineModel
-    key = "PUBLIC_MODEL"
-    cached = get_ml_cache_config(configs, team, key)#::Union{Vector{Float64}, Nothing}
-    if cached !== nothing
-        return cached
-    end
-    model = try_load_serialized_model_from_csv(get_player_config(configs, key, team),  get_player_config(configs, "PUBLIC_FEATURES", team))
-    update_ml_cache!(configs, team, key, model)
-    return model
 end
 
 """
-    try_load_model_from_csv(tree, model_file_name, features_file_name)
+    load_or_train_serialized_model_from_jls(model_file_name, features_file_name)
 
 If the serialized file exists, then load it.  If not, train a new model and 
 serialize it before returning it to caller.
 """
-function try_load_serialized_model_from_csv(model_file_name::String, features_file_name::String)::MachineModel
+function load_or_train_serialized_model_from_jls(model_file_name::String, features_file_name::String)::MachineModel
     
     if isfile(model_file_name)
         @info "Found model stored in $model_file_name"
-        return load_model_from_csv(model_file_name)
+        return load_model_from_jls(model_file_name)
     end
     @info "Model not found, let's try to train a new model from features in $features_file_name"
     train_and_serialize_model(features_file_name, model_file_name; num_tuning_iterations = 100)
 end
 
-function load_model_from_csv(model_file_name)::MachineModel
+function load_model_from_jls(model_file_name)::MachineModel
     return MachineModel(machine(model_file_name))
 end
 
@@ -214,6 +207,11 @@ function train_linear_model_from_csv(features_csv; sv_threshold = 0.01)
     N_num = length(filter(x -> x >= sv_threshold, S))
     pseudo_inv = transpose(Vt)[1:n, 1:N_num] * diagm(1 ./ S[1:N_num]) * transpose(U)[1:N_num, 1:m]
     model = pseudo_inv * y
+    return model
+end
+
+function add_perturbation!(model::MachineModel, magnitude)
+    @warn "Not implemented - no perturbation added"
     return model
 end
 
