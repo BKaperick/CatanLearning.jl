@@ -61,7 +61,7 @@ for k=1:tourney.epochs
             end
             winners[w] += 1
             if winner !== nothing
-                println("Game $((j - 1)*tourney.games_per_map + i) / $(tourney.maps_per_epoch * tourney.games_per_map): $(winner.player.team)")
+                println("Game $((j - 1)*tourney.games_per_map + i) / $(tourney.maps_per_epoch * tourney.games_per_map): $(winner)")
             end
 
             end_length = length(master_state_to_value)

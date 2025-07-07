@@ -266,9 +266,9 @@ probability of victory, based on his `player.model` model.  If no action
 increases the probability of victory, then do nothing.
 """
 function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, actions::Set{PreAction})::ChosenAction
-    @info "$(player.player.team) considers $(collect(actions))"
+    @info "$(player) considers $(collect(actions))"
     best_action = get_best_transition(board, players, player, actions).chosen_action
-    @info "$(player.player.team) chooses to $(best_action)"
+    @info "$(player) chooses to $(best_action)"
     return best_action #ChosenAction(best_action.name, best_action.args...)
 end
 
@@ -338,7 +338,7 @@ Use public model (stored in `player.player.model_public`) to choose a trading pa
 """
 function Catan.choose_robber_victim(board::Board, player::LearningPlayer, potential_victims::PlayerPublicView...)::PlayerPublicView
     return argmax(p -> predict_public_model(player.model_public, board, p), potential_victims)
-    @info "$(player.player.team) decided it is wisest to steal from the $(max_ind.team) player"
+    @info "$(player) decided it is wisest to steal from the $(max_ind) player"
     return max_ind
 end
 
