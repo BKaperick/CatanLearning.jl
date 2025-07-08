@@ -34,3 +34,15 @@ BenchmarkTools.Trial: 51 samples with 1 evaluation per sample.
 
  Memory estimate: 196.03 MiB, allocs estimate: 2878413.
 
+4 HybridPlayer - DEPTH 1 - LINEAR
+BenchmarkTools.Trial: 67 samples with 1 evaluation per sample.
+ Range (min … max):  165.178 ms …    3.053 s  ┊ GC (min … max): 10.80% … 10.89%
+ Time  (median):     621.310 ms               ┊ GC (median):    10.82%
+ Time  (mean ± σ):   917.249 ms ± 711.221 ms  ┊ GC (mean ± σ):  10.49% ±  1.08%
+
+  ▅██ ▂   █ ▂     ▂                  ▂    ▂                      
+  █████▅█▅████▅▅▅▅█▅█▁▁▁▅▁▁▁▅▅▁▁▅▁▅▅▁█▁▅▅▅█▁█▁▁▁▅▁▁▁▁▁▅▁▁▁▁▅▁▁▅ ▁
+  165 ms           Histogram: frequency by time          2.65 s <
+
+ Memory estimate: 204.96 MiB, allocs estimate: 2991025.
+
