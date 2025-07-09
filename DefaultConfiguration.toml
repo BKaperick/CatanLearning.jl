@@ -36,6 +36,7 @@ REWARD_WEIGHT = 0.5
 VALUE_WEIGHT = 0.5
 REWARD_DISCOUNT = 0.5
 LEARNING_RATE = 0.1
+MODIFY_REINFORCEMENT_WEIGHTS = false
 [PlayerSettings.blue]
 [PlayerSettings.cyan]
 [PlayerSettings.green]

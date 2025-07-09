@@ -244,8 +244,10 @@ function initialize_epoch!(configs::Dict, team_to_perturb::Dict{Symbol, Decision
     value_weight = epoch_num/(tourney.epochs-1)
 
     for team in teams
-        Catan.set_player_config(configs, team, "VALUE_WEIGHT", value_weight)
-        Catan.set_player_config(configs, team, "REWARD_WEIGHT", 1 - value_weight)
+        if get_player_config(configs, "MODIFY_REINFORCEMENT_WEIGHTS", team)
+            Catan.set_player_config(configs, team, "VALUE_WEIGHT", value_weight)
+            Catan.set_player_config(configs, team, "REWARD_WEIGHT", 1 - value_weight)
+        end
         # Every other iteration, start with perturbed model
         add_perturbation!(team_to_perturb[team], 0.1)
     end
