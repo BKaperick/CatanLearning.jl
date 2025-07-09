@@ -22,6 +22,21 @@ function Tournament(configs::Dict)
     Tournament(configs["Tournament"]["GAMES_PER_MAP"], configs["Tournament"]["MAPS_PER_EPOCH"], configs["Tournament"]["NUM_EPOCHS"], :noop, id)
 end
 
+struct StateValueContainer
+    master::Dict{UInt64, Float64}
+    current::Dict{UInt64, Float64}
+end
+
+function Base.show(io::IO, s::StateValueContainer)
+    print(io, "states: $(length(keys(s.master))) | $(length(keys(s.current)))")
+end
+
+function StateValueContainer(configs::Dict)
+    master_state_to_value = read_values_file(configs["PlayerSettings"]["STATE_VALUES"])::Dict{UInt64, Float64}
+    @info "Enriching MarkovPlayers with $(length(master_state_to_value)) pre-explored states"
+    new_state_to_value = Dict{UInt64, Float64}()
+    return StateValueContainer(master_state_to_value, new_state_to_value)
+end
 
 abstract type AbstractActionSet end
 abstract type AbstractAction end
