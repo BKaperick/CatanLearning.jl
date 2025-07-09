@@ -30,6 +30,10 @@ PUBLIC_MODEL = "./models/public_model.jls"
 FEATURES = "./data/features.csv"
 STATE_VALUES = "./data/state_values.csv"
 SEARCH_DEPTH = 2
+REWARD_WEIGHT = 0.5
+VALUE_WEIGHT = 0.5
+REWARD_DISCOUNT = 0.5
+LEARNING_RATE = 0.1
 [PlayerSettings.blue]
 [PlayerSettings.cyan]
 [PlayerSettings.green]

@@ -46,7 +46,7 @@ function try_load_serialized_model(team::Symbol, configs::Dict, model_key="MODEL
     return model
 end
 
-function try_load_serialized_public_model(team::Symbol, configs::Dict)::MachineModel
+function try_load_serialized_public_model(team::Symbol, configs::Dict)::DecisionModel
     try_load_serialized_model(team, configs, "PUBLIC_MODEL", "PUBLIC_FEATURES")
 end
 
