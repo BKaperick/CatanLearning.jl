@@ -4,6 +4,19 @@
 
 Code for machine learning players training and playing via the [Catan.jl](https://github.com/BKaperick/Catan.jl) game engine.  It implements the reinforcement-learned players and their training code.
 
+# Leaderboard
+
+Rank | Player type | Parameters | Model class | Win percentage
+-|-|-|-|-
+1 | EmpathRobotPlayer | `SEARCH_DEPTH = 2` | Linear | 39.5%
+2 | HybridPlayer | `SEARCH_DEPTH = 1; VALUE_WEIGHT = 0.6` | Linear | 25.5%
+3 | DefaultRobotPlayer | | | 18%
+4 | EmpathRobotPlayer | `SEARCH_DEPTH = 3` | Random Forest | 9.5%
+
+(Note: the remaining 7.5% of games were drawn after 500 turns.)
+
+For performance benchmarks, see [benchmark_catan_release.txt](./benchmarks/benchmark_catan_release.txt)
+
 ## Modeling strategy
 
 Our current approach is via Temporal Difference learning.  We model the game as a Markov Reward Process, in which the scripted player refines their initial policy by exploring the state space via repeated self-play.
@@ -50,18 +63,6 @@ Value succeeds on all.
 Interesting (and slightly suspicious) that only two fail on each of RF model and the state Reward, and that it's not the same problematic features.
 
 
-# Benchmarks
-
-Player type | Parameters | Model class | Win percentage
--|-|-|-
-EmpathRobotPlayer | `SEARCH_DEPTH = 2` | Linear | 39.5%
-EmpathRobotPlayer | `SEARCH_DEPTH = 3` | Random Forest | 9.5%
-HybridPlayer | `SEARCH_DEPTH = 1; VALUE_WEIGHT = 0.6` | Linear | 25.5%
-DefaultRobotPlayer | | | 18%
-
-(Note: the remaining 7.5% of games were drawn after 500 turns.)
-
-For performance benchmarks, see [./benchmarks](./benchmarks)
 
 # Useful scripts
 From `CatanLearning.jl/` directory:
