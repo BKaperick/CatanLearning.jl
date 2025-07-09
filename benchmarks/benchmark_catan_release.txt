@@ -34,6 +34,18 @@ BenchmarkTools.Trial: 51 samples with 1 evaluation per sample.
 
  Memory estimate: 196.03 MiB, allocs estimate: 2878413.
 
+4 EmpathRobotPlayer - DEPTH 2 - LINEAR
+BenchmarkTools.Trial: 7 samples with 1 evaluation per sample.
+ Range (min … max):  3.130 s … 14.246 s  ┊ GC (min … max): 7.43% … 8.38%
+ Time  (median):     7.073 s             ┊ GC (median):    7.67%
+ Time  (mean ± σ):   8.726 s ±  4.831 s  ┊ GC (mean ± σ):  7.76% ± 0.40%
+
+  ▁  ▁          ▁    ▁                           ▁       █  
+  █▁▁█▁▁▁▁▁▁▁▁▁▁█▁▁▁▁█▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁█▁▁▁▁▁▁▁█ ▁
+  3.13 s        Histogram: frequency by time        14.2 s <
+
+ Memory estimate: 2.30 GiB, allocs estimate: 38644121.
+
 4 HybridPlayer - DEPTH 1 - LINEAR
 BenchmarkTools.Trial: 67 samples with 1 evaluation per sample.
  Range (min … max):  165.178 ms …    3.053 s  ┊ GC (min … max): 10.80% … 10.89%
@@ -45,4 +57,28 @@ BenchmarkTools.Trial: 67 samples with 1 evaluation per sample.
   165 ms           Histogram: frequency by time          2.65 s <
 
  Memory estimate: 204.96 MiB, allocs estimate: 2991025.
+
+4 HybridPlayer - DEPTH 1 - LINEAR - PUBLIC MODEL LINEAR
+BenchmarkTools.Trial: 96 samples with 1 evaluation per sample.
+ Range (min … max):   42.743 ms …    2.829 s  ┊ GC (min … max):  0.00% … 10.53%
+ Time  (median):     378.384 ms               ┊ GC (median):    13.12%
+ Time  (mean ± σ):   650.083 ms ± 575.321 ms  ┊ GC (mean ± σ):  12.14% ±  1.87%
+
+    ▂▃█▃▃▃                                                       
+  ▄▇███████▇▄▅▅▇▅▅▄▄▅▄▅▁▄▁▅▁▄▁▁▄▄▅▄▄▄▁▅▁▁█▁▄▄▄▄▄▅▁▁▄▁▄▁▁▁▁▁▁▁▁▄ ▁
+  42.7 ms          Histogram: frequency by time           2.2 s <
+
+ Memory estimate: 62.46 MiB, allocs estimate: 876909.
+
+4 DefaultRobotPlayer
+BenchmarkTools.Trial: 4164 samples with 1 evaluation per sample.
+ Range (min … max):   1.493 ms … 119.255 ms  ┊ GC (min … max): 0.00% …  0.00%
+ Time  (median):     10.543 ms               ┊ GC (median):    0.00%
+ Time  (mean ± σ):   14.387 ms ±  12.325 ms  ┊ GC (mean ± σ):  9.42% ± 14.68%
+
+   ▃██▆▇▆▄▃▂▁▂                                                  
+  ▃█████████████▇▅▆▅▅▄▄▄▄▃▄▃▃▂▃▃▂▃▂▂▂▂▁▂▂▁▂▁▁▂▁▁▂▂▂▁▁▁▁▁▁▁▁▁▁▁ ▃
+  1.49 ms         Histogram: frequency by time         61.3 ms <
+
+ Memory estimate: 1.31 MiB, allocs estimate: 32360.
 
