@@ -15,14 +15,11 @@ function initialize_tournament(configs::Dict)
     end
 end
 
-function do_tournament_one_epoch(tourney, teams, configs, player_constructors::Dict)
+function do_tournament_one_epoch(tourney, teams, configs, player_constructors::Dict)::Vector{Tuple{Symbol, Int}}
     do_tournament_one_epoch(tourney, teams, configs, player_constructors, Dict([(t,Dict()) for t in teams]))
 end
-function do_tournament_one_epoch(tourney, teams, configs, player_constructors::Dict, team_to_mutation::Dict)
-    create_players = () -> [player_constructors[t](team_to_mutation[t]) for t in teams]
-end
 
-function do_tournament_one_epoch(tourney, teams, configs; create_players = Catan.create_players)
+function do_tournament_one_epoch(tourney, teams, configs; create_players = Catan.create_players)::Vector{Tuple{Union{Nothing,Symbol}, Int}}
     winners = init_winners(teams)
     for j=1:tourney.maps_per_epoch
         @info "map $j / $(tourney.maps_per_epoch)"
@@ -96,7 +93,7 @@ function do_tournament_one_game_async!(channels, map, players, configs)
     return
 end
 
-function init_winners(teams)
+function init_winners(teams)::Dict{Union{Symbol, Nothing}, Int}
     winners = Dict{Union{Symbol, Nothing}, Int}([(k,0) for k in teams])
     winners[nothing] = 0
     return winners
@@ -209,54 +206,91 @@ function run_state_space_tournament(configs)
         # First iteration, start with stored model
         team_to_perturb[team] = try_load_serialized_model(team, configs)::DecisionModel
     end
-    winners = init_winners(teams)
+    winners = init_winners(teams)::Dict{Union{Symbol, Nothing}, Int}
     @info "Enriching MarkovPlayers with $(length(master_state_to_value)) pre-explored states"
     for k=1:tourney.epochs
         @info "epoch $k / $(tourney.epochs)"
         @info "states: $(length(keys(master_state_to_value))) | $(length(keys(new_state_to_value)))"
         # Add a new perturbation to player's model weights
-        initialize_epoch!(team_to_perturb, configs, tournament_path, k, markov_teams)
+        initialize_epoch!(team_to_perturb, markov_teams)
 
         with_enrichment = conf -> create_enriched_players(conf, master_state_to_value, new_state_to_value, team_to_perturb)
         epoch_winners = do_tournament_one_epoch(tourney, teams, configs; create_players = with_enrichment)
+        println(epoch_winners)
+
         for (w,n) in collect(epoch_winners)
             winners[w] += n
         end
 
         # Choose a perturbation to keep and update team_to_perturb for all players 
         # to take the best perturbation
-        biggest_winner = argmax(x -> x[2], [y for y in epoch_winners if y[1] !== nothing])[1]
+        epoch_winner = argmax(x -> x[2], [y for y in epoch_winners if y[1] !== nothing])[1]::Symbol
 
         # Don't keep the mutation if `nothing` wins more than anyone else
-        #if biggest_winner === nothing || !(biggest_winner in markov_teams)
-        if !(biggest_winner in markov_teams)
-            @info "skipping mutation since $biggest_winner won epoch"
-            println(epoch_winners)
-            continue
-        else
-            validate_and_apply_mutation!(team_to_perturb, markov_teams, biggest_winner)
+        #if epoch_winner === nothing || !(biggest_winner in markov_teams)
+        validation_check = validate_mutation!(configs, master_state_to_value, new_state_to_value, team_to_perturb[epoch_winner], markov_teams, epoch_winner)
+        
+        if validation_check
+            apply_mutation!(team_to_perturb, markov_teams, epoch_winner)
         end
-        println(epoch_winners)
+
+        finalize_epoch!(team_to_perturb, configs, tournament_path, k, markov_teams, epoch_winner, validation_check)
     end
     println(winners)
 end
 
-function initialize_epoch!(team_to_perturb::Dict{Symbol, DecisionModel}, configs, tourney_path, epoch_num, teams)
+function initialize_epoch!(team_to_perturb::Dict{Symbol, DecisionModel}, teams)
     for team in teams
         # Every other iteration, start with perturbed model
         add_perturbation!(team_to_perturb[team], 0.1)
-        write_perturbed_linear_model(tourney_path, epoch_num, team, team_to_perturb[team], get_player_config(configs, "MODELS_DIR", team))
     end
 end
 
-function validate_and_apply_mutation!(team_to_perturb, teams, winner)
+function finalize_epoch!(team_to_perturb::Dict{Symbol, DecisionModel}, configs, tourney_path, epoch_num, teams, winner, validation_check::Bool)
+    if validation_check
+        for team in teams
+            write_perturbed_linear_model(tourney_path, epoch_num, team, team_to_perturb[team], get_player_config(configs, "MODELS_DIR", team))
+        end
+    end
+end
+
+function validate_mutation!(configs::Dict, master_stv, new_stv, perturb::DecisionModel, teams::AbstractVector{Symbol}, winner::Symbol)::Bool
+    @info "Starting validation epoch for winner $winner"
+    if !(winner in teams)
+        @info "skipping mutation since $winner won epoch"
+        return false
+    end
+    # TODO validate
+    # Create 1 hybrid players with the mutation and compare to baseline model
+    validation_configs = deepcopy(configs)
+    tourney = Tournament(configs)
+
+    validation_team_to_perturb = Dict{Symbol, DecisionModel}([winner => perturb])
+
+    with_enrichment = conf -> create_enriched_players(conf, master_stv, new_stv, validation_team_to_perturb)
+    ordered_winners = do_tournament_one_epoch(tourney, teams, validation_configs; create_players = with_enrichment)::Vector{Tuple{Union{Symbol, Nothing}, Int}}
+    validation_check = ordered_winners[1][1] == winner
+    if validation_check
+        @info "Finished validation epoch: accept mutation"
+    else
+        @warn "Finished validation epoch: reject mutation $(ordered_winners[1])"
+    end
+    return validation_check
+end
+
+function apply_mutation!(team_to_perturb::Dict{Symbol, DecisionModel}, teams::AbstractVector{Symbol}, winner::Symbol)
+
+
+
+
     @info "$winner won the epoch, so all players copy his mutation"
     for team in teams
         team_to_perturb[team].weights = copy(team_to_perturb[winner].weights)
     end
+
 end
 
-function create_enriched_players(configs, state_values::Dict{UInt64, Float64}, new_state_values::Dict{UInt64, Float64}, team_to_perturb::Dict{Symbol, LinearModel})
+function create_enriched_players(configs, state_values::Dict{UInt64, Float64}, new_state_values::Dict{UInt64, Float64}, team_to_perturb::Dict{Symbol, DecisionModel})
     players = Catan.create_players(configs)
 
     # Enrich players if needed
@@ -264,7 +298,7 @@ function create_enriched_players(configs, state_values::Dict{UInt64, Float64}, n
         if typeof(p) <: MarkovPlayer
             p.process.state_to_value = state_values
             p.process.new_state_to_value = new_state_values
-            p.model = team_to_perturb[p.player.team]
+            p.model = get(team_to_perturb, p.player.team, p.model)
         end
     end
     return players

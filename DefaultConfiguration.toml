@@ -25,8 +25,10 @@ SIZE = 32
 [PlayerSettings]
 MODELS_DIR = "../CatanLearning.jl/models"
 MODELS = ["decision", "public"]
-MODEL = "./models/model.jls"
-PUBLIC_MODEL = "./models/public_model.jls"
+#MODEL = "./models/model.jls"
+#PUBLIC_MODEL = "./models/public_model.jls"
+MODEL = "./models/model.csv"
+PUBLIC_MODEL = "./models/public_linear_model.csv"
 FEATURES = "./data/features.csv"
 STATE_VALUES = "./data/state_values.csv"
 SEARCH_DEPTH = 2

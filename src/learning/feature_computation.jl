@@ -429,9 +429,7 @@ end
 function predict_model(weights::Vector{Float64}, features::Vector{Pair{Symbol, Float64}})
     features = CatanLearning.filter_bad_features(features)
     X_new = [x.second for x in features]
-    @debug "$X_new ^T * $weights"
     pred = X_new'weights
-    @info "pred = $(pred[1])"
     return pred[1]
 end
 
