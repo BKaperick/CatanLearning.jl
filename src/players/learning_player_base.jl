@@ -98,18 +98,20 @@ function get_legal_action_sets(board::Board, players::AbstractVector{PlayerPubli
         #sampled = random_sample_resources(player.resources, 1)
         #rand_resource_from = [sampled...]
         rand_resource_from = [unsafe_random_sample_one_resource(player.resources)]
-        rand_resource_to = [get_random_resource()]
-        while rand_resource_to[1] == rand_resource_from[1]
-            rand_resource_to = [get_random_resource()]
+        rand_resource_to = get_random_resource()
+        while rand_resource_to == rand_resource_from[1]
+            rand_resource_to = get_random_resource()
         end
+        to_goods_dict = Dict{Symbol, UInt8}([rand_resource_to => UInt8(1)])
+        to_goods = [rand_resource_to]
         push!(main_action_set.actions, 
               Action(
                      :ProposeTrade, 
                      (g, b, p) -> propose_trade_goods(
                                                       b, g.players, p, 
                                                       rand_resource_from, 
-                                                      rand_resource_to), 
-                     rand_resource_from, rand_resource_to))
+                                                      to_goods, to_goods_dict), 
+                     rand_resource_from, to_goods))
     end
 
     if haskey(actions, :PlaceRobber)
