@@ -227,9 +227,9 @@ function read_perturbed_linear_model(tourney_id, epoch_num, team, output_dir)::L
     model = weights[!, :Weights]
     return LinearModel(model)
 end
-function write_perturbed_linear_model(tourney_path, epoch_num, team, model::LinearModel, models_dir)
+function write_perturbed_linear_model(tourney_path, epoch_num, team, model::LinearModel, models_dir, name = "model")
     df = DataFrame(Weights = model.weights)
-    file_name = "$(epoch_num)_$team.csv"
+    file_name = "$(epoch_num)_$(name)_$team.csv"
     output_path = joinpath(tourney_path, file_name)
     weights = CSV.write(output_path, df)
 end
