@@ -1,7 +1,7 @@
 name = "CatanLearning"
 uuid = "4c91a4e0-7dfb-465a-9cbf-f9fc204cf8e7"
 authors = ["Bryan Kaperick <bryankaperick@gmail.com>"]
-version = "0.1.0"
+version = "1.0.0"
 
 [deps]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
@@ -14,6 +14,7 @@ DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 DecisionTree = "7806a523-6efd-50cb-b5f6-3fa6f1930dbb"
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
@@ -28,8 +29,9 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [compat]
-Catan = "0.3.1"
+Catan = "0.5.0"
 DataStructures = "0.18.22"
 Distributions = "0.25.120"
+Documenter = "1.14.1"
 JET = "0.9.19"
 StatsBase = "0.34.5"

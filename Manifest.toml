@@ -2,7 +2,7 @@
 
 julia_version = "1.11.5"
 manifest_format = "2.0"
-project_hash = "1f63fb275618e5cc12d58d2651f2adcfe478502e"
+project_hash = "afd224c7440a7d7722498a96a9e15809e6ad5150"
 
 [[deps.ANSIColoredPrinters]]
 git-tree-sha1 = "574baf8110975760d391c710b6341da1afa48d8c"
@@ -222,7 +222,7 @@ version = "1.18.4+0"
 deps = ["Crayons", "Dates", "DocStringExtensions", "Documenter", "JET", "Logging", "Random", "Revise", "StaticArrays", "StatsBase", "TOML", "Test", "TestItemRunner", "TestItems"]
 path = "../CatanEngine.jl"
 uuid = "f5a9156a-9005-488a-a606-ecf760a1f632"
-version = "0.3.1"
+version = "0.5.0"
 
 [[deps.CategoricalArrays]]
 deps = ["DataAPI", "Future", "Missings", "Printf", "Requires", "Statistics", "Unicode"]
@@ -521,9 +521,9 @@ version = "0.9.4"
 
 [[deps.Documenter]]
 deps = ["ANSIColoredPrinters", "AbstractTrees", "Base64", "CodecZlib", "Dates", "DocStringExtensions", "Downloads", "Git", "IOCapture", "InteractiveUtils", "JSON", "Logging", "Markdown", "MarkdownAST", "Pkg", "PrecompileTools", "REPL", "RegistryInstances", "SHA", "TOML", "Test", "Unicode"]
-git-tree-sha1 = "22ca291bada1e8af75dcb5b41f9e1d2da91c2986"
+git-tree-sha1 = "47ffb8f27ffc01e2e57e7ae5365ae5ceef87b03d"
 uuid = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
-version = "1.11.0"
+version = "1.14.1"
 
 [[deps.Downloads]]
 deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
