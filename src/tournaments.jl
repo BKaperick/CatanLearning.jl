@@ -244,6 +244,7 @@ function initialize_epoch!(configs::Dict, team_to_perturb::Dict{Symbol, Decision
 
     # Linear spacing of reward weight across epochs 
     value_weight = epoch_num/(tourney.epochs-1)
+    @info "setting value weight to $value_weight"
 
     for team in teams
         if get_player_config(configs, "MODIFY_REINFORCEMENT_WEIGHTS", team)
