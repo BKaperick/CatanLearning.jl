@@ -295,7 +295,7 @@ probability of victory, based on his `player.model` model.  If no action
 increases the probability of victory, then do nothing.
 """
 function Catan.choose_next_action(board::Board, players::AbstractVector{PlayerPublicView}, player::LearningPlayer, actions::Set{PreAction})::ChosenAction
-    @info "$(player) considers $(collect(actions))"
+    @debug "$(player) considers $(collect(actions))"
     best_action = get_best_transition(board, players, player, actions).chosen_action
     @info "$(player) chooses to $(best_action)"
     return best_action #ChosenAction(best_action.name, best_action.args...)
