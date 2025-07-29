@@ -41,6 +41,8 @@ function get_legal_action_sets(board::Board, players::AbstractVector{PlayerPubli
 
     actions = Dict([(p.name, p.admissible_args) for p in pre_actions])
     
+    @debug "$player can do one of following: $(join(actions, "\n"))"
+
     # Deterministic PreActions are all quite easy to handle
     for (action, candidates) in actions
 
@@ -237,9 +239,12 @@ function compute_features_from_hypoth(action::AbstractAction, hypoth_game::Game,
     
     @debug "Entering game $(hypoth_game.unique_id) with action $(action) and log level $(configs["LogSettings"]["HYPOTH_LOG_LEVEL"])"
     main_logger = descend_logger(hypoth_player.player.configs, "HYPOTH")
+    hypoth_game.configs["SAVE_GAME_TO_FILE"] = false
+    
     action.func!(hypoth_game, hypoth_board, hypoth_player)
+    
     features = compute_features(hypoth_board, hypoth_player.player)
-
+    hypoth_game.configs["SAVE_GAME_TO_FILE"] = true
     global_logger(main_logger)
     @debug "Reverting to global logger as we exit HYPOTH environment $(hypoth_game.unique_id)"
     return features
