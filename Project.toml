@@ -29,7 +29,7 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [compat]
-Catan = "0.5.0"
+Catan = "1.0.0"
 DataStructures = "0.18.22"
 Distributions = "0.25.120"
 Documenter = "1.14.1"
