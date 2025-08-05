@@ -162,11 +162,6 @@ function get_legal_action_sets(board::Board, players::AbstractVector{PlayerPubli
     return action_sets
 end
 
-function inner_do_robber_move_theft_from_knight(b, players, p, team, candidate_tile, r)
-    inner_do_robber_move_theft(b, players, p, team, candidate_tile, r)
-    PlayerApi.do_play_devcard(b, players, p, :Knight)
-end
-
 """
     `get_best_transition(board::Board, players::AbstractVector{PlayerPublicView}, 
                               player::PlayerType, actions::Set{Symbol})`
@@ -237,7 +232,7 @@ end
 function compute_features_from_hypoth(action::AbstractAction, hypoth_game::Game, hypoth_board::Board, hypoth_player::PlayerType)
     # We control the log-level of 'hypothetical' games separately from the main game.
     
-    @debug "Entering game $(hypoth_game.unique_id) with action $(action) and log level $(configs["LogSettings"]["HYPOTH_LOG_LEVEL"])"
+    @debug "Entering game $(hypoth_game.unique_id) with action $(action) and log level $(hypoth_game.configs["LogSettings"]["HYPOTH_LOG_LEVEL"])"
     main_logger = descend_logger(hypoth_player.player.configs, "HYPOTH")
     hypoth_game.configs["SAVE_GAME_TO_FILE"] = false
     
@@ -388,5 +383,5 @@ function choose_monopoly_resource(board::Board, players::AbstractVector{PlayerPu
         get_estimated_resources(board, players, target)::Dict{Symbol, Int}
     end
     =#
-    return get_best_transition(board, players, player, Set([PreAction(:GainResource, r) for r in Catan.RESOURCES])).chosen_action.args[1]
+    return get_best_transition(board, players, player, Set(PreAction(:GainResource, [(r,) for r in Catan.RESOURCES]))).chosen_action.args[1]
 end

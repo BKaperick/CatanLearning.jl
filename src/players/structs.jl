@@ -16,26 +16,6 @@ mutable struct EmpathRobotPlayer <: LearningPlayer
     model_public::DecisionModel
 end
 
-mutable struct MutatedEmpathRobotPlayer <: LearningPlayer 
-    player::Player
-    model::DecisionModel
-    model_public::DecisionModel
-    mutation::Dict #{Symbol, AbstractFloat}
-    configs::Dict
-end
-
-MutatedEmpathRobotPlayer(team::Symbol, configs::Dict) = MutatedEmpathRobotPlayer(
-    team, Dict{Symbol, AbstractFloat}(), configs)
-
-function MutatedEmpathRobotPlayer(team::Symbol, mutation::Dict, configs::Dict) 
-    MutatedEmpathRobotPlayer(
-    Player(team, configs), 
-    try_load_serialized_model(team, configs),
-    try_load_serialized_public_model(team, configs),
-    mutation,
-    configs)
-end
-
 mutable struct TemporalDifferencePlayer <: MarkovPlayer
     player::Player
     model::DecisionModel
@@ -87,10 +67,6 @@ function HybridPlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}
     policy = WeightsRewardPlusValueMarkovPolicy(model, reward_weight, value_weight)
     player = Player(team, configs)
     HybridPlayer(player, model, model_public, process, policy, configs, nothing)
-end
-
-function Base.copy(player::MutatedEmpathRobotPlayer)
-    return MutatedEmpathRobotPlayer(copy(player.player), player.model, player.model_public, copy(player.mutation), player.configs) 
 end
 
 function Base.copy(player::TemporalDifferencePlayer)

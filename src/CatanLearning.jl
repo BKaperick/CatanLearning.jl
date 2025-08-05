@@ -33,7 +33,6 @@ include("tournaments.jl")
 
 function __init__()
     Catan.add_player_to_register("EmpathRobotPlayer", (t,c) -> EmpathRobotPlayer(t,c))
-    Catan.add_player_to_register("MutatedEmpathRobotPlayer", (t,c) -> MutatedEmpathRobotPlayer(t,c))
     Catan.add_player_to_register("TemporalDifferencePlayer", (t,c) -> TemporalDifferencePlayer(t,c))
     Catan.add_player_to_register("HybridPlayer", (t,c) -> HybridPlayer(t,c))
 
@@ -42,48 +41,9 @@ function __init__()
     Catan.update_default_configs(default_config_path)
 end
 
-function run(T::MutatedEmpathRobotPlayer, configs::Dict, player_configs::Dict)
-    player_constructors = Dict([
-        :Blue => (mutation) -> T(:Blue, mutation, player_configs), 
-        :Green => (mutation) -> T(:Green, mutation, player_configs), 
-        :Cyan => (mutation) -> T(:Cyan, mutation, player_configs), 
-        :Yellow => (mutation) -> T(:Yellow, mutation, player_configs)
-    ])
-    run(player_constructors, configs)
-end
-
-function run_explore()
-    configs = Catan.parse_configs("Configuration.toml")
-    player_configs = configs["PlayerSettings"]
-    master_state_to_value = read_values_file(player_configs["STATE_VALUES"])::Dict{UInt64, Float64}
-    new_state_to_value = Dict{UInt64, Float64}()
-    player_maker = team -> ((mutation) -> TemporalDifferencePlayer(
-                                    MaxRewardPlusValueMarkovPolicy, 
-                                    team, 
-                                    master_state_to_value, 
-                                    new_state_to_value,
-                                    player_configs
-                                   )
-                           )
-    player_constructors = Dict([
-                                :Blue => player_maker(:Blue), 
-                                :Green => player_maker(:Green), 
-                                :Cyan => player_maker(:Cyan), 
-                                :Yellow => player_maker(:Yellow)
-    ])
-    run(player_constructors, configs)
-end
-
 function run(configs)
     tourney = Tournament(configs, :Sequential)
     run_tournament(tourney, configs)
-end
-
-function run(player_constructors::Dict, configs)
-    tourney = Tournament(configs, :Sequential)
-    if any([typeof(c(Dict())) <: MutatedEmpathRobotPlayer for (t,c) in collect(player_constructors)])
-        run_mutating_tournament(tourney, player_constructors, configs)
-    end
 end
 
 function descend_logger(configs, logger_prefix)

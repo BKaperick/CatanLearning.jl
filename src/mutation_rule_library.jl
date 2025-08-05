@@ -16,6 +16,10 @@ function sequential_assign_new_mutations!(team_to_mutation, winners)
     mutate_other!(team_to_mutation, winners[4], winners[1])
 end
 
+function mutate!(d, team)
+end
+function mutate_other!(d, other_team, team)
+end
 
 """
     `percent_winner_stays_assign_new_mutations!(team_to_mutation, winners, percent)`

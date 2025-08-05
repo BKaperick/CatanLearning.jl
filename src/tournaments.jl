@@ -15,10 +15,6 @@ function initialize_tournament(configs::Dict)
     end
 end
 
-function do_tournament_one_epoch(tourney, teams, configs, player_constructors::Dict)::Vector{Tuple{Symbol, Int}}
-    do_tournament_one_epoch(tourney, teams, configs, player_constructors, Dict([(t,Dict()) for t in teams]))
-end
-
 function do_tournament_one_epoch(tourney, teams, configs; create_players = Catan.create_players)::Vector{Tuple{Union{Nothing,Symbol}, Int}}
     winners = init_winners(teams)
     for j=1:tourney.maps_per_epoch
@@ -97,25 +93,6 @@ function init_winners(teams)::Dict{Union{Symbol, Nothing}, Int}
     winners = Dict{Union{Symbol, Nothing}, Int}([(k,0) for k in teams])
     winners[nothing] = 0
     return winners
-end
-
-function run_mutating_tournament(tourney, player_constructors, configs)
-    teams = configs["TEAMS"]
-    team_to_mutation = Dict([(t, Dict()) for t in teams])
-    configs["SAVE_MAP"] = "./data/_temp_map_file.csv"
-    for k=1:tourney.epochs
-        ordered_winners = do_tournament_one_epoch(tourney, teams, configs, player_constructors, team_to_mutation)
-        @info ordered_winners
-        
-        # Don't assign new mutations on the last one so we can see the results
-        if k < tourney.epochs
-            apply_mutation_rule![tourney.mutation_rule](team_to_mutation, ordered_winners)
-        end
-    end
-
-    for (player,mt) in team_to_mutation
-        toggleprint("$(player): $(print_mutation(mt))")
-    end
 end
 
 function run_tournament(configs::Dict)
@@ -218,7 +195,8 @@ function run_state_space_tournament(configs)
         validation_check = validate_mutation!(configs, state_to_value, team_to_perturb, team_to_public_perturb, markov_teams, epoch_winner)
         
         if validation_check
-            apply_mutation!(team_to_perturb, team_to_public_perturb, markov_teams, epoch_winner)
+            # Part of validation check ensures epoch_winner is not `nothing`
+            apply_mutation!(team_to_perturb, team_to_public_perturb, markov_teams, epoch_winner::Symbol)
         end
 
         finalize_epoch!(team_to_perturb, team_to_public_perturb, configs, tournament_path, k, markov_teams, epoch_winner, validation_check)

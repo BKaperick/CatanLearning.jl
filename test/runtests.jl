@@ -22,7 +22,8 @@ parse_configs
 using CatanLearning
 using CatanLearning:
     compute_features,
-    MutatedEmpathRobotPlayer,EmpathRobotPlayer,
+    EmpathRobotPlayer,
+    HybridPlayer,
 
 read_values_file,
 feature_library,
@@ -50,9 +51,9 @@ end
 function test_evolving_robot_game(neverend, configs)
     team_and_playertype = [
                           (:blue, EmpathRobotPlayer),
-                          (:cyan, MutatedEmpathRobotPlayer),
+                          (:cyan, EmpathRobotPlayer),
                           (:green, EmpathRobotPlayer),
-                          (:red, MutatedEmpathRobotPlayer)
+                          (:red, EmpathRobotPlayer)
             ]
     players = setup_players(team_and_playertype, configs)
     test_automated_game(neverend, players, configs)
@@ -295,7 +296,7 @@ function test_action_interface(configs)
 
     BoardApi.build_settlement!(board, :Blue, (1,1))
     #admissible_roads = BoardApi.get_admissible_road_locations(board, player.player.team, true)
-    admissible_roads = Vector{Tuple}([((1,1), (1,2), true), ((1,1),(2,2), true)])
+    admissible_roads = Vector{Tuple}([((1,1), (1,2), false), ((1,1),(2,2), false)])
     game = Game(players, configs)
     #actions = Set([PreAction(:BuyDevCard), PreAction(:ConstructRoad, admissible_roads)])
 
@@ -348,7 +349,7 @@ function run_tests(neverend = false)
     test_empath_road_building(configs)
     test_player_implementation(Catan.DefaultRobotPlayer, configs)
     test_player_implementation(EmpathRobotPlayer, configs)
-    test_player_implementation(MutatedEmpathRobotPlayer, configs)
+    test_player_implementation(HybridPlayer, configs)
     test_player_implementation(TemporalDifferencePlayer, configs)
     test_compute_features(configs)
     test_evolving_robot_game(neverend, configs)
