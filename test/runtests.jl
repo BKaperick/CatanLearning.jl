@@ -1,9 +1,13 @@
+using Revise
 using Test
+using TestItems
+using TestItemRunner
 using StatsBase
 using JET
 using Logging
-using Revise
+
 using Catan
+using CatanLearning
 using Catan: Game, Board, Player, PlayerType, PlayerApi, BoardApi, GameApi,
              DefaultRobotPlayer, PlayerPublicView, 
              ALL_ACTIONS, choose_accept_trade, get_legal_actions,
@@ -14,12 +18,9 @@ test_player_implementation,
 setup_players,
 setup_and_do_robot_game,
 test_automated_game,
-#configs,
-#player_configs,
-#logger,
-parse_configs
+parse_configs,
+doset
 
-using CatanLearning
 using CatanLearning:
     compute_features,
     EmpathRobotPlayer,
@@ -36,83 +37,43 @@ TemporalDifferencePlayer,
 get_legal_action_sets,
 feature_library
 
-function test_jet_fails()
-    rep = report_package(CatanLearning;
-    ignored_modules=())
 
-    #@show length(JET.get_reports(rep))
-    #@show rep
-    reports = JET.get_reports(rep)
-    max_num = 70
-    println("length(JET.get_reports(rep)) = $(length(reports)) / $max_num")
-    @test length(reports) <= max_num
-end
+@testsnippet global_test_setup begin
+    using JET
+    using StatsBase
 
-function test_evolving_robot_game(neverend, configs)
-    team_and_playertype = [
-                          (:blue, EmpathRobotPlayer),
-                          (:cyan, EmpathRobotPlayer),
-                          (:green, EmpathRobotPlayer),
-                          (:red, EmpathRobotPlayer)
-            ]
-    players = setup_players(team_and_playertype, configs)
-    test_automated_game(neverend, players, configs)
-end
+    using Catan
+    using CatanLearning
+    using Catan: Game, Board, Player, PlayerType, PlayerApi, BoardApi, GameApi,
+                DefaultRobotPlayer, PlayerPublicView, 
+                ALL_ACTIONS, choose_accept_trade, get_legal_actions,
+    read_map,
+    load_gamestate!,
+    reset_savefile!,
+    test_player_implementation,
+    setup_players,
+    setup_and_do_robot_game,
+    test_automated_game,
+    parse_configs,
+    doset
 
-function empath_player(configs)
-    player = EmpathRobotPlayer(:red)
-    board = read_map(configs)
-    p = predict_model(player.model, board, player)
-    return player, board, p
-end
+    using CatanLearning:
+        compute_features,
+        EmpathRobotPlayer,
+        HybridPlayer,
 
-function test_model_caching(configs)
-    @test CatanLearning.get_ml_cache_config(configs, :blue, "TEST_KEY") === nothing
-    CatanLearning.update_ml_cache!(configs, :blue, "TEST_KEY", 50)
-    CatanLearning.get_ml_cache_config(configs, :blue, "TEST_KEY") == 50
-    CatanLearning.get_ml_cache_config(configs, :green, "TEST_KEY") === nothing
-end
+    read_values_file,
+    feature_library,
+    get_state_optimizing_quantity,
+    predict_model,
+    MarkovState,
+    MaxValueMarkovPolicy,
+    MaxRewardMarkovPolicy,
+    TemporalDifferencePlayer,
+    get_legal_action_sets,
+    feature_library
 
-
-function test_learning_player_base_actions(configs)
-    player = EmpathRobotPlayer(:Red, configs)
-    player2 = DefaultRobotPlayer(:Blue, configs)
-    players = [player, player2]
-    game = Game(players, configs)
-    board = read_map(configs)
-    # get_legal_action_sets(board::Board, players::AbstractVector{PlayerPublicView}, player::Player, pre_actions::Set{PreAction})::Vector{AbstractActionSet}
-
-    PlayerApi.give_resource!(player.player, :Grain)
-    PlayerApi.give_resource!(player.player, :Wood)
-    PlayerApi.give_resource!(player.player, :Brick)
-    PlayerApi.give_resource!(player.player, :Pasture)
-    candidates = BoardApi.get_admissible_settlement_locations(board, player.player.team, true)
-    pre_actions = Set([PreAction(:ConstructSettlement, candidates)])
-    legal_actions = get_legal_action_sets(board, PlayerPublicView.(game.players), player.player, pre_actions)
-    
-    Catan.ACTIONS_DICTIONARY[:ConstructSettlement](game, board, player, legal_actions[1].actions[1].args, false)
-    BoardApi.print_board(board)
-    road_candidates = BoardApi.get_admissible_road_locations(board, player.player.team, true)
-    @test ~isempty(road_candidates)
-
-    PlayerApi.give_resource!(player.player, :Wood)
-    PlayerApi.give_resource!(player.player, :Brick)
-    Catan.choose_road_location(board, PlayerPublicView.(game.players), player, road_candidates)
-
-
-    PlayerApi.give_resource!(player.player, :Grain)
-    PlayerApi.give_resource!(player.player, :Grain)
-    PlayerApi.give_resource!(player.player, :Grain)
-    PlayerApi.give_resource!(player.player, :Stone)
-    PlayerApi.give_resource!(player.player, :Stone)
-    PlayerApi.give_resource!(player.player, :Stone)
-    candidates = BoardApi.get_admissible_city_locations(board, player.player.team)
-    pre_actions = Set([PreAction(:ConstructCity, candidates)])
-    legal_actions = get_legal_action_sets(board, PlayerPublicView.(game.players), player.player, pre_actions)
-    Catan.ACTIONS_DICTIONARY[:ConstructCity](game, board, player, legal_actions[1].actions[1].args)
-
-    return legal_actions
-end
+    configs = parse_configs("Configuration.toml")
 
 
 features = collect(keys(feature_library))
@@ -150,29 +111,6 @@ features_increasing_good = Set([
 #:HasLongestRoad,
 :CountVictoryPoint
 ])
-
-function test_compute_features(configs)
-    #players = setup_players()
-    player = Catan.DefaultRobotPlayer(:Blue, configs)
-    board = Catan.read_map(configs)
-    compute_features(board, player.player)
-end
-
-function generate_realistic_features(features)
-    feature_values = Dict([f => 0.0 for f in features])
-
-    for f in features
-        if haskey(feature_library, f)
-            mn = feature_library[f].min
-            mx = feature_library[f].max
-
-            feature_values[f] = sample(range(mn,mx), 1, replace=false)[1]
-        else
-            feature_values[f] = sample(range(0,10), 1, replace=false)[1]
-        end
-    end
-    return [Pair(f,v) for (f,v) in collect(feature_values)]
-end
 
 """
     `test_feature_perturbations()`
@@ -242,35 +180,155 @@ function test_feature_perturbations(features, features_increasing_good, configs,
     return fails_m, fails_r, fails_v
 end
 
-function test_choose_road_location(configs)
+function generate_realistic_features(features)
+    feature_values = Dict([f => 0.0 for f in features])
 
-    player1 = DefaultRobotPlayer(:Test1)
-    player2 = DefaultRobotPlayer(:Test2)
-    players = Vector{PlayerType}([player1, player2])
-    board = read_map(configs)
-    player1 = DefaultRobotPlayer(:Test1)
-choose_road_location(board::Board, players::Vector{PlayerPublicView}, player::LearningPlayer, candidates::Vector{Vector{Tuple{Int, Int}}})
+    for f in features
+        if haskey(feature_library, f)
+            mn = feature_library[f].min
+            mx = feature_library[f].max
+
+            feature_values[f] = sample(range(mn,mx), 1, replace=false)[1]
+        else
+            feature_values[f] = sample(range(0,10), 1, replace=false)[1]
+        end
+    end
+    return [Pair(f,v) for (f,v) in collect(feature_values)]
+end
 end
 
-function test_stackoverflow_knight(main_configs)
-    configs = deepcopy(main_configs)
-    configs["PlayerSettings"]["SEARCH_DEPTH"] = 2
+@testitem "jet_fails" tags=[:slow] setup=[global_test_setup] begin
+    rep = report_package(CatanLearning;
+    ignored_modules=())
+
+    #@show length(JET.get_reports(rep))
+    #@show rep
+    reports = JET.get_reports(rep)
+    max_num = 65
+    println("length(JET.get_reports(rep)) = $(length(reports)) / $max_num")
+    @test length(reports) <= max_num
+end
+
+function test_evolving_robot_game(neverend, configs)
+    team_and_playertype = [
+                          (:blue, EmpathRobotPlayer),
+                          (:cyan, EmpathRobotPlayer),
+                          (:green, EmpathRobotPlayer),
+                          (:red, EmpathRobotPlayer)
+            ]
+    players = setup_players(team_and_playertype, configs)
+    test_automated_game(neverend, players, configs)
+end
+
+function empath_player(configs)
+    player = EmpathRobotPlayer(:red)
+    board = read_map(configs)
+    p = predict_model(player.model, board, player)
+    return player, board, p
+end
+
+
+@testitem "model_caching" setup=[global_test_setup] begin
+    @test CatanLearning.get_ml_cache_config(configs, :blue, "TEST_KEY") === nothing
+    CatanLearning.update_ml_cache!(configs, :blue, "TEST_KEY", 50)
+    CatanLearning.get_ml_cache_config(configs, :blue, "TEST_KEY") == 50
+    CatanLearning.get_ml_cache_config(configs, :green, "TEST_KEY") === nothing
+end
+
+@testitem "learning_player_base_actions" setup=[global_test_setup] begin
+    player = EmpathRobotPlayer(:Red, configs)
+    player2 = DefaultRobotPlayer(:Blue, configs)
+    players = [player, player2]
+    game = Game(players, configs)
+    board = read_map(configs)
+    # get_legal_action_sets(board::Board, players::AbstractVector{PlayerPublicView}, player::Player, pre_actions::Set{PreAction})::Vector{AbstractActionSet}
+
+    PlayerApi.give_resource!(player.player, :Grain)
+    PlayerApi.give_resource!(player.player, :Wood)
+    PlayerApi.give_resource!(player.player, :Brick)
+    PlayerApi.give_resource!(player.player, :Pasture)
+    candidates = BoardApi.get_admissible_settlement_locations(board, player.player.team, true)
+    pre_actions = Set([PreAction(:ConstructSettlement, candidates)])
+    legal_actions = get_legal_action_sets(board, PlayerPublicView.(game.players), player.player, pre_actions)
+    
+    Catan.ACTIONS_DICTIONARY[:ConstructSettlement](game, board, player, legal_actions[1].actions[1].args, false)
+    BoardApi.print_board(board)
+    road_candidates = BoardApi.get_admissible_road_locations(board, player.player.team, true)
+    @test ~isempty(road_candidates)
+
+    PlayerApi.give_resource!(player.player, :Wood)
+    PlayerApi.give_resource!(player.player, :Brick)
+    Catan.choose_road_location(board, PlayerPublicView.(game.players), player, road_candidates)
+
+
+    PlayerApi.give_resource!(player.player, :Grain)
+    PlayerApi.give_resource!(player.player, :Grain)
+    PlayerApi.give_resource!(player.player, :Grain)
+    PlayerApi.give_resource!(player.player, :Stone)
+    PlayerApi.give_resource!(player.player, :Stone)
+    PlayerApi.give_resource!(player.player, :Stone)
+    candidates = BoardApi.get_admissible_city_locations(board, player.player.team)
+    pre_actions = Set([PreAction(:ConstructCity, candidates)])
+    legal_actions = get_legal_action_sets(board, PlayerPublicView.(game.players), player.player, pre_actions)
+    Catan.ACTIONS_DICTIONARY[:ConstructCity](game, board, player, legal_actions[1].actions[1].args)
+
+    return legal_actions
+end
+
+
+
+@testitem "compute_features" setup=[global_test_setup] begin
+    #players = setup_players()
+    player = Catan.DefaultRobotPlayer(:Blue, configs)
+    board = Catan.read_map(configs)
+    compute_features(board, player.player)
+end
+
+@testitem "feature_perturbations" setup=[global_test_setup] begin
+    (fails_m, fails_r, fails_v) = test_feature_perturbations(features, features_increasing_good, configs)
+    println("model fails with +3 perturbation $(length(fails_m[3])): $(fails_m[3])")
+    println("model fails with +2 perturbation $(length(fails_m[2])): $(fails_m[2])")
+    println("model fails with +1 perturbation $(length(fails_m[1])): $(fails_m[1])")
+    
+    #=
+    println("reward fails with +3 perturbation: $(fails_r[3])")
+    println("reward fails with +2 perturbation: $(fails_r[2])")
+    println("reward fails with +1 perturbation: $(fails_r[1])")
+    println("value fails with +3 perturbation: $(fails_v[3])")
+    println("value fails with +2 perturbation: $(fails_v[2])")
+    println("value fails with +1 perturbation: $(fails_v[1])")
+    =#
+end
+
+
+@testitem "choose_road_location" setup=[global_test_setup] begin
+    player1 = DefaultRobotPlayer(:Test1, configs)
+    player2 = DefaultRobotPlayer(:Test2, configs)
+    players = Vector{PlayerType}([player1, player2])
+    board = read_map(configs)
+    player1 = DefaultRobotPlayer(:Test1, configs)
+    #choose_road_location(board::Board, PlayerPublicView.(players), player1, })
+end
+
+@testitem "stackoverflow_knight" setup=[global_test_setup] begin
+    copied_configs = deepcopy(configs)
+    copied_configs["PlayerSettings"]["SEARCH_DEPTH"] = 2
     player = EmpathRobotPlayer(:Blue, configs)
     players = Vector{PlayerType}([
                                   player, 
-                                  DefaultRobotPlayer(:Test2, configs),
-                                  DefaultRobotPlayer(:Test3, configs),
-                                  DefaultRobotPlayer(:Test4, configs),
+                                  DefaultRobotPlayer(:Test2, copied_configs),
+                                  DefaultRobotPlayer(:Test3, copied_configs),
+                                  DefaultRobotPlayer(:Test4, copied_configs),
                                  ])
-    board = read_map(configs)
-    game = Game(players, configs)
+    board = read_map(copied_configs)
+    game = Game(players, copied_configs)
     PlayerApi.add_devcard!(player.player, :Knight)
     actions = get_legal_actions(game, board, player.player)
     println(actions)
     choice = Catan.choose_next_action(board, PlayerPublicView.(players), player, actions)
 end
 
-function test_empath_road_building(configs)
+@testitem "empath_road_building" setup=[global_test_setup] begin
     players = Vector{PlayerType}([
                                   EmpathRobotPlayer(:Blue, configs), 
                                   DefaultRobotPlayer(:Test2, configs),
@@ -284,7 +342,7 @@ function test_empath_road_building(configs)
     Catan.do_road_building_action(board, PlayerPublicView.(players), player)
 end
 
-function test_action_interface(configs)
+@testitem "action_interface" setup=[global_test_setup] begin
     players = Vector{PlayerType}([
                                   EmpathRobotPlayer(:Blue, configs), 
                                   DefaultRobotPlayer(:Test2, configs),
@@ -329,7 +387,7 @@ function test_action_interface(configs)
     =#
 end
 
-function test_perturbations()
+@testitem "perturbations" setup=[global_test_setup] begin
     feats = [1.0, 2.0, 3.0]
     model = CatanLearning.LinearModel(feats)
 
@@ -339,34 +397,25 @@ function test_perturbations()
     @test model.weights[3] != feats[3]
 end
 
-function run_tests(neverend = false)
-    configs = parse_configs("Configuration.toml")
-    test_stackoverflow_knight(configs)
-    test_action_interface(configs)
-    test_perturbations()
-    test_model_caching(configs)
-    test_learning_player_base_actions(configs)
-    test_empath_road_building(configs)
+@testitem "player_implementation_default" setup=[global_test_setup] begin
     test_player_implementation(Catan.DefaultRobotPlayer, configs)
+end
+@testitem "player_implementation_empath" setup=[global_test_setup] begin
     test_player_implementation(EmpathRobotPlayer, configs)
+end
+@testitem "player_implementation_hybrid" setup=[global_test_setup] begin
     test_player_implementation(HybridPlayer, configs)
+end
+@testitem "player_implementation_td" setup=[global_test_setup] begin
     test_player_implementation(TemporalDifferencePlayer, configs)
-    test_compute_features(configs)
-    test_evolving_robot_game(neverend, configs)
-    (fails_m, fails_r, fails_v) = test_feature_perturbations(features, features_increasing_good, configs)
-    println("model fails with +3 perturbation $(length(fails_m[3])): $(fails_m[3])")
-    println("model fails with +2 perturbation $(length(fails_m[2])): $(fails_m[2])")
-    println("model fails with +1 perturbation $(length(fails_m[1])): $(fails_m[1])")
-    
-    #=
-    println("reward fails with +3 perturbation: $(fails_r[3])")
-    println("reward fails with +2 perturbation: $(fails_r[2])")
-    println("reward fails with +1 perturbation: $(fails_r[1])")
-    println("value fails with +3 perturbation: $(fails_v[3])")
-    println("value fails with +2 perturbation: $(fails_v[2])")
-    println("value fails with +1 perturbation: $(fails_v[1])")
-    =#
-    test_jet_fails()
+end
+
+function run_tests(neverend = false)
+
+    @run_package_tests filter=ti->doset(ti)
+
+    configs = parse_configs("Configuration.toml")
+
 end
 
 if length(ARGS) > 1
