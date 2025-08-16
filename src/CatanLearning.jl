@@ -11,6 +11,8 @@ import Catan
 import Catan: Player, PlayerPublicView, PlayerType, RobotPlayer, DefaultRobotPlayer, Game, Board, 
 get_player_config
 
+export LearningPlayer, EmpathRobotPlayer, HybridPlayer, compute_features, get_state_score
+
 function toggleprint(str)
     #println(str)
 end

@@ -13,6 +13,8 @@ GAMES_PER_MAP = 100
 MAPS_PER_EPOCH = 2
 # Number of epochs (1 epoch is M*N games) to run
 NUM_EPOCHS = 1
+# Defines behavior of generating maps during tournament
+GENERATE_RANDOM_MAPS = true
 
 [Async]
 CHANNELS = ["main", "public"]

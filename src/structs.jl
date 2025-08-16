@@ -106,7 +106,7 @@ end
 struct MarkovState
     # hash of game state to be used to track state value
     key::UInt
-    features::Dict{Symbol, Float64}
+    #features::Dict{Symbol, Float64}
     reward::Float64
 end
 
@@ -232,7 +232,7 @@ function MarkovState(features::Vector{Pair{Symbol, Float64}}, reward::Float64)
     # within the same box.
     rounded_features = round.([f.second for f in features], digits=1)
 
-    return MarkovState(persistent_hash(rounded_features), Dict(features), reward)
+    return MarkovState(persistent_hash(rounded_features), reward)
 end
 
 function persistent_hash(feats)

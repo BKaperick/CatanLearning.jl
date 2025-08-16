@@ -7,7 +7,8 @@ using Catan: choose_next_action, choose_who_to_trade_with,
              choose_place_robber, do_post_action_step, 
              choose_accept_trade, choose_resource_to_draw,
              choose_one_resource_to_discard,
-             choose_robber_victim, inner_do_robber_move_theft
+             choose_robber_victim, inner_do_robber_move_theft,
+             get_state_score
 
 function get_estimated_resources(board::Board, players::AbstractVector{PlayerPublicView}, target::PlayerPublicView)::Dict{Symbol, Int}
     resources = random_sample_resources(Catan.RESOURCE_TO_COUNT, target.resource_count)
@@ -229,7 +230,7 @@ function aggregate(ts::Vector{MarkovTransition})::MarkovTransition
     return argmax(t -> t.reward, ts)
 end
 
-function compute_features_from_hypoth(action::AbstractAction, hypoth_game::Game, hypoth_board::Board, hypoth_player::PlayerType)
+function isolate_and_perform_action(action::AbstractAction, hypoth_game::Game, hypoth_board::Board, hypoth_player::PlayerType)
     # We control the log-level of 'hypothetical' games separately from the main game.
     
     @debug "Entering game $(hypoth_game.unique_id) with action $(action) and log level $(hypoth_game.configs["LogSettings"]["HYPOTH_LOG_LEVEL"])"
@@ -237,32 +238,29 @@ function compute_features_from_hypoth(action::AbstractAction, hypoth_game::Game,
     hypoth_game.configs["SAVE_GAME_TO_FILE"] = false
     
     action.func!(hypoth_game, hypoth_board, hypoth_player)
-    
-    features = compute_features(hypoth_board, hypoth_player.player)
+
     hypoth_game.configs["SAVE_GAME_TO_FILE"] = true
     global_logger(main_logger)
     @debug "Reverting to global logger as we exit HYPOTH environment $(hypoth_game.unique_id)"
-    return features
 end
 
-function calculate_state_score(features, hypoth_game::Game, hypoth_board::Board, players::AbstractVector{PlayerPublicView}, hypoth_player::PlayerType, depth::UInt8)
-    # Look ahead an additional `SEARCH_DEPTH` turns
-    if depth < get_player_config(hypoth_player, "SEARCH_DEPTH")
-        # Don't apply first turn calculations here
-        # Not exactly the correct condition, since technically first turn happens a few times (2 settlements, 2 roads)
-        hypoth_game.turn_num = 2
-        next_legal_actions = Catan.get_legal_actions(hypoth_game, hypoth_board, hypoth_player.player)
-        filtered_next_legal_actions = Set{PreAction}()
-        for a in next_legal_actions
-            push!(filtered_next_legal_actions, a)
-        end
-        return get_best_transition(hypoth_board, players, hypoth_player, filtered_next_legal_actions, depth + UInt8(1)).reward
-    else
-        return get_state_score(hypoth_player, features)
+function calculate_state_score(hypoth_game::Game, hypoth_board::Board, players::AbstractVector{PlayerPublicView}, hypoth_player::LearningPlayer, depth::UInt8)
+    # Don't apply first turn calculations here
+    # Not exactly the correct condition, since technically first turn happens a few times (2 settlements, 2 roads)
+    hypoth_game.turn_num = 2
+    next_legal_actions = Catan.get_legal_actions(hypoth_game, hypoth_board, hypoth_player.player)
+    filtered_next_legal_actions = Set{PreAction}()
+    for a in next_legal_actions
+        push!(filtered_next_legal_actions, a)
     end
+    return get_best_transition(hypoth_board, players, hypoth_player, filtered_next_legal_actions, depth + UInt8(1)).reward
 end
 
-function get_state_score(player::LearningPlayer, features::Vector{Pair{Symbol, Float64}})::Float64
+function Catan.get_state_score(board::Board, player::LearningPlayer)::Float64
+    features = compute_features(board, player.player)
+    predict_model(player.model, features)
+end
+function Catan.get_state_score(player::LearningPlayer, features::Vector{Pair{Symbol, Float64}})::Float64
     predict_model(player.model, features)
 end
 
@@ -282,8 +280,17 @@ function analyze_action!(action::AbstractAction, board::Board, players::Abstract
     hypoth_player = copy(player)
     hypoth_game = Game(create_hypoth_other_players(board, players), board.configs)
     
-    features = compute_features_from_hypoth(action, hypoth_game, hypoth_board, hypoth_player)
-    state_score = calculate_state_score(features, hypoth_game, hypoth_board, players, hypoth_player, depth)
+    isolate_and_perform_action(action, hypoth_game, hypoth_board, hypoth_player)
+    
+    features = compute_features(board, player.player)
+    
+    # Look ahead an additional `SEARCH_DEPTH` turns
+    if depth < get_player_config(hypoth_player, "SEARCH_DEPTH")
+        state_score = calculate_state_score(hypoth_game, hypoth_board, players, hypoth_player, depth)
+    else
+
+        state_score = get_state_score(hypoth_player, features)
+    end
     return MarkovState(features, state_score)
 end
 

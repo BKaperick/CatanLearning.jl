@@ -1,5 +1,5 @@
 include("../reinforcement.jl")
-using Catan: do_post_action_step, choose_next_action
+using Catan: do_post_action_step, choose_next_action, get_state_score
 
 function Catan.do_post_action_step(board::Board, player::MarkovPlayer)
     next_features = compute_features(board, player.player)
@@ -10,8 +10,9 @@ function Catan.do_post_action_step(board::Board, player::MarkovPlayer)
 end
 
 
-function get_state_score(player::MarkovPlayer, features::Vector{Pair{Symbol, Float64}})::Float64
-    reward = get_combined_reward(player.process, player.model, features)
+function Catan.get_state_score(board::Board, player::MarkovPlayer)::Float64
+    features = compute_features(board, player.player)
+    reward = get_combined_reward(player.player.process, player.player.model, features)
     return reward
 end
 
