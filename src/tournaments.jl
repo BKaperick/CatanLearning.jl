@@ -17,9 +17,17 @@ end
 
 function do_tournament_one_epoch(tourney, teams, configs; create_players = Catan.create_players)::Vector{Tuple{Union{Nothing,Symbol}, Int}}
     winners = init_winners(teams)
+    map_str = ""
+    if !configs["Tournament"]["GENERATE_RANDOM_MAPS"]
+        map_str = read(configs["LOAD_MAP"], String)
+    end
     for j=1:tourney.maps_per_epoch
         @info "map $j / $(tourney.maps_per_epoch)"
-        do_tournament_one_map!(winners, tourney, configs, j; create_players = create_players)
+        if configs["Tournament"]["GENERATE_RANDOM_MAPS"]
+            do_tournament_one_map!(winners, tourney, configs, j; create_players = create_players)
+        else
+            do_tournament_one_map!(winners, tourney, configs, j, map_str; create_players = create_players)
+        end
         @info winners
     end
     order_winners(winners)
@@ -35,16 +43,29 @@ function do_tournament_one_epoch_async(channels, tourney, teams, configs)
     end
 end
 
-function do_tournament_one_map!(winners, tourney, configs, map_num; create_players = Catan.create_players)
-    map = Catan.generate_random_map()
-    for i=1:tourney.games_per_map
-        players = create_players(configs)
-        do_tournament_one_game!(winners, map, players, configs)
 
+function do_tournament_one_map!(winners, tourney, configs, map_num::Integer; create_players = Catan.create_players)
+    map = Catan.generate_random_map()
+    do_tournament_one_map!(winners, tourney, configs, map_num, map; create_players)
+end
+function do_tournament_one_map!(winners, tourney, configs, map_num::Integer, map_str::AbstractString; create_players = Catan.create_players)
+    
+    function log_games_per_map(map_num, tourney, i)
         g_num = (map_num - 1)*tourney.games_per_map + i
         if g_num % 100 == 0
             toggleprint("Game $(g_num) / $(tourney.maps_per_epoch * tourney.games_per_map)")
         end
+    end
+
+    iter_logger = (tourney, i) -> log_games_per_map(map_num, tourney, i)
+    do_tournament_one_map!(winners, tourney, configs, map_str, iter_logger; create_players)
+end
+
+function do_tournament_one_map!(winners, tourney, configs, map::AbstractString, iter_logger; create_players = Catan.create_players)
+    for i=1:tourney.games_per_map
+        players = create_players(configs)
+        do_tournament_one_game!(winners, map, players, configs)
+        iter_logger(tourney, i)
     end
 end
 
@@ -63,7 +84,7 @@ function do_tournament_one_game!(winners, map, players, configs)
     game = Game(players, configs)
     board = Catan.read_map(configs, map)
     main_logger = descend_logger(configs, "GAME")
-    _,winner = Catan.run(game)
+    _,winner = Catan.run(game, board)
     global_logger(main_logger)
     @debug "finished game $(game.unique_id)"
 
