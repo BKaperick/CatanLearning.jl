@@ -16,13 +16,13 @@ struct EmpathRobotPlayer <: LearningPlayer
     model_public::DecisionModel
 end
 
-struct TemporalDifferencePlayer <: MarkovPlayer
-    player::Player
-    model::DecisionModel
-    model_public::DecisionModel
-    process::MarkovRewardProcess
-    policy::MarkovPolicy
-    configs::Dict
+mutable struct TemporalDifferencePlayer <: MarkovPlayer
+    const player::Player
+    const model::DecisionModel
+    const model_public::DecisionModel
+    const process::MarkovRewardProcess
+    const policy::MarkovPolicy
+    const configs::Dict
     current_state::Union{Nothing, MarkovState}
 end
 
@@ -42,13 +42,13 @@ function TemporalDifferencePlayer(TPolicy::Type, team::Symbol, master_state_to_v
     TemporalDifferencePlayer(Player(team, configs), model, model_public, process, policy, configs, nothing)
 end
 
-struct HybridPlayer <: MarkovPlayer
-    player::Player
-    model::DecisionModel
-    model_public::DecisionModel
-    process::MarkovRewardProcess
-    policy::MarkovPolicy
-    configs::Dict
+mutable struct HybridPlayer <: MarkovPlayer
+    const player::Player
+    const model::DecisionModel
+    const model_public::DecisionModel
+    const process::MarkovRewardProcess
+    const policy::MarkovPolicy
+    const configs::Dict
     current_state::Union{Nothing, MarkovState}
 end
 
