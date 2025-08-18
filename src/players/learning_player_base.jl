@@ -10,7 +10,7 @@ using Catan: choose_next_action, choose_who_to_trade_with,
              choose_robber_victim, inner_do_robber_move_theft,
              get_state_score
 
-function get_estimated_resources(board::Board, players::AbstractVector{PlayerPublicView}, target::PlayerPublicView)::Dict{Symbol, Int}
+function get_estimated_resources(board::Board, players::AbstractVector{PlayerPublicView}, target::PlayerPublicView)::Dict{Symbol, Int8}
     resources = random_sample_resources(Catan.RESOURCE_TO_COUNT, target.resource_count)
     return Dict(counter(resources))
 end
@@ -268,8 +268,7 @@ function create_hypoth_other_players(board::Board, players::AbstractVector{Playe
     out = Vector{PlayerType}(undef, length(players))
     for (i,p) in enumerate(players)
         r = get_estimated_resources(board, players, p)
-        player = DefaultRobotPlayer(p.team, board.configs)
-        player.player.resources = r
+        player = DefaultRobotPlayer(p.team, board.configs, r)
         out[i] = player
     end
     return out
