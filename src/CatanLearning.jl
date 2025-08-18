@@ -8,7 +8,7 @@ import MLJModelInterface
 const MMI = MLJModelInterface
 
 import Catan
-import Catan: Player, PlayerPublicView, PlayerType, RobotPlayer, DefaultRobotPlayer, Game, Board, 
+import Catan: Player, PlayerPublicView, PlayerType, RobotPlayer, DefaultRobotPlayer, Game, Board, Map,
 get_player_config
 
 export LearningPlayer, EmpathRobotPlayer, HybridPlayer, compute_features, get_state_score

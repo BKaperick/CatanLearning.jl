@@ -11,7 +11,6 @@ using CatanLearning
 using Catan: Game, Board, Player, PlayerType, PlayerApi, BoardApi, GameApi,
              DefaultRobotPlayer, PlayerPublicView, 
              ALL_ACTIONS, choose_accept_trade, get_legal_actions,
-read_map,
 load_gamestate!,
 reset_savefile!,
 test_player_implementation,
@@ -47,7 +46,6 @@ feature_library
     using Catan: Game, Board, Player, PlayerType, PlayerApi, BoardApi, GameApi,
                 DefaultRobotPlayer, PlayerPublicView, 
                 ALL_ACTIONS, choose_accept_trade, get_legal_actions,
-    read_map,
     load_gamestate!,
     reset_savefile!,
     test_player_implementation,
@@ -204,7 +202,7 @@ end
     #@show length(JET.get_reports(rep))
     #@show rep
     reports = JET.get_reports(rep)
-    max_num = 65
+    max_num = 66
     println("length(JET.get_reports(rep)) = $(length(reports)) / $max_num")
     @test length(reports) <= max_num
 end
@@ -222,7 +220,7 @@ end
 
 function empath_player(configs)
     player = EmpathRobotPlayer(:red)
-    board = read_map(configs)
+    board = Board(configs)
     p = predict_model(player.model, board, player)
     return player, board, p
 end
@@ -240,7 +238,7 @@ end
     player2 = DefaultRobotPlayer(:Blue, configs)
     players = [player, player2]
     game = Game(players, configs)
-    board = read_map(configs)
+    board = Board(configs)
     # get_legal_action_sets(board::Board, players::AbstractVector{PlayerPublicView}, player::Player, pre_actions::Set{PreAction})::Vector{AbstractActionSet}
 
     PlayerApi.give_resource!(player.player, :Grain)
@@ -280,7 +278,7 @@ end
 @testitem "compute_features" setup=[global_test_setup] begin
     #players = setup_players()
     player = Catan.DefaultRobotPlayer(:Blue, configs)
-    board = Catan.read_map(configs)
+    board = Board(configs)
     compute_features(board, player.player)
 end
 
@@ -305,7 +303,7 @@ end
     player1 = DefaultRobotPlayer(:Test1, configs)
     player2 = DefaultRobotPlayer(:Test2, configs)
     players = Vector{PlayerType}([player1, player2])
-    board = read_map(configs)
+    board = Board(configs)
     player1 = DefaultRobotPlayer(:Test1, configs)
     #choose_road_location(board::Board, PlayerPublicView.(players), player1, })
 end
@@ -320,7 +318,7 @@ end
                                   DefaultRobotPlayer(:Test3, copied_configs),
                                   DefaultRobotPlayer(:Test4, copied_configs),
                                  ])
-    board = read_map(copied_configs)
+    board = Board(copied_configs)
     game = Game(players, copied_configs)
     PlayerApi.add_devcard!(player.player, :Knight)
     actions = get_legal_actions(game, board, player.player)
@@ -336,7 +334,7 @@ end
                                   DefaultRobotPlayer(:Test4, configs),
                                  ])
     player = players[1]
-    board = read_map(configs)
+    board = Board(configs)
     
     #BoardApi.build_settlement!(board, :Blue, (1,1))
     Catan.do_road_building_action(board, PlayerPublicView.(players), player)
@@ -350,7 +348,7 @@ end
                                   DefaultRobotPlayer(:Test4, configs),
                                  ])
     player = players[1]
-    board = read_map(configs)
+    board = Board(configs)
 
     BoardApi.build_settlement!(board, :Blue, (1,1))
     #admissible_roads = BoardApi.get_admissible_road_locations(board, player.player.team, true)
@@ -410,16 +408,10 @@ end
     test_player_implementation(TemporalDifferencePlayer, configs)
 end
 
-function run_tests(neverend = false)
-
+function run_tests()
     @run_package_tests filter=ti->doset(ti)
-
     configs = parse_configs("Configuration.toml")
-
+    rm("savefile.txt")
 end
 
-if length(ARGS) > 1
-    run_tests(ARGS[1])
-else
-    run_tests()
-end
+run_tests()

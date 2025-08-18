@@ -61,7 +61,8 @@ function do_tournament_one_map!(winners, tourney, configs, map_num::Integer, map
     do_tournament_one_map!(winners, tourney, configs, map_str, iter_logger; create_players)
 end
 
-function do_tournament_one_map!(winners, tourney, configs, map::AbstractString, iter_logger; create_players = Catan.create_players)
+function do_tournament_one_map!(winners, tourney, configs, map_str::AbstractString, iter_logger; create_players = Catan.create_players)
+    map = Map(map_str)
     for i=1:tourney.games_per_map
         players = create_players(configs)
         do_tournament_one_game!(winners, map, players, configs)
@@ -71,18 +72,18 @@ end
 
 function do_tournament_one_map_async!(channels, tourney, configs)
     @debug "running do_tournament_one_map_async!"
-    map = Catan.generate_random_map()
+    map_str = Catan.generate_random_map()
     for i=1:tourney.games_per_map
         @debug "game $i / $(tourney.games_per_map)"
         players = Catan.create_players(configs)
-        do_tournament_one_game_async!(channels, map, players, configs)
+        do_tournament_one_game_async!(channels, map_str, players, configs)
         yield()
     end
 end
 
-function do_tournament_one_game!(winners, map, players, configs)
+function do_tournament_one_game!(winners, map::Map, players, configs)
     game = Game(players, configs)
-    board = Catan.read_map(configs, map)
+    board = Board(map, configs)
     main_logger = descend_logger(configs, "GAME")
     _,winner = Catan.run(game, board)
     global_logger(main_logger)
@@ -98,9 +99,9 @@ function do_tournament_one_game!(winners, map, players, configs)
     return winner
 end
 
-function do_tournament_one_game_async!(channels, map, players, configs)
+function do_tournament_one_game_async!(channels, map::Map, players, configs)
     game = Game(players, configs)
-    board = Catan.read_map(configs, map)
+    board = Board(map, configs)
     @debug "starting game $(game.unique_id)"
     main_logger = global_logger()
     global_logger(NullLogger())

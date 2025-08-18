@@ -354,7 +354,7 @@ end
 
 function get_resource_port_count(board, team, resource)::Int
     count = 0
-    for (c,p) in board.coord_to_port
+    for (c,p) in board.map.coord_to_port
         if p == resource && haskey(board.coord_to_building, c) && board.coord_to_building[c].team == team
             count += 1
         end
