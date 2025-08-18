@@ -299,8 +299,8 @@ function get_sum_resource_dice_weight(board, team, resource)::Int
     for (c,b) in board.coord_to_building
         if b.team == team
             for tile in Catan.COORD_TO_TILES[c]
-                if board.tile_to_resource[tile] == resource
-                    weight = Catan.DICEVALUE_TO_PROBA_WEIGHT[board.tile_to_dicevalue[tile]]
+                if board.map.tile_to_resource[tile] == resource
+                    weight = Catan.DICEVALUE_TO_PROBA_WEIGHT[board.map.tile_to_dicevalue[tile]]
                     if b.type == :City
                         weight *= 2
                     end
@@ -354,7 +354,7 @@ end
 
 function get_resource_port_count(board, team, resource)::Int
     count = 0
-    for (c,p) in board.coord_to_port
+    for (c,p) in board.map.coord_to_port
         if p == resource && haskey(board.coord_to_building, c) && board.coord_to_building[c].team == team
             count += 1
         end

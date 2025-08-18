@@ -10,19 +10,19 @@ end
 abstract type MarkovPlayer <: LearningPlayer
 end
 
-mutable struct EmpathRobotPlayer <: LearningPlayer 
+struct EmpathRobotPlayer <: LearningPlayer 
     player::Player
     model::DecisionModel
     model_public::DecisionModel
 end
 
 mutable struct TemporalDifferencePlayer <: MarkovPlayer
-    player::Player
-    model::DecisionModel
-    model_public::DecisionModel
-    process::MarkovRewardProcess
-    policy::MarkovPolicy
-    configs::Dict
+    const player::Player
+    const model::DecisionModel
+    const model_public::DecisionModel
+    const process::MarkovRewardProcess
+    const policy::MarkovPolicy
+    const configs::Dict
     current_state::Union{Nothing, MarkovState}
 end
 
@@ -43,12 +43,12 @@ function TemporalDifferencePlayer(TPolicy::Type, team::Symbol, master_state_to_v
 end
 
 mutable struct HybridPlayer <: MarkovPlayer
-    player::Player
-    model::DecisionModel
-    model_public::DecisionModel
-    process::MarkovRewardProcess
-    policy::MarkovPolicy
-    configs::Dict
+    const player::Player
+    const model::DecisionModel
+    const model_public::DecisionModel
+    const process::MarkovRewardProcess
+    const policy::MarkovPolicy
+    const configs::Dict
     current_state::Union{Nothing, MarkovState}
 end
 

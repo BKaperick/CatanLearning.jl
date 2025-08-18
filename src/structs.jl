@@ -83,7 +83,7 @@ function Base.show(io::IO, a::AbstractActionSet)
 end
 
 
-mutable struct ActionSet{T<:AbstractAction} <: AbstractActionSet
+struct ActionSet{T<:AbstractAction} <: AbstractActionSet
     name::Symbol
     actions::Vector{T}
 end
@@ -128,8 +128,8 @@ mutable struct MarkovRewardProcess <: AbstractMarkovRewardProcess
     # Do not access them directly! Use the following helper methods!
     # Writing: `update_state_value(process, state_key, new_value)`
     # Reading: `query_state_value(process, state, default = 0.5)`
-    state_to_value::Dict{UInt64, Float64}
-    new_state_to_value::Dict{UInt64, Float64}
+    const state_to_value::Dict{UInt64, Float64}
+    const new_state_to_value::Dict{UInt64, Float64}
 end
 
 abstract type DecisionModel
