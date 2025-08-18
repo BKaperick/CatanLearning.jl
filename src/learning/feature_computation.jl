@@ -299,8 +299,8 @@ function get_sum_resource_dice_weight(board, team, resource)::Int
     for (c,b) in board.coord_to_building
         if b.team == team
             for tile in Catan.COORD_TO_TILES[c]
-                if board.tile_to_resource[tile] == resource
-                    weight = Catan.DICEVALUE_TO_PROBA_WEIGHT[board.tile_to_dicevalue[tile]]
+                if board.map.tile_to_resource[tile] == resource
+                    weight = Catan.DICEVALUE_TO_PROBA_WEIGHT[board.map.tile_to_dicevalue[tile]]
                     if b.type == :City
                         weight *= 2
                     end
