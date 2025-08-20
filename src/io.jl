@@ -86,7 +86,6 @@ end
 #
 
 function read_values_file(values_file::String, max_lines = nothing)::Dict{UInt64, Float64}
-    println("reading values file...")
     if ~isfile(values_file)
         io = open(values_file, "w")
         close(io)

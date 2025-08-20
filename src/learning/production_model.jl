@@ -51,10 +51,14 @@ function try_load_serialized_public_model(team::Symbol, configs::Dict)::Decision
 end
 
 function load_or_train_serialized_model(model_path::String, features_path::String)::DecisionModel
-    if endswith(lowercase(model_path), "csv")
+    if model_path == ""
+        return EmptyModel()
+    elseif endswith(lowercase(model_path), "csv")
         return load_or_train_serialized_model_from_csv(model_path, features_path)
-    else
+    elseif endswith(lowercase(model_path), "jls")
         return load_or_train_serialized_model_from_jls(model_path, features_path)
+    else
+        throw(ArgumentError("Unrecognized model serialization formation for model $model_path (Only .csv and .jls file deserialization is currentlly implemented)"))
     end
 end
 

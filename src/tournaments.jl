@@ -26,6 +26,7 @@ function do_tournament_one_epoch(tourney, teams, configs; create_players = Catan
         if configs["Tournament"]["GENERATE_RANDOM_MAPS"]
             do_tournament_one_map!(winners, tourney, configs, j; create_players = create_players)
         else
+            @debug "loading map from $(configs["LOAD_MAP"])"
             do_tournament_one_map!(winners, tourney, configs, j, map_str; create_players = create_players)
         end
         @info winners
@@ -48,12 +49,13 @@ function do_tournament_one_map!(winners, tourney, configs, map_num::Integer; cre
     map = Catan.generate_random_map()
     do_tournament_one_map!(winners, tourney, configs, map_num, map; create_players)
 end
+
 function do_tournament_one_map!(winners, tourney, configs, map_num::Integer, map_str::AbstractString; create_players = Catan.create_players)
     
     function log_games_per_map(map_num, tourney, i)
         g_num = (map_num - 1)*tourney.games_per_map + i
-        if g_num % 100 == 0
-            toggleprint("Game $(g_num) / $(tourney.maps_per_epoch * tourney.games_per_map)")
+        if g_num % 1 == 0
+            @debug "Game $(g_num) / $(tourney.maps_per_epoch * tourney.games_per_map)"
         end
     end
 

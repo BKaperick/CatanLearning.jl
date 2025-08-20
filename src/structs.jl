@@ -140,6 +140,8 @@ end
 mutable struct LinearModel <: DecisionModel
     weights::Vector{Float64}
 end
+mutable struct EmptyModel <: DecisionModel
+end
 
 """
     `MarkovTransition`
