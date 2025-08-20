@@ -235,11 +235,12 @@ function isolate_and_perform_action(action::AbstractAction, hypoth_game::Game, h
     
     @debug "Entering game $(hypoth_game.unique_id) with action $(action) and log level $(hypoth_game.configs["LogSettings"]["HYPOTH_LOG_LEVEL"])"
     main_logger = descend_logger(hypoth_player.player.configs, "HYPOTH")
+    main_save_lvl = hypoth_game.configs["SAVE_GAME_TO_FILE"]
     hypoth_game.configs["SAVE_GAME_TO_FILE"] = false
     
     action.func!(hypoth_game, hypoth_board, hypoth_player)
 
-    hypoth_game.configs["SAVE_GAME_TO_FILE"] = true
+    hypoth_game.configs["SAVE_GAME_TO_FILE"] = main_save_lvl
     global_logger(main_logger)
     @debug "Reverting to global logger as we exit HYPOTH environment $(hypoth_game.unique_id)"
 end

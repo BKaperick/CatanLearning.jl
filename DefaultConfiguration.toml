@@ -1,5 +1,6 @@
 SAVE_MAP = ""
 WRITE_FEATURES = false
+WRITE_VALUES = false
 TEAMS = ["blue", "cyan", "green", "yellow"]
 
 [LogSettings]
