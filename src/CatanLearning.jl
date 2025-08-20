@@ -49,13 +49,17 @@ function run(configs)
 end
 
 function descend_logger(configs, logger_prefix)
+    main_logger = global_logger()
+    descended_logger = create_descended_logger(configs, logger_prefix)
+    global_logger(descended_logger)
+    return main_logger
+end
+
+function create_descended_logger(configs, logger_prefix)
     logging_config = configs["LogSettings"]
     level = get(logging_config, "$(logger_prefix)_LOG_LEVEL", "Warn")
     out = get(logging_config, "$(logger_prefix)_LOG_OUTPUT", logging_config["LOG_OUTPUT"])
     descended_logger,_,__ = Catan.make_logger(level, out)
-    @debug "setting logger to $level as we enter $logger_prefix environment"
-    main_logger = global_logger()
-    global_logger(descended_logger)
-    return main_logger
+    return descended_logger
 end
 end

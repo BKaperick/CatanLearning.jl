@@ -66,8 +66,10 @@ end
 function do_tournament_one_map!(winners, tourney, configs, map_str::AbstractString, iter_logger; create_players = Catan.create_players)
     map = Map(map_str)
     for i=1:tourney.games_per_map
-        players = create_players(configs)
-        do_tournament_one_game!(winners, map, players, configs)
+        main_logger = descend_logger(configs, "GAME")
+            players = create_players(configs)
+            do_tournament_one_game!(winners, map, players, configs)
+        global_logger(main_logger)
         iter_logger(tourney, i)
     end
 end
@@ -86,9 +88,7 @@ end
 function do_tournament_one_game!(winners, map::Map, players, configs)
     game = Game(players, configs)
     board = Board(map, configs)
-    main_logger = descend_logger(configs, "GAME")
     _,winner = Catan.run(game, board)
-    global_logger(main_logger)
     @debug "finished game $(game.unique_id)"
 
     w = winner

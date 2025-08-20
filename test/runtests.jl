@@ -40,6 +40,7 @@ feature_library
 @testsnippet global_test_setup begin
     using JET
     using StatsBase
+    using Logging
 
     using Catan
     using CatanLearning
@@ -406,6 +407,37 @@ end
 end
 @testitem "player_implementation_td" setup=[global_test_setup] begin
     test_player_implementation(TemporalDifferencePlayer, configs)
+end
+
+@testitem "descend_logger" setup=[global_test_setup] begin
+    #LOG_LEVEL = "Logging.Warn"
+    #LOG_OUTPUT = ""
+    #TESTPREFIX_LOG_LEVEL = "Logging.Debug"
+    #TESTPREFIX_LOG_OUTPUT = "log.txt"
+
+    # Before
+    @test global_logger().min_level == Logging.Warn
+    @test typeof(global_logger().stream) == Base.TTY
+    
+    # Create logger but don't change global logger yet
+    descended_logger = CatanLearning.create_descended_logger(configs, "TESTPREFIX")
+
+    @test descended_logger.min_level == Logging.Debug
+    @test typeof(descended_logger.stream) == IOStream
+    @test descended_logger.stream.name == "<file log.txt>"
+
+    # Now change the global logger
+    main_logger = CatanLearning.descend_logger(configs, "TESTPREFIX")
+
+    @test global_logger().min_level == Logging.Debug
+    @test typeof(global_logger().stream) == IOStream
+    @test global_logger().stream.name == "<file log.txt>"
+    @test main_logger.min_level == Logging.Warn
+    @test typeof(main_logger.stream) == Base.TTY
+
+    # Reset logger to original
+    global_logger(main_logger)
+    rm("log.txt")
 end
 
 function run_tests()
