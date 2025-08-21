@@ -282,7 +282,7 @@ function analyze_action!(action::AbstractAction, board::Board, players::Abstract
     
     isolate_and_perform_action(action, hypoth_game, hypoth_board, hypoth_player)
     
-    features = compute_features(board, player.player)
+    features = compute_features(hypoth_board, hypoth_player.player)
     
     # Look ahead an additional `SEARCH_DEPTH` turns
     if depth < get_player_config(hypoth_player, "SEARCH_DEPTH")

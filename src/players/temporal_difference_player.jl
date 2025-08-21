@@ -2,6 +2,7 @@ include("../reinforcement.jl")
 using Catan: do_post_action_step, choose_next_action, get_state_score
 
 function Catan.do_post_action_step(board::Board, player::MarkovPlayer)
+    # We can't re-use already computed features, because if it was a non-deterministic action, the features may not be the same
     next_features = compute_features(board, player.player)
     next_state = MarkovState(player.process, next_features, player.model)
 
