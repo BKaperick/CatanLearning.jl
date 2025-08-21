@@ -41,7 +41,7 @@ function try_load_serialized_model(team::Symbol, configs::Dict, model_key="MODEL
     end
     model_path = get_player_config(configs, model_key, team)
     features_path = get_player_config(configs, features_key, team)
-    model = load_or_train_serialized_model(model_path, features_path)
+    model = load_or_train_serialized_model(model_path, features_path, get_player_config(configs, "$(model_key)_FORCE_RETRAIN", team))
     update_ml_cache!(configs, team, model_key, model)
     return model
 end
@@ -50,47 +50,61 @@ function try_load_serialized_public_model(team::Symbol, configs::Dict)::Decision
     try_load_serialized_model(team, configs, "PUBLIC_MODEL", "PUBLIC_FEATURES")
 end
 
-function load_or_train_serialized_model(model_path::String, features_path::String)::DecisionModel
+"""
+    load_or_train_serialized_model(model_path::String, features_path::String, force_retrain::Bool)::DecisionModel
+
+If the serialized file exists, then load it.  If not, train a new model and 
+serialize it before returning it to caller.  Use `force_retrain` to force training and serialization of a new model.
+If `model_path` ends in csv or jls we have dedicated training and serialization implementation.
+"""
+function load_or_train_serialized_model(model_path::String, features_path::String, force_retrain::Bool)::DecisionModel
     if model_path == ""
         return EmptyModel()
     elseif endswith(lowercase(model_path), "csv")
-        return load_or_train_serialized_model_from_csv(model_path, features_path)
+        return load_or_train_serialized_model_from_csv(model_path, features_path, force_retrain)
     elseif endswith(lowercase(model_path), "jls")
-        return load_or_train_serialized_model_from_jls(model_path, features_path)
+        return load_or_train_serialized_model_from_jls(model_path, features_path, force_retrain)
     else
         throw(ArgumentError("Unrecognized model serialization formation for model $model_path (Only .csv and .jls file deserialization is currentlly implemented)"))
     end
 end
 
-function load_or_train_serialized_model_from_csv(model_path::String, features_path::String)
-    if isfile(model_path)
+function load_or_train_serialized_model_from_csv(model_path::String, features_path::String, force_retrain::Bool)
+    if isfile(model_path) && !force_retrain
         @info "Found CSV model stored in $model_path"
         weights = CSV.read(model_path, DataFrame)
         model = LinearModel(weights[!, :Weights])
     else
-        @info "Serialized model not found at $model_path, let's try to train a new model from features in $features_path"
+        if force_retrain
+            @warn "Forcing re-training and serialization to $model_path from features in $features_path"
+            rm(model_path, force=true)
+        else
+            @info "Serialized model not found at $model_path, let's try to train a new model from features in $features_path"
+        end
         model = train_and_serialize_linear_model(features_path, model_path)
     end
+    return model
 end
 
-"""
-    load_or_train_serialized_model_from_jls(model_file_name, features_file_name)
-
-If the serialized file exists, then load it.  If not, train a new model and 
-serialize it before returning it to caller.
-"""
-function load_or_train_serialized_model_from_jls(model_file_name::String, features_file_name::String)::MachineModel
+function load_or_train_serialized_model_from_jls(model_path::String, features_path::String, force_retrain::Bool)::MachineModel
     
-    if isfile(model_file_name)
-        @info "Found model stored in $model_file_name"
-        return load_model_from_jls(model_file_name)
+    if isfile(model_path) && !force_retrain
+        @info "Found model stored in $model_path"
+        model = load_model_from_jls(model_path)
+    else
+        if force_retrain
+            @warn "Forcing re-training and serialization to $model_path from features in $features_path"
+            rm(model_path, force=true)
+        else
+            @info "Serialized model not found at $model_path, let's try to train a new model from features in $features_path"
+        end
+        model = train_and_serialize_model(features_path, model_path; num_tuning_iterations = 100)
     end
-    @info "Model not found, let's try to train a new model from features in $features_file_name"
-    train_and_serialize_model(features_file_name, model_file_name; num_tuning_iterations = 100)
+    return model
 end
 
-function load_model_from_jls(model_file_name)::MachineModel
-    return MachineModel(machine(model_file_name))
+function load_model_from_jls(model_path)::MachineModel
+    return MachineModel(machine(model_path))
 end
 
 function coerce_feature_types!(df)

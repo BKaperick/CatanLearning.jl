@@ -415,7 +415,7 @@ end
 
 predict_model(model::MachineModel, features) = predict_model(model.machine, features)
 predict_model(model::LinearModel, features) = predict_model(model.weights, features::Vector{Pair{Symbol, Float64}})
-predict_model(_::EmptyModel, __) = rand()
+predict_model(_::EmptyModel, __) = 0.0 #()
 
 function predict_model(machine::Machine, features)
     X_new = DataFrame(features)

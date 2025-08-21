@@ -78,7 +78,9 @@ function Catan.do_post_game_action(game::Game, board::Board, players::AbstractVe
         write_public_features_file(game, board, players, player, winner)
         write_main_features_file(game, board, players, player, winner)
     end
-    return write_values_file(players, player)
+    if game.configs["WRITE_VALUES"] == true
+        write_values_file(players, player)
+    end
 end
 
 #

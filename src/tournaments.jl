@@ -132,6 +132,7 @@ function run_tournament(configs::Dict)
         end
     end
     @info winners
+    return winners
 end
 
 function run_tournament_async(configs)
@@ -187,6 +188,7 @@ end
     run_state_space_tournament(configs)
 
 Run a tournament parameterized by `configs` which keeps track of the exploration of state space and mutations.
+Each epoch adds a new mutation
 """
 function run_state_space_tournament(configs)
     tourney = Tournament(configs)
