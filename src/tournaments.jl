@@ -1,7 +1,7 @@
 
 function initialize_tournament(configs::Dict)
     if configs["WRITE_FEATURES"] == true
-        @info "Intializing player feature files"
+        @info "Initializing player feature files"
         f = get_features()
         pf = get_public_features()
         for team in configs["TEAMS"]

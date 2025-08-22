@@ -79,7 +79,10 @@ function Catan.do_post_game_action(game::Game, board::Board, players::AbstractVe
         write_main_features_file(game, board, players, player, winner)
     end
     if game.configs["WRITE_VALUES"] == true
-        write_values_file(players, player)
+        first_markov = [p.player.team for p in players if p isa MarkovPlayer][1]
+        if player.player.team == first_markov
+            write_values_file(players, player)
+        end
     end
 end
 
@@ -89,14 +92,13 @@ end
 
 function read_values_file(values_file::String, max_lines = nothing)::Dict{UInt64, Float64}
     if ~isfile(values_file)
-        io = open(values_file, "w")
-        close(io)
+        touch(values_file)
     end
     out = Dict{UInt64, Float64}() 
     #data = split(read(values_file, String), "\n")
     key_collisions = 0
     for (i,line) in enumerate(readlines(values_file))#, String))
-        if line == max_lines
+        if !isnothing(max_lines) && i > max_lines
             break
         end
         if occursin(",", line)
@@ -104,7 +106,7 @@ function read_values_file(values_file::String, max_lines = nothing)::Dict{UInt64
             parsed_key = parse(UInt64, key)
             if haskey(out, parsed_key)
                 key_collisions += 1
-                #println("key collision: $key")
+                println("key collision: $key")
             end
             out[parse(UInt64, key)] = parse(Float64, value)
         end
@@ -118,13 +120,13 @@ end
 function write_values_file(players::AbstractVector{PlayerType}, player::MarkovPlayer)
     values_file = get_player_config(player, "STATE_VALUES")
     @info "to $values_file"
-    state_to_value = player.process.new_state_to_value
-    write_values_file(values_file, state_to_value)
+    state_to_value = player.process.state_to_value
+    #write_values_file(values_file, state_to_value)
 
     # Merge all new entries from this game into the main state_to_value dict
-    merge!(player.process.state_to_value, player.process.new_state_to_value)
-    # and clear the new state to values learned
-    empty!(player.process.new_state_to_value)
+    new_state_to_values = [p.process.new_state_to_value for p in players if p isa MarkovPlayer]
+    write_values_file(values_file, state_to_value, new_state_to_values)
+
     
     #=
     for other_player in players
@@ -136,9 +138,19 @@ function write_values_file(players::AbstractVector{PlayerType}, player::MarkovPl
     =#
 end
 
+function write_values_file(values_file::String, master_state_to_value::Dict{UInt64, Float64}, new_state_to_values::AbstractVector)
+    for s_to_v in new_state_to_values
+        merge!(master_state_to_value, s_to_v)
+        
+        # and clear the new state to values learned
+        empty!(s_to_v)
+    end
+    write_values_file(values_file, master_state_to_value)
+end
+
 function write_values_file(values_file::String, state_to_value)
     data = join(["$k,$v\n" for (k,v) in collect(state_to_value)])
-    file = open(values_file, "a")
+    file = open(values_file, "w")
     write(file, data)
     close(file)
 end
