@@ -18,6 +18,7 @@ function toggleprint(str)
 end
 
 include("structs.jl")
+include("state_values.jl")
 include("learning/naive_model.jl")
 include("learning/production_model.jl")
 include("players/structs.jl")

@@ -128,14 +128,14 @@ mutable struct MarkovRewardProcess <: AbstractMarkovRewardProcess
     # Coefficient for the number of victory points term in combined reward function 
     points_coeff::AbstractFloat
 
-    # Two dictionaries to keep track of state -> value mapping.
-    # Do not access them directly! Use the following helper methods!
+    # Container for two dictionaries keeping track of state -> value mapping.
+    # Do not access it directly! Use the following helper methods!
     # Writing: `update_state_value(process, state_key, new_value)`
     # Reading: `query_state_value(process, state, default = 0.5)`
     state_values::StateValueContainer
 end
 
-function MarkovRewardProcess(r::AbstractFloat, l::AbstractFloat, m::AbstractFloat, p::AbstractFloat, master::Dict{UInt64, Float64}, current::Dict{UInt64, Float64})
+function MarkovRewardProcess(r::AbstractFloat, l::AbstractFloat, m::AbstractFloat, p::AbstractFloat, master ::Dict{UInt64, Float64}, current::Dict{UInt64, Float64})
     return MarkovRewardProcess(r, l, m, p, StateValueContainer(master, current))
 end
 
@@ -236,20 +236,7 @@ Represents one game state.  `Markov` because it maintains a key and reward,
 which can be used in its modeling as a Markov Reward Process.
 """
 function MarkovState(features::Vector{Pair{Symbol, Float64}}, reward::Float64)
-    # In order to avoid numerical instability issues in `Float64`, we apply rounding to the featurees first
-    # Essentially applying a grid to our feature space, and considering all points the same if they are
-    # within the same box.
-    rounded_features = round.([f.second for f in features], digits=1)
-
-    return MarkovState(persistent_hash(rounded_features), reward)
-end
-
-function persistent_hash(feats)
-    hash = UInt64(17)
-    for f in feats
-        hash = hash * UInt64(23) + UInt64(f * 100)
-    end
-    return UInt64(hash)
+    return MarkovState(persistent_hash(features), reward)
 end
 
 
@@ -257,30 +244,4 @@ function get_combined_reward(states::Vector{MarkovState})
     # Get average reward from this transition
     reward = sum([s.reward for s in states]) / length(states)
     return reward
-end
-
-"""
-    query_state_value(state_values::StateValueContainer, state::MarkovState)::Float64
-
-Read from the state values cache to find the current state.  If not found, we retrieve the state's reward.
-"""
-function query_state_value(state_values::StateValueContainer, state::MarkovState)::Float64
-    @debug "querying key {$(state.key)} (searching $(length(keys(state_values.master))) + $(length(keys(state_values.current))) known values...)"
-    if haskey(state_values.master, state.key)
-        return state_values.master[state.key]
-    elseif haskey(state_values.current, state.key)
-        return state_values.current[state.key]
-    else
-        # Default to the state combined reward
-        @debug "defaulting to reward = $(state.reward)"
-        return state.reward
-    end
-end
-function update_state_value(state_values::StateValueContainer, state_key::UInt, new_value::Float64)
-    @assert ~(haskey(state_values.master, state_key) && haskey(state_values.current, state_key))
-    if haskey(state_values.master, state_key)
-        state_values.master[state_key] = new_value
-    else
-        state_values.current[state_key] = new_value
-    end
 end
