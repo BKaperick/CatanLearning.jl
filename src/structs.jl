@@ -42,32 +42,6 @@ function StateValueContainer(master::Dict{UInt64, Float64})
     return StateValueContainer(master, new_state_to_value)
 end
 
-"""
-    query_state_value(state_values::StateValueContainer, state::MarkovState)::Float64
-
-Read from the state values cache to find the current state.  If not found, we retrieve the state's reward.
-"""
-function query_state_value(state_values::StateValueContainer, state::MarkovState)::Float64
-    @debug "querying key {$(state.key)} (searching $(length(keys(state_values.master))) + $(length(keys(state_values.current))) known values...)"
-    if haskey(state_values.master, state.key)
-        return state_values.master[state.key]
-    elseif haskey(state_values.current, state.key)
-        return state_values.current[state.key]
-    else
-        # Default to the state combined reward
-        @debug "defaulting to reward = $(state.reward)"
-        return state.reward
-    end
-end
-function update_state_value(state_values::StateValueContainer, state_key::UInt, new_value::Float64)
-    @assert ~(haskey(state_values.master, state_key) && haskey(state_values.current, state_key))
-    if haskey(state_values.master, state_key)
-        state_values.master[state_key] = new_value
-    else
-        state_values.current[state_key] = new_value
-    end
-end
-
 abstract type AbstractActionSet end
 abstract type AbstractAction end
 struct Action <: AbstractAction
@@ -159,8 +133,10 @@ mutable struct MarkovRewardProcess <: AbstractMarkovRewardProcess
     # Writing: `update_state_value(process, state_key, new_value)`
     # Reading: `query_state_value(process, state, default = 0.5)`
     state_values::StateValueContainer
-    state_to_value::Dict{UInt64, Float64}
-    new_state_to_value::Dict{UInt64, Float64}
+end
+
+function MarkovRewardProcess(r::AbstractFloat, l::AbstractFloat, m::AbstractFloat, p::AbstractFloat, master::Dict{UInt64, Float64}, current::Dict{UInt64, Float64})
+    return MarkovRewardProcess(r, l, m, p, StateValueContainer(master, current))
 end
 
 abstract type DecisionModel
@@ -281,4 +257,30 @@ function get_combined_reward(states::Vector{MarkovState})
     # Get average reward from this transition
     reward = sum([s.reward for s in states]) / length(states)
     return reward
+end
+
+"""
+    query_state_value(state_values::StateValueContainer, state::MarkovState)::Float64
+
+Read from the state values cache to find the current state.  If not found, we retrieve the state's reward.
+"""
+function query_state_value(state_values::StateValueContainer, state::MarkovState)::Float64
+    @debug "querying key {$(state.key)} (searching $(length(keys(state_values.master))) + $(length(keys(state_values.current))) known values...)"
+    if haskey(state_values.master, state.key)
+        return state_values.master[state.key]
+    elseif haskey(state_values.current, state.key)
+        return state_values.current[state.key]
+    else
+        # Default to the state combined reward
+        @debug "defaulting to reward = $(state.reward)"
+        return state.reward
+    end
+end
+function update_state_value(state_values::StateValueContainer, state_key::UInt, new_value::Float64)
+    @assert ~(haskey(state_values.master, state_key) && haskey(state_values.current, state_key))
+    if haskey(state_values.master, state_key)
+        state_values.master[state_key] = new_value
+    else
+        state_values.current[state_key] = new_value
+    end
 end
