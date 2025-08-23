@@ -314,8 +314,7 @@ function create_enriched_players(configs, state_to_value::StateValueContainer, t
     # Enrich players if needed
     for p in players
         if typeof(p) <: MarkovPlayer
-            p.process.state_to_value = state_to_value.master
-            p.process.new_state_to_value = state_to_value.current
+            p.process.state_values = state_to_value
             p.model = get(team_to_perturb, p.player.team, p.model)
             p.model_public = get(team_to_public_perturb, p.player.team, p.model_public)
         end

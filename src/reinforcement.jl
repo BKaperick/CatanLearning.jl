@@ -15,27 +15,11 @@ end
 =#
 
 
-function query_state_value(process::MarkovRewardProcess, state::MarkovState)
-    @debug "querying key {$(state.key)} (searching $(length(keys(process.state_to_value))) + $(length(keys(process.new_state_to_value))) known values...)"
-    if haskey(process.state_to_value, state.key)
-        return process.state_to_value[state.key]
-    elseif haskey(process.new_state_to_value, state.key)
-        return process.new_state_to_value[state.key]
-    else
-        # Default to the state combined reward
-        @debug "defaulting to reward = $(state.reward)"
-        return state.reward
-    end
-end
+query_state_value(process::MarkovRewardProcess, state::MarkovState) = query_state_value(process.state_values, state)
 
-function update_state_value(process::MarkovRewardProcess, state_key::UInt, new_value::Float64)
-    @assert ~(haskey(process.state_to_value, state_key) && haskey(process.new_state_to_value, state_key))
-    if haskey(process.state_to_value, state_key)
-        process.state_to_value[state_key] = new_value
-    else
-        process.new_state_to_value[state_key] = new_value
-    end
-end
+
+update_state_value(process::MarkovRewardProcess, state_key::UInt, new_value::Float64) = update_state_value(process.state_values, state_key, new_value)
+
 
 function get_state_optimizing_quantity(process::MarkovRewardProcess, policy::MaxRewardMarkovPolicy, state::MarkovState)
     return state.reward

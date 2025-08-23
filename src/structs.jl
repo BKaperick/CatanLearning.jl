@@ -33,9 +33,39 @@ end
 
 function StateValueContainer(configs::Dict)
     master_state_to_value = read_values_file(configs["PlayerSettings"]["STATE_VALUES"])::Dict{UInt64, Float64}
-    @info "Enriching MarkovPlayers with $(length(master_state_to_value)) pre-explored states"
+    return StateValueContainer(master_state_to_value)
+end
+
+function StateValueContainer(master::Dict{UInt64, Float64})
+    @info "Enriching MarkovPlayers with $(length(master)) pre-explored states"
     new_state_to_value = Dict{UInt64, Float64}()
-    return StateValueContainer(master_state_to_value, new_state_to_value)
+    return StateValueContainer(master, new_state_to_value)
+end
+
+"""
+    query_state_value(state_values::StateValueContainer, state::MarkovState)::Float64
+
+Read from the state values cache to find the current state.  If not found, we retrieve the state's reward.
+"""
+function query_state_value(state_values::StateValueContainer, state::MarkovState)::Float64
+    @debug "querying key {$(state.key)} (searching $(length(keys(state_values.master))) + $(length(keys(state_values.current))) known values...)"
+    if haskey(state_values.master, state.key)
+        return state_values.master[state.key]
+    elseif haskey(state_values.current, state.key)
+        return state_values.current[state.key]
+    else
+        # Default to the state combined reward
+        @debug "defaulting to reward = $(state.reward)"
+        return state.reward
+    end
+end
+function update_state_value(state_values::StateValueContainer, state_key::UInt, new_value::Float64)
+    @assert ~(haskey(state_values.master, state_key) && haskey(state_values.current, state_key))
+    if haskey(state_values.master, state_key)
+        state_values.master[state_key] = new_value
+    else
+        state_values.current[state_key] = new_value
+    end
 end
 
 abstract type AbstractActionSet end
@@ -128,6 +158,7 @@ mutable struct MarkovRewardProcess <: AbstractMarkovRewardProcess
     # Do not access them directly! Use the following helper methods!
     # Writing: `update_state_value(process, state_key, new_value)`
     # Reading: `query_state_value(process, state, default = 0.5)`
+    state_values::StateValueContainer
     state_to_value::Dict{UInt64, Float64}
     new_state_to_value::Dict{UInt64, Float64}
 end

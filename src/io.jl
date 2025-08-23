@@ -119,23 +119,17 @@ end
 
 function write_values_file(players::AbstractVector{PlayerType}, player::MarkovPlayer)
     values_file = get_player_config(player, "STATE_VALUES")
-    @info "to $values_file"
-    state_to_value = player.process.state_to_value
-    #write_values_file(values_file, state_to_value)
+    @info "Writing values to $values_file"
 
     # Merge all new entries from this game into the main state_to_value dict
-    new_state_to_values = [p.process.new_state_to_value for p in players if p isa MarkovPlayer]
-    write_values_file(values_file, state_to_value, new_state_to_values)
+    state_values = [p.process.state_values for p in players if p isa MarkovPlayer]
+    write_values_file(values_file, state_values)
+end
 
-    
-    #=
-    for other_player in players
-        if hasproperty(other_player, :process)
-            empty!(other_player.process.new_state_to_value)
-            other_player.process.state_to_value = player.process.state_to_value
-        end
-    end
-    =#
+function write_values_file(values_file::String, state_values::AbstractVector{StateValueContainer})
+    master = state_values[1].master
+    currents = [s.current for s in state_values]
+    write_values_file(values_file, master, currents)
 end
 
 function write_values_file(values_file::String, master_state_to_value::Dict{UInt64, Float64}, new_state_to_values::AbstractVector)
