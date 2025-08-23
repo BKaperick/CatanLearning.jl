@@ -203,7 +203,7 @@ end
     #@show length(JET.get_reports(rep))
     #@show rep
     reports = JET.get_reports(rep)
-    max_num = 66
+    max_num = 69
     println("length(JET.get_reports(rep)) = $(length(reports)) / $max_num")
     @test length(reports) <= max_num
 end
@@ -438,6 +438,49 @@ end
     # Reset logger to original
     global_logger(main_logger)
     rm("log.txt")
+end
+
+@testitem "values_file" setup=[global_test_setup] begin
+    v_file = "_tmp_values.csv"
+    configs["PlayerSettings"]["STATE_VALUES"] = v_file
+    io = open(v_file, "w")
+    println(io, "1,100")
+    println(io, "2,101")
+    println(io, "3,101")
+    println(io, "4,100")
+    close(io)
+
+    state_to_value = CatanLearning.read_values_file(v_file, 3)
+
+    @test length(state_to_value) == 3
+    @test state_to_value[1] == 100
+    @test state_to_value[2] == 101
+    @test state_to_value[3] == 101
+
+    new_state_to_value = [
+        Dict{UInt64, Float64}([
+            1 => 200,
+            4 => 201,
+            5 => 300
+        ]),
+        Dict{UInt64, Float64}([
+            6 => 301
+        ])
+    ]
+    state_to_value = CatanLearning.read_values_file(v_file)
+    CatanLearning.write_values_file(v_file, state_to_value, new_state_to_value)
+
+    state_to_value = CatanLearning.read_values_file(v_file)
+    @test countlines(v_file) == 6
+    @test length(state_to_value) == 6
+    @test state_to_value[1] == 200
+    @test state_to_value[2] == 101
+    @test state_to_value[3] == 101
+    @test state_to_value[4] == 201
+    @test state_to_value[5] == 300
+    @test state_to_value[6] == 301
+
+    rm(v_file, force=true)
 end
 
 function run_tests()

@@ -79,7 +79,10 @@ function Catan.do_post_game_action(game::Game, board::Board, players::AbstractVe
         write_main_features_file(game, board, players, player, winner)
     end
     if game.configs["WRITE_VALUES"] == true
-        write_values_file(players, player)
+        first_markov = [p.player.team for p in players if p isa MarkovPlayer][1]
+        if player.player.team == first_markov
+            write_values_file(players, player)
+        end
     end
 end
 
@@ -87,60 +90,13 @@ end
 # Feature writing utils
 #
 
-function read_values_file(values_file::String, max_lines = nothing)::Dict{UInt64, Float64}
-    if ~isfile(values_file)
-        io = open(values_file, "w")
-        close(io)
-    end
-    out = Dict{UInt64, Float64}() 
-    #data = split(read(values_file, String), "\n")
-    key_collisions = 0
-    for (i,line) in enumerate(readlines(values_file))#, String))
-        if line == max_lines
-            break
-        end
-        if occursin(",", line)
-            (key,value) = split(line, ",")
-            parsed_key = parse(UInt64, key)
-            if haskey(out, parsed_key)
-                key_collisions += 1
-                #println("key collision: $key")
-            end
-            out[parse(UInt64, key)] = parse(Float64, value)
-        end
-    end
-    if key_collisions > 0
-        println("key collisions: $key_collisions")
-    end
-    return out
-end
-
 function write_values_file(players::AbstractVector{PlayerType}, player::MarkovPlayer)
     values_file = get_player_config(player, "STATE_VALUES")
-    @info "to $values_file"
-    state_to_value = player.process.new_state_to_value
-    write_values_file(values_file, state_to_value)
+    @info "Writing values to $values_file"
 
     # Merge all new entries from this game into the main state_to_value dict
-    merge!(player.process.state_to_value, player.process.new_state_to_value)
-    # and clear the new state to values learned
-    empty!(player.process.new_state_to_value)
-    
-    #=
-    for other_player in players
-        if hasproperty(other_player, :process)
-            empty!(other_player.process.new_state_to_value)
-            other_player.process.state_to_value = player.process.state_to_value
-        end
-    end
-    =#
-end
-
-function write_values_file(values_file::String, state_to_value)
-    data = join(["$k,$v\n" for (k,v) in collect(state_to_value)])
-    file = open(values_file, "a")
-    write(file, data)
-    close(file)
+    state_values = [p.process.state_values for p in players if p isa MarkovPlayer]
+    write_values_file(values_file, state_values)
 end
 
 function write_main_features_file(game::Game, board::Board, players, player::PlayerType, winner::Union{PlayerType, Nothing}) 
@@ -156,8 +112,6 @@ function write_public_features_file(game::Game, board::Board, players, player::P
     features = compute_public_features_and_labels(game, board, player.player)
     _write_features_file(file, file_name, features)
 end
-
-
 
 function write_features_header_if_needed(path, features, configs)
     columns = vcat(features, get_labels())

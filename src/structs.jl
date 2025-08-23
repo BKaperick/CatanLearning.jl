@@ -31,13 +31,6 @@ function Base.show(io::IO, s::StateValueContainer)
     print(io, "states: $(length(keys(s.master))) | $(length(keys(s.current)))")
 end
 
-function StateValueContainer(configs::Dict)
-    master_state_to_value = read_values_file(configs["PlayerSettings"]["STATE_VALUES"])::Dict{UInt64, Float64}
-    @info "Enriching MarkovPlayers with $(length(master_state_to_value)) pre-explored states"
-    new_state_to_value = Dict{UInt64, Float64}()
-    return StateValueContainer(master_state_to_value, new_state_to_value)
-end
-
 abstract type AbstractActionSet end
 abstract type AbstractAction end
 struct Action <: AbstractAction
@@ -124,12 +117,15 @@ mutable struct MarkovRewardProcess <: AbstractMarkovRewardProcess
     # Coefficient for the number of victory points term in combined reward function 
     points_coeff::AbstractFloat
 
-    # Two dictionaries to keep track of state -> value mapping.
-    # Do not access them directly! Use the following helper methods!
+    # Container for two dictionaries keeping track of state -> value mapping.
+    # Do not access it directly! Use the following helper methods!
     # Writing: `update_state_value(process, state_key, new_value)`
     # Reading: `query_state_value(process, state, default = 0.5)`
-    const state_to_value::Dict{UInt64, Float64}
-    const new_state_to_value::Dict{UInt64, Float64}
+    state_values::StateValueContainer
+end
+
+function MarkovRewardProcess(r::AbstractFloat, l::AbstractFloat, m::AbstractFloat, p::AbstractFloat, master ::Dict{UInt64, Float64}, current::Dict{UInt64, Float64})
+    return MarkovRewardProcess(r, l, m, p, StateValueContainer(master, current))
 end
 
 abstract type DecisionModel
@@ -229,20 +225,7 @@ Represents one game state.  `Markov` because it maintains a key and reward,
 which can be used in its modeling as a Markov Reward Process.
 """
 function MarkovState(features::Vector{Pair{Symbol, Float64}}, reward::Float64)
-    # In order to avoid numerical instability issues in `Float64`, we apply rounding to the featurees first
-    # Essentially applying a grid to our feature space, and considering all points the same if they are
-    # within the same box.
-    rounded_features = round.([f.second for f in features], digits=1)
-
-    return MarkovState(persistent_hash(rounded_features), reward)
-end
-
-function persistent_hash(feats)
-    hash = UInt64(17)
-    for f in feats
-        hash = hash * UInt64(23) + UInt64(f * 100)
-    end
-    return UInt64(hash)
+    return MarkovState(persistent_hash(features), reward)
 end
 
 

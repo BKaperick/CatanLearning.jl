@@ -1,7 +1,7 @@
 
 function initialize_tournament(configs::Dict)
     if configs["WRITE_FEATURES"] == true
-        @info "Intializing player feature files"
+        @info "Initializing player feature files"
         f = get_features()
         pf = get_public_features()
         for team in configs["TEAMS"]
@@ -233,6 +233,7 @@ end
 function get_tournament_path(configs, tourney_id)
     models_dir = get_player_config(configs, "MODELS_DIR")
     tournament_path = joinpath(models_dir, "tournament_$(tourney_id)")
+    ~isdir(models_dir) && mkdir(models_dir)
     ~isdir(tournament_path) && mkdir(tournament_path)
     return tournament_path
 end
@@ -313,8 +314,7 @@ function create_enriched_players(configs, state_to_value::StateValueContainer, t
     # Enrich players if needed
     for p in players
         if typeof(p) <: MarkovPlayer
-            p.process.state_to_value = state_to_value.master
-            p.process.new_state_to_value = state_to_value.current
+            p.process.state_values = state_to_value
             p.model = get(team_to_perturb, p.player.team, p.model)
             p.model_public = get(team_to_public_perturb, p.player.team, p.model_public)
         end
