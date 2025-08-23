@@ -31,17 +31,6 @@ function Base.show(io::IO, s::StateValueContainer)
     print(io, "states: $(length(keys(s.master))) | $(length(keys(s.current)))")
 end
 
-function StateValueContainer(configs::Dict)
-    master_state_to_value = read_values_file(configs["PlayerSettings"]["STATE_VALUES"])::Dict{UInt64, Float64}
-    return StateValueContainer(master_state_to_value)
-end
-
-function StateValueContainer(master::Dict{UInt64, Float64})
-    @info "Enriching MarkovPlayers with $(length(master)) pre-explored states"
-    new_state_to_value = Dict{UInt64, Float64}()
-    return StateValueContainer(master, new_state_to_value)
-end
-
 abstract type AbstractActionSet end
 abstract type AbstractAction end
 struct Action <: AbstractAction
