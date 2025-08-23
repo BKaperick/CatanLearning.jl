@@ -146,10 +146,10 @@ compute_number_of_turns = (game, board, player) -> game.turn_num
 
 const _raw_features = [
         :CountSettlement => compute_count_settlement,
-        #:CountTotalSettlement => compute_count_total_settlement,
+        :CountTotalSettlement => compute_count_total_settlement,
         :CountCity => compute_count_city,
         :CountRoad => compute_count_road,
-        #=
+        
 
         :MaxRoadLength => compute_max_road_length,
 
@@ -183,15 +183,15 @@ const _raw_features = [
         :CountDevCardsVictoryPoint => compute_count_devcards_owned_victory_point,
         :HasLargestArmy => compute_has_largest_army,
         :HasLongestRoad => compute_has_longest_road,
-        =#
+        
         :CountVictoryPoint => compute_count_victory_points
 ]
 const _public_features = [
         :CountSettlement => compute_count_settlement,
-        #:CountTotalSettlement => compute_count_total_settlement,
+        :CountTotalSettlement => compute_count_total_settlement,
         :CountCity => compute_count_city,
         :CountRoad => compute_count_road,
-        #=
+        
         :MaxRoadLength => compute_max_road_length,
 
         :SumWoodDiceWeight => compute_sum_wood_dice_weight,
@@ -223,7 +223,7 @@ const _public_features = [
         :CountDevCardsUsedRoadBuilding => compute_count_devcards_used_road_building,
         :HasLargestArmy => compute_has_largest_army,
         :HasLongestRoad => compute_has_longest_road,
-        =#
+        
         :CountVisibleVictoryPoint => compute_count_public_victory_points
        ]
 
