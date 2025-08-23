@@ -44,9 +44,9 @@ end
 
 mutable struct HybridPlayer <: MarkovPlayer
     const player::Player
-    const model::DecisionModel
-    const model_public::DecisionModel
-    const process::MarkovRewardProcess
+    model::DecisionModel
+    model_public::DecisionModel
+    process::MarkovRewardProcess
     const policy::MarkovPolicy
     const configs::Dict
     current_state::Union{Nothing, MarkovState}

@@ -139,12 +139,12 @@ function write_values_file(players::AbstractVector{PlayerType}, player::MarkovPl
 end
 
 function write_values_file(values_file::String, master_state_to_value::Dict{UInt64, Float64}, new_state_to_values::AbstractVector)
+    merge!(master_state_to_value, new_state_to_values...)
     for s_to_v in new_state_to_values
-        merge!(master_state_to_value, s_to_v)
-        
         # and clear the new state to values learned
         empty!(s_to_v)
     end
+    #println(master_state_to_value)
     write_values_file(values_file, master_state_to_value)
 end
 
