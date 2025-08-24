@@ -439,6 +439,17 @@ end
     global_logger(main_logger)
     rm("log.txt")
 end
+@testitem "state_values_container" setup=[global_test_setup] begin
+    v_file = tempname(cleanup=true)
+    configs["PlayerSettings"]["STATE_VALUES"] = v_file
+    mkpath(v_file)
+    svc = StateValueContainer(configs)
+    features = [:test => 1.0, :test2 => 2.0]
+    key = CatanLearning.persistent_hash(features)
+    CatanLearning.update_state_value(svc, key, 1.0)
+    markov_state = MarkovState(features, 0.5)
+    @test CatanLearning.query_state_value(svc, markov_state) == 1.0
+end
 
 @testitem "values_file" setup=[global_test_setup] begin
     v_file = "_tmp_values.csv"

@@ -1,9 +1,13 @@
-function StateValueContainer(configs::Dict)
-    master_state_to_value = read_values_file(configs["PlayerSettings"]["STATE_VALUES"])::Dict{UInt64, Float64}
+using LMDB
+
+
+function StateValueContainer(configs::Dict{String, Any})
+    master_state_to_value = LMDBDict{UInt64, Float64}(configs["PlayerSettings"]["STATE_VALUES"])
+    #master_state_to_value = read_values_file(configs["PlayerSettings"]["STATE_VALUES"])::Dict{UInt64, Float64}
     return StateValueContainer(master_state_to_value)
 end
 
-function StateValueContainer(master::Dict{UInt64, Float64})
+function StateValueContainer(master::LMDB.LMDBDict{UInt64, Float64})
     @info "Enriching MarkovPlayers with $(length(master)) pre-explored states"
     new_state_to_value = Dict{UInt64, Float64}()
     return StateValueContainer(master, new_state_to_value)

@@ -3,6 +3,7 @@ using Logging
 using Profile
 using BenchmarkTools
 using DataStructures
+using LMDB
 
 import MLJModelInterface
 const MMI = MLJModelInterface
@@ -11,7 +12,7 @@ import Catan
 import Catan: Player, PlayerPublicView, PlayerType, RobotPlayer, DefaultRobotPlayer, Game, Board, Map,
 get_player_config
 
-export LearningPlayer, EmpathRobotPlayer, HybridPlayer, compute_features, get_state_score
+export LearningPlayer, EmpathRobotPlayer, HybridPlayer, compute_features, get_state_score, StateValueContainer
 
 function toggleprint(str)
     #println(str)

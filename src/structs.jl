@@ -23,8 +23,8 @@ function Tournament(configs::Dict)
 end
 
 struct StateValueContainer
-    master::Dict{UInt64, Float64}
-    current::Dict{UInt64, Float64}
+    master::LMDB.LMDBDict{UInt64, Float64}
+    current::AbstractDict{UInt64, Float64}
 end
 
 function Base.show(io::IO, s::StateValueContainer)
