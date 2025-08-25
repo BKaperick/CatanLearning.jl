@@ -37,7 +37,6 @@ include("tournaments.jl")
 
 function __init__()
     Catan.add_player_to_register("EmpathRobotPlayer", (t,c) -> EmpathRobotPlayer(t,c))
-    Catan.add_player_to_register("TemporalDifferencePlayer", (t,c) -> TemporalDifferencePlayer(t,c))
     Catan.add_player_to_register("HybridPlayer", (t,c) -> HybridPlayer(t,c))
 
     # Upsert the configs from this package

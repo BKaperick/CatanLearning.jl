@@ -23,12 +23,18 @@ function Tournament(configs::Dict)
 end
 
 struct StateValueContainer
-    master::LMDBDict{UInt64, Float64}
+    env::Environment
+    path::AbstractString
+    keys::Set{UInt64}
+    keys_path::AbstractString
+
 end
 
+#=
 function Base.show(io::IO, s::StateValueContainer)
-    print(io, "states: $(length(keys(s.master))) | $(length(keys(s.current)))")
+    print(io, s)
 end
+=#
 
 abstract type AbstractActionSet end
 abstract type AbstractAction end

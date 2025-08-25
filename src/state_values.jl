@@ -7,11 +7,19 @@ function StateValueContainer(path::AbstractString)
     if ~ispath(path)
         mkpath(path)
     end
-    master_state_to_value = LMDBDict{UInt64, Float64}(path)
-    return StateValueContainer(master_state_to_value)
-end
 
-StateValueContainer(master::LMDBDict{UInt64, Float64}, _) = StateValueContainer(master)
+    env = create()
+    #env[:MapSize] = 1000^3
+    #open(env, path)
+    key_path = joinpath(path, "_bryan_keys")
+    if isfile(key_path)
+        keys = Set([parse(i,UInt64) for i in readlines(open(key_path, "r"))])
+    else
+        keys = Set{UInt64}()
+    end
+
+    return StateValueContainer(env, path, keys, key_path)
+end
 
 """
     query_state_value(state_values::StateValueContainer, state::MarkovState)::Float64
@@ -19,18 +27,55 @@ StateValueContainer(master::LMDBDict{UInt64, Float64}, _) = StateValueContainer(
 Read from the state values cache to find the current state.  If not found, we retrieve the state's reward.
 """
 function query_state_value(state_values::StateValueContainer, state::MarkovState)::Float64
-    @debug "querying key {$(state.key)} (searching $(length(keys(state_values.master)))) known values...)"
-    if haskey(state_values.master, state.key)
-        return state_values.master[state.key]
-    else
-        # Default to the state combined reward
-        @debug "defaulting to reward = $(state.reward)"
+    if !(state.key in state_values.keys)
         return state.reward
     end
+    env = state_values.env
+    try
+        open(env, state_values.path) # open db environment !!! `testdb` must exist !!!
+        txn = start(env)      # start new transaction
+        dbi = open(txn)       # open database
+        try
+            x = get(txn, dbi, state.key, Float64) # add key-value pair
+            @info "found $(state.key) -> $x"
+            #=
+            catch LMDBError
+                println("hi")
+                # Default to the state combined reward
+                @debug "defaulting to reward = $(state.reward)"
+                return state.reward
+            end
+            =#
+            commit(txn)                  # commit transaction
+        finally
+            close(env, dbi)  # close db
+        end
+    finally
+        close(env)           # close environment
+    end
+
+    return x
+
+
+    
 end
 
 function update_state_value(state_values::StateValueContainer, state_key::UInt, new_value::Float64)
-    state_values.master[state_key] = new_value
+    push!(state_values.keys, state_key)
+    env = state_values.env
+    try
+        open(env, state_values.path) # open db environment !!! `testdb` must exist !!!
+        txn = start(env)      # start new transaction
+        dbi = open(txn)       # open database
+        try
+            x = put!(txn, dbi, state_key, new_value) # add key-value pair
+            commit(txn)                  # commit transaction
+        finally
+            close(env, dbi)  # close db
+        end
+    finally
+        close(env)           # close environment
+    end
 end
 function update_state_values(state_values::StateValueContainer, new_values::AbstractVector{Dict{UInt, Float64}})
     for (k,v) in merge(new_values...)
@@ -39,6 +84,12 @@ function update_state_values(state_values::StateValueContainer, new_values::Abst
 end
 
 function write_values_file(values_file::String, state_values::AbstractVector{StateValueContainer})
+    merge!(state_values[1].keys, [s.keys for s in state_values[2:end]])
+    io = open(state_values[1].key_path, "w")
+    for k in state_values[1].keys
+        println(io, k)
+    end
+    close(io)
     #=
     merge!(state_values[1].current, [s.current for s in state_values[2:end]]...)
     update_state_values(state_values[1], state_values[1].current)

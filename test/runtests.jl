@@ -31,7 +31,6 @@ predict_model,
 MarkovState,
 MaxValueMarkovPolicy,
 MaxRewardMarkovPolicy,
-TemporalDifferencePlayer,
 get_legal_action_sets,
 feature_library
 
@@ -66,7 +65,6 @@ feature_library
     MarkovState,
     MaxValueMarkovPolicy,
     MaxRewardMarkovPolicy,
-    TemporalDifferencePlayer,
     get_legal_action_sets,
     feature_library
 
@@ -122,8 +120,8 @@ function test_feature_perturbations(features, features_increasing_good, configs,
     feature_vec = generate_realistic_features(features)
     feature_values = [f[2] for f in feature_vec]
 
-    value_player = TemporalDifferencePlayer(MaxValueMarkovPolicy, :Blue, state_to_value, Dict{UInt64, Float64}(), configs)
-    reward_player = TemporalDifferencePlayer(MaxRewardMarkovPolicy, :Red, state_to_value, Dict{UInt64, Float64}(), configs)
+    value_player = HybridPlayer(MaxValueMarkovPolicy, :Blue, state_to_value, Dict{UInt64, Float64}(), configs)
+    reward_player = HybridPlayer(MaxRewardMarkovPolicy, :Red, state_to_value, Dict{UInt64, Float64}(), configs)
     
     current_state = MarkovState(reward_player.process, feature_vec, value_player.model)
     value = get_state_optimizing_quantity(value_player.process, value_player.policy, current_state)
@@ -403,9 +401,6 @@ end
 @testitem "player_implementation_hybrid" setup=[global_test_setup] begin
     test_player_implementation(HybridPlayer, configs)
 end
-#@testitem "player_implementation_td" setup=[global_test_setup] begin
-#    test_player_implementation(TemporalDifferencePlayer, configs)
-#end
 
 @testitem "descend_logger" setup=[global_test_setup] begin
     #LOG_LEVEL = "Logging.Warn"
@@ -446,7 +441,8 @@ end
     key = CatanLearning.persistent_hash(features)
     CatanLearning.update_state_value(svc, key, 1.0)
     markov_state = MarkovState(features, 0.5)
-    @test CatanLearning.query_state_value(svc, markov_state) == 1.0
+    val = CatanLearning.query_state_value(svc, markov_state)
+    @test val == 1.0
 end
 
 @testitem "values_file" setup=[global_test_setup] begin
@@ -479,6 +475,7 @@ end
     CatanLearning.write_values_file(v_file, [svc])
 
     state_to_value = svc.master
+    svc.query_state_value(svc, )
     @test state_to_value[1] == 200
     @test state_to_value[2] == 201
     @test state_to_value[3] == 100
