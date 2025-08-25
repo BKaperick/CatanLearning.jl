@@ -32,7 +32,10 @@ MarkovState,
 MaxValueMarkovPolicy,
 MaxRewardMarkovPolicy,
 get_legal_action_sets,
-feature_library
+feature_library,
+query_state_value,
+update_state_value,
+update_state_values
 
 
 @testsnippet global_test_setup begin
@@ -66,7 +69,10 @@ feature_library
     MaxValueMarkovPolicy,
     MaxRewardMarkovPolicy,
     get_legal_action_sets,
-    feature_library
+    feature_library,
+    query_state_value,
+    update_state_value,
+    update_state_values
 
     configs = parse_configs("Configuration.toml")
 
@@ -439,9 +445,9 @@ end
     svc = StateValueContainer(configs)
     features = [:test => 1.0, :test2 => 2.0]
     key = CatanLearning.persistent_hash(features)
-    CatanLearning.update_state_value(svc, key, 1.0)
+    update_state_value(svc, key, 1.0)
     markov_state = MarkovState(features, 0.5)
-    val = CatanLearning.query_state_value(svc, markov_state)
+    val = query_state_value(svc, markov_state)
     @test val == 1.0
 end
 
@@ -468,20 +474,21 @@ end
     ]
 
     svc = StateValueContainer(configs)
-    CatanLearning.update_state_values(svc, [original_values])
-    CatanLearning.update_state_values(svc, new_state_to_values)
+    update_state_values(svc, [original_values])
+    update_state_values(svc, new_state_to_values)
 
     #state_to_values = [StateValueContainer(svc.master, new_sv) for new_sv in new_state_to_values]
     CatanLearning.write_values_file(v_file, [svc])
 
     state_to_value = svc.master
-    svc.query_state_value(svc, )
-    @test state_to_value[1] == 200
-    @test state_to_value[2] == 201
-    @test state_to_value[3] == 100
-    @test state_to_value[4] == 201
-    @test state_to_value[5] == 300
-    @test state_to_value[6] == 301
+    query_state_value(svc, MarkovState(1, 0.5))
+    @test query_state_value(svc, MarkovState(1, 0.5)) == 200
+    @test query_state_value(svc, MarkovState(2, 0.5)) == 201
+    @test query_state_value(svc, MarkovState(3, 0.5)) == 100
+    @test query_state_value(svc, MarkovState(4, 0.5)) == 201
+    @test query_state_value(svc, MarkovState(5, 0.5)) == 300
+    @test query_state_value(svc, MarkovState(6, 0.5)) == 301
+    @test query_state_value(svc, MarkovState(7, 0.5)) == 0.5
 
     rm(v_file, force=true, recursive=true)
 end

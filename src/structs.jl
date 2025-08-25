@@ -23,10 +23,9 @@ function Tournament(configs::Dict)
 end
 
 struct StateValueContainer
+    master::LMDBDict{UInt64, Float64}
     env::Environment
     path::AbstractString
-    keys::Set{UInt64}
-    keys_path::AbstractString
 
 end
 

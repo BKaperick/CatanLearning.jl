@@ -12,7 +12,10 @@ import Catan
 import Catan: Player, PlayerPublicView, PlayerType, RobotPlayer, DefaultRobotPlayer, Game, Board, Map,
 get_player_config
 
-export LearningPlayer, EmpathRobotPlayer, HybridPlayer, compute_features, get_state_score, StateValueContainer
+export LearningPlayer, EmpathRobotPlayer, HybridPlayer, compute_features, get_state_score, StateValueContainer,
+query_state_value,
+update_state_value,
+update_state_values
 
 function toggleprint(str)
     #println(str)
