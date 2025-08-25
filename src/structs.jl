@@ -23,13 +23,17 @@ function Tournament(configs::Dict)
 end
 
 struct StateValueContainer
-    master::Dict{UInt64, Float64}
-    current::Dict{UInt64, Float64}
+    master::LMDBDict{UInt64, Float64}
+    env::Environment
+    path::AbstractString
+
 end
 
+#=
 function Base.show(io::IO, s::StateValueContainer)
-    print(io, "states: $(length(keys(s.master))) | $(length(keys(s.current)))")
+    print(io, s)
 end
+=#
 
 abstract type AbstractActionSet end
 abstract type AbstractAction end
@@ -124,7 +128,7 @@ mutable struct MarkovRewardProcess <: AbstractMarkovRewardProcess
     state_values::StateValueContainer
 end
 
-function MarkovRewardProcess(r::AbstractFloat, l::AbstractFloat, m::AbstractFloat, p::AbstractFloat, master ::Dict{UInt64, Float64}, current::Dict{UInt64, Float64})
+function MarkovRewardProcess(r::AbstractFloat, l::AbstractFloat, m::AbstractFloat, p::AbstractFloat, master::LMDBDict{UInt64, Float64}, current::Dict{UInt64, Float64})
     return MarkovRewardProcess(r, l, m, p, StateValueContainer(master, current))
 end
 

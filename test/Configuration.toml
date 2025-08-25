@@ -16,7 +16,7 @@ MODEL = "./data/model.jls"
 PUBLIC_MODEL = "./data/public_model.jls"
 FEATURES = "./data/features.csv"
 PUBLIC_FEATURES = "./data/public_features.csv"
-STATE_VALUES = "./data/state_values.csv"
+STATE_VALUES = "./state_values"
 SEARCH_DEPTH = 1
 [PlayerSettings.blue]
 [PlayerSettings.cyan]

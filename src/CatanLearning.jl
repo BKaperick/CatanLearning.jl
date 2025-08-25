@@ -3,6 +3,7 @@ using Logging
 using Profile
 using BenchmarkTools
 using DataStructures
+using LMDB
 
 import MLJModelInterface
 const MMI = MLJModelInterface
@@ -11,7 +12,10 @@ import Catan
 import Catan: Player, PlayerPublicView, PlayerType, RobotPlayer, DefaultRobotPlayer, Game, Board, Map,
 get_player_config
 
-export LearningPlayer, EmpathRobotPlayer, HybridPlayer, compute_features, get_state_score
+export LearningPlayer, EmpathRobotPlayer, HybridPlayer, compute_features, get_state_score, StateValueContainer,
+query_state_value,
+update_state_value,
+update_state_values
 
 function toggleprint(str)
     #println(str)
@@ -36,7 +40,6 @@ include("tournaments.jl")
 
 function __init__()
     Catan.add_player_to_register("EmpathRobotPlayer", (t,c) -> EmpathRobotPlayer(t,c))
-    Catan.add_player_to_register("TemporalDifferencePlayer", (t,c) -> TemporalDifferencePlayer(t,c))
     Catan.add_player_to_register("HybridPlayer", (t,c) -> HybridPlayer(t,c))
 
     # Upsert the configs from this package
