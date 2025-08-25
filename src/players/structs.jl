@@ -27,7 +27,7 @@ mutable struct TemporalDifferencePlayer <: MarkovPlayer
 end
 
 function TemporalDifferencePlayer(TPolicy::Type, team::Symbol, configs::Dict)
-    state_to_value = read_values_file(get_player_config(configs, "STATE_VALUES", team))
+    state_to_value = StateValueContainer(get_player_config(configs, "STATE_VALUES", team))
     return TemporalDifferencePlayer(TPolicy, team, state_to_value, Dict{UInt64, Float64}(), configs)
 end
 TemporalDifferencePlayer(team::Symbol, configs::Dict) = TemporalDifferencePlayer(MaxRewardMarkovPolicy, team::Symbol, configs)
@@ -52,10 +52,10 @@ mutable struct HybridPlayer <: MarkovPlayer
     current_state::Union{Nothing, MarkovState}
 end
 
-HybridPlayer(team::Symbol, configs::Dict) = HybridPlayer(team::Symbol, Dict{UInt64, Float64}(), Dict{UInt64, Float64}(), configs)
+HybridPlayer(team::Symbol, configs::Dict) = HybridPlayer(team::Symbol, StateValueContainer(configs), configs)
 #HybridPlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs::Dict) 
 
-function HybridPlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs)
+function HybridPlayer(team::Symbol, svc::StateValueContainer, configs)
     model = try_load_serialized_model(team, configs)::DecisionModel
     model_public = try_load_serialized_public_model(team, configs)
 
@@ -63,7 +63,7 @@ function HybridPlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}
     learning_rate = get_player_config(configs, "LEARNING_RATE", team)
     reward_weight = get_player_config(configs, "REWARD_WEIGHT", team)
     value_weight = get_player_config(configs, "VALUE_WEIGHT", team)
-    process = MarkovRewardProcess(learning_rate, reward_discount, 1.0, 0.0, master_state_to_value, new_state_to_value)
+    process = MarkovRewardProcess(learning_rate, reward_discount, 1.0, 0.0, svc)
     policy = WeightsRewardPlusValueMarkovPolicy(model, reward_weight, value_weight)
     player = Player(team, configs)
     HybridPlayer(player, model, model_public, process, policy, configs, nothing)

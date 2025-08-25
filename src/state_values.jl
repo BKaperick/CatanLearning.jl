@@ -1,17 +1,17 @@
 using LMDB
 
 
-function StateValueContainer(configs::Dict{String, Any})
-    master_state_to_value = LMDBDict{UInt64, Float64}(configs["PlayerSettings"]["STATE_VALUES"])
-    #master_state_to_value = read_values_file(configs["PlayerSettings"]["STATE_VALUES"])::Dict{UInt64, Float64}
+StateValueContainer(configs::Dict{String, Any}) = StateValueContainer(configs["PlayerSettings"]["STATE_VALUES"])
+
+function StateValueContainer(path::AbstractString)
+    if ~ispath(path)
+        mkpath(path)
+    end
+    master_state_to_value = LMDBDict{UInt64, Float64}(path)
     return StateValueContainer(master_state_to_value)
 end
 
-function StateValueContainer(master::LMDB.LMDBDict{UInt64, Float64})
-    @info "Enriching MarkovPlayers with $(length(master)) pre-explored states"
-    new_state_to_value = Dict{UInt64, Float64}()
-    return StateValueContainer(master, new_state_to_value)
-end
+StateValueContainer(master::LMDBDict{UInt64, Float64}, _) = StateValueContainer(master)
 
 """
     query_state_value(state_values::StateValueContainer, state::MarkovState)::Float64
@@ -32,12 +32,20 @@ end
 function update_state_value(state_values::StateValueContainer, state_key::UInt, new_value::Float64)
     state_values.master[state_key] = new_value
 end
+function update_state_values(state_values::StateValueContainer, new_values::AbstractVector{Dict{UInt, Float64}})
+    for (k,v) in merge(new_values...)
+        update_state_value(state_values, k, v)
+    end
+end
 
 function write_values_file(values_file::String, state_values::AbstractVector{StateValueContainer})
+    #=
     merge!(state_values[1].current, [s.current for s in state_values[2:end]]...)
+    update_state_values(state_values[1], state_values[1].current)
     for (k,v) in state_values[1].current
         update_state_value(state_values[1], k, v)
     end
+    =#
 end
 
 function _deprecated_read_values_file(values_file::String, max_lines = nothing)::Dict{UInt64, Float64}
@@ -45,9 +53,8 @@ function _deprecated_read_values_file(values_file::String, max_lines = nothing):
         touch(values_file)
     end
     out = Dict{UInt64, Float64}() 
-    #data = split(read(values_file, String), "\n")
     key_collisions = 0
-    for (i,line) in enumerate(readlines(values_file))#, String))
+    for (i,line) in enumerate(readlines(values_file))
         if !isnothing(max_lines) && i > max_lines
             break
         end
@@ -78,28 +85,4 @@ function persistent_hash(features::Vector{Pair{Symbol, Float64}})
         hash = hash * UInt64(23) + UInt64(f * 100)
     end
     return UInt64(hash)
-end
-
-
-
-function write_values_file(values_file::String, master_state_to_value::LMDB.LMDBDict{UInt64, Float64}, new_state_to_values::AbstractVector)
-    merge!(new_state_to_values[1], new_state_to_values[2:end]...)
-    for (k,v) in new_state_to_values[1]
-        update_state_value(state_values::StateValueContainer, state_key::UInt, new_value::Float64)
-        update_state_value
-        #update_state_value
-        master_state_to_value[k] = v
-    end
-    #=
-    println(new_state_to_values[1])
-    for (k,v) in new_state_to_values[1]
-        println(k,v)
-        master_state_to_value[k] = v
-    end
-    for s_to_v in new_state_to_values
-        # and clear the new state to values learned
-        empty!(s_to_v)
-    end
-    #println(master_state_to_value)
-    =#
 end

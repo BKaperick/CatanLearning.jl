@@ -23,8 +23,7 @@ function Tournament(configs::Dict)
 end
 
 struct StateValueContainer
-    master::LMDB.LMDBDict{UInt64, Float64}
-    current::AbstractDict{UInt64, Float64}
+    master::LMDBDict{UInt64, Float64}
 end
 
 function Base.show(io::IO, s::StateValueContainer)
@@ -124,7 +123,7 @@ mutable struct MarkovRewardProcess <: AbstractMarkovRewardProcess
     state_values::StateValueContainer
 end
 
-function MarkovRewardProcess(r::AbstractFloat, l::AbstractFloat, m::AbstractFloat, p::AbstractFloat, master ::Dict{UInt64, Float64}, current::Dict{UInt64, Float64})
+function MarkovRewardProcess(r::AbstractFloat, l::AbstractFloat, m::AbstractFloat, p::AbstractFloat, master::LMDBDict{UInt64, Float64}, current::Dict{UInt64, Float64})
     return MarkovRewardProcess(r, l, m, p, StateValueContainer(master, current))
 end
 
