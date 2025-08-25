@@ -200,16 +200,13 @@ function run_state_space_tournament(configs)
     team_to_public_perturb = Dict{Symbol, DecisionModel}()
     markov_teams = [t for t in teams if get_player_config(configs, "TYPE", t) == "HybridPlayer"]
     winners = init_winners(teams)::Dict{Union{Symbol, Nothing}, Int}
-    state_to_value = StateValueContainer(configs)
-
     for k=1:tourney.epochs
         @info "epoch $k / $(tourney.epochs)"
-        @info "$state_to_value"
 
         # Add a new perturbation to player's model weights
         initialize_epoch!(configs, team_to_perturb, team_to_public_perturb, markov_teams, tourney, k)
 
-        with_enrichment = conf -> create_enriched_players(conf, state_to_value, team_to_perturb, team_to_public_perturb)
+        with_enrichment = conf -> create_enriched_players(conf, team_to_perturb, team_to_public_perturb)
         epoch_winners = do_tournament_one_epoch(tourney, teams, configs; create_players = with_enrichment)
         println(epoch_winners)
 
@@ -218,7 +215,7 @@ function run_state_space_tournament(configs)
         end
 
         epoch_winner = epoch_winners[1][1]
-        validation_check = validate_mutation!(configs, state_to_value, team_to_perturb, team_to_public_perturb, markov_teams, epoch_winner)
+        validation_check = validate_mutation!(configs, team_to_perturb, team_to_public_perturb, markov_teams, epoch_winner)
         
         if validation_check
             # Part of validation check ensures epoch_winner is not `nothing`
@@ -249,10 +246,10 @@ function initialize_epoch!(configs::Dict, team_to_perturb::Dict{Symbol, Decision
 
     # Linear spacing of reward weight across epochs 
     value_weight = epoch_num/(tourney.epochs-1)
-    @info "setting value weight to $value_weight"
 
     for team in teams
         if get_player_config(configs, "MODIFY_REINFORCEMENT_WEIGHTS", team)
+            @info "setting value weight for $team to $value_weight"
             Catan.set_player_config(configs, team, "VALUE_WEIGHT", value_weight)
             Catan.set_player_config(configs, team, "REWARD_WEIGHT", 1 - value_weight)
         end
@@ -271,7 +268,7 @@ function finalize_epoch!(team_to_perturb::Dict{Symbol, DecisionModel}, team_to_p
     end
 end
 
-function validate_mutation!(configs::Dict, state_to_value::StateValueContainer, team_to_perturb::Dict, team_to_public_perturb::Dict, teams::AbstractVector{Symbol}, winner::Union{Nothing, Symbol})::Bool
+function validate_mutation!(configs::Dict, team_to_perturb::Dict, team_to_public_perturb::Dict, teams::AbstractVector{Symbol}, winner::Union{Nothing, Symbol})::Bool
     @info "Starting validation epoch for winner $winner"
     if winner === nothing || !(winner in teams)
         @info "skipping mutation since player $winner won epoch"
@@ -287,7 +284,7 @@ function validate_mutation!(configs::Dict, state_to_value::StateValueContainer, 
     validation_team_to_perturb = Dict{Symbol, DecisionModel}([winner => perturb])
     validation_team_to_public_perturb = Dict{Symbol, DecisionModel}([winner => public_perturb])
 
-    with_enrichment = conf -> create_enriched_players(conf, state_to_value, validation_team_to_perturb, validation_team_to_public_perturb)
+    with_enrichment = conf -> create_enriched_players(conf, validation_team_to_perturb, validation_team_to_public_perturb)
     ordered_winners = do_tournament_one_epoch(tourney, teams, validation_configs; create_players = with_enrichment)::Vector{Tuple{Union{Symbol, Nothing}, Int}}
     validation_check = ordered_winners[1][1] == winner
     if validation_check
@@ -308,13 +305,12 @@ function apply_mutation!(team_to_perturb::Dict{Symbol, DecisionModel}, team_to_p
 
 end
 
-function create_enriched_players(configs, state_to_value::StateValueContainer, team_to_perturb::Dict{Symbol, DecisionModel}, team_to_public_perturb::Dict{Symbol, DecisionModel})
+function create_enriched_players(configs, team_to_perturb::Dict{Symbol, DecisionModel}, team_to_public_perturb::Dict{Symbol, DecisionModel})
     players = Catan.create_players(configs)
 
     # Enrich players if needed
     for p in players
         if typeof(p) <: MarkovPlayer
-            p.process.state_values = state_to_value
             p.model = get(team_to_perturb, p.player.team, p.model)
             p.model_public = get(team_to_public_perturb, p.player.team, p.model_public)
         end

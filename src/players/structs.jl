@@ -20,14 +20,13 @@ mutable struct HybridPlayer <: MarkovPlayer
     const player::Player
     model::DecisionModel
     model_public::DecisionModel
-    process::MarkovRewardProcess
+    const process::MarkovRewardProcess
     const policy::MarkovPolicy
     const configs::Dict
     current_state::Union{Nothing, MarkovState}
 end
 
 HybridPlayer(team::Symbol, configs::Dict) = HybridPlayer(team::Symbol, StateValueContainer(configs), configs)
-#HybridPlayer(team::Symbol, master_state_to_value::Dict{UInt64, Float64}, new_state_to_value::Dict{UInt64, Float64}, configs::Dict) 
 
 function HybridPlayer(team::Symbol, svc::StateValueContainer, configs)
     model = try_load_serialized_model(team, configs)::DecisionModel
