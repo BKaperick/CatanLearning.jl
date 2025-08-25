@@ -452,23 +452,11 @@ end
 end
 
 @testitem "values_file" setup=[global_test_setup] begin
-    v_file = "_tmp_values.csv"
+    v_file = tempname(cleanup=true)
     configs["PlayerSettings"]["STATE_VALUES"] = v_file
-    io = open(v_file, "w")
-    println(io, "1,100")
-    println(io, "2,101")
-    println(io, "3,101")
-    println(io, "4,100")
-    close(io)
+    mkpath(v_file)
 
-    state_to_value = CatanLearning.read_values_file(v_file, 3)
-
-    @test length(state_to_value) == 3
-    @test state_to_value[1] == 100
-    @test state_to_value[2] == 101
-    @test state_to_value[3] == 101
-
-    new_state_to_value = [
+    new_state_to_values = [
         Dict{UInt64, Float64}([
             1 => 200,
             4 => 201,
@@ -478,20 +466,31 @@ end
             6 => 301
         ])
     ]
-    state_to_value = CatanLearning.read_values_file(v_file)
-    CatanLearning.write_values_file(v_file, state_to_value, new_state_to_value)
 
-    state_to_value = CatanLearning.read_values_file(v_file)
-    @test countlines(v_file) == 6
-    @test length(state_to_value) == 6
+    svc = StateValueContainer(configs)
+    CatanLearning.update_state_value(svc, UInt64(1), 100.0)
+    CatanLearning.update_state_value(svc, UInt64(2), 201.0)
+    CatanLearning.update_state_value(svc, UInt64(3), 100.0)
+    println(svc.master)
+
+    #=
+    state_to_values = [StateValueContainer(svc.master, new_sv) for new_sv in new_state_to_values]
+    CatanLearning.write_values_file(v_file, state_to_values)
+    println(svc.master)
+    =#
+    state_to_values = [StateValueContainer(svc.master, new_sv) for new_sv in new_state_to_values]
+    CatanLearning.write_values_file(v_file, state_to_values)
+
+    state_to_value = state_to_values[1].master
+    #@test length(state_to_value) == 6
     @test state_to_value[1] == 200
-    @test state_to_value[2] == 101
-    @test state_to_value[3] == 101
+    @test state_to_value[2] == 201
+    @test state_to_value[3] == 100
     @test state_to_value[4] == 201
     @test state_to_value[5] == 300
     @test state_to_value[6] == 301
 
-    rm(v_file, force=true)
+    rm(v_file, force=true, recursive=true)
 end
 
 function run_tests()

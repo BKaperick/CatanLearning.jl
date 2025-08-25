@@ -19,11 +19,9 @@ end
 Read from the state values cache to find the current state.  If not found, we retrieve the state's reward.
 """
 function query_state_value(state_values::StateValueContainer, state::MarkovState)::Float64
-    @debug "querying key {$(state.key)} (searching $(length(keys(state_values.master))) + $(length(keys(state_values.current))) known values...)"
+    @debug "querying key {$(state.key)} (searching $(length(keys(state_values.master)))) known values...)"
     if haskey(state_values.master, state.key)
         return state_values.master[state.key]
-    elseif haskey(state_values.current, state.key)
-        return state_values.current[state.key]
     else
         # Default to the state combined reward
         @debug "defaulting to reward = $(state.reward)"
@@ -32,52 +30,17 @@ function query_state_value(state_values::StateValueContainer, state::MarkovState
 end
 
 function update_state_value(state_values::StateValueContainer, state_key::UInt, new_value::Float64)
-    @assert ~(haskey(state_values.master, state_key) && haskey(state_values.current, state_key))
-    if haskey(state_values.master, state_key)
-        state_values.master[state_key] = new_value
-    else
-        state_values.current[state_key] = new_value
-    end
+    state_values.master[state_key] = new_value
 end
-
-function persistent_hash(features::Vector{Pair{Symbol, Float64}})
-    # In order to avoid numerical instability issues in `Float64`, we apply rounding to the featurees first
-    # Essentially applying a grid to our feature space, and considering all points the same if they are
-    # within the same box.
-    rounded_features = round.([f.second for f in features], digits=1)
-
-    hash = UInt64(17)
-    for f in rounded_features
-        hash = hash * UInt64(23) + UInt64(f * 100)
-    end
-    return UInt64(hash)
-end
-
 
 function write_values_file(values_file::String, state_values::AbstractVector{StateValueContainer})
-    master = state_values[1].master
-    currents = [s.current for s in state_values]
-    write_values_file(values_file, master, currents)
-end
-
-function write_values_file(values_file::String, master_state_to_value::Dict{UInt64, Float64}, new_state_to_values::AbstractVector)
-    merge!(master_state_to_value, new_state_to_values...)
-    for s_to_v in new_state_to_values
-        # and clear the new state to values learned
-        empty!(s_to_v)
+    merge!(state_values[1].current, [s.current for s in state_values[2:end]]...)
+    for (k,v) in state_values[1].current
+        update_state_value(state_values[1], k, v)
     end
-    #println(master_state_to_value)
-    write_values_file(values_file, master_state_to_value)
 end
 
-function write_values_file(values_file::String, state_to_value)
-    data = join(["$k,$v\n" for (k,v) in collect(state_to_value)])
-    file = open(values_file, "w")
-    write(file, data)
-    close(file)
-end
-
-function read_values_file(values_file::String, max_lines = nothing)::Dict{UInt64, Float64}
+function _deprecated_read_values_file(values_file::String, max_lines = nothing)::Dict{UInt64, Float64}
     if ~isfile(values_file)
         touch(values_file)
     end
@@ -102,4 +65,41 @@ function read_values_file(values_file::String, max_lines = nothing)::Dict{UInt64
         println("key collisions: $key_collisions")
     end
     return out
+end
+
+function persistent_hash(features::Vector{Pair{Symbol, Float64}})
+    # In order to avoid numerical instability issues in `Float64`, we apply rounding to the featurees first
+    # Essentially applying a grid to our feature space, and considering all points the same if they are
+    # within the same box.
+    rounded_features = round.([f.second for f in features], digits=1)
+
+    hash = UInt64(17)
+    for f in rounded_features
+        hash = hash * UInt64(23) + UInt64(f * 100)
+    end
+    return UInt64(hash)
+end
+
+
+
+function write_values_file(values_file::String, master_state_to_value::LMDB.LMDBDict{UInt64, Float64}, new_state_to_values::AbstractVector)
+    merge!(new_state_to_values[1], new_state_to_values[2:end]...)
+    for (k,v) in new_state_to_values[1]
+        update_state_value(state_values::StateValueContainer, state_key::UInt, new_value::Float64)
+        update_state_value
+        #update_state_value
+        master_state_to_value[k] = v
+    end
+    #=
+    println(new_state_to_values[1])
+    for (k,v) in new_state_to_values[1]
+        println(k,v)
+        master_state_to_value[k] = v
+    end
+    for s_to_v in new_state_to_values
+        # and clear the new state to values learned
+        empty!(s_to_v)
+    end
+    #println(master_state_to_value)
+    =#
 end
