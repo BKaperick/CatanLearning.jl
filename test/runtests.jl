@@ -480,7 +480,6 @@ end
     #state_to_values = [StateValueContainer(svc.master, new_sv) for new_sv in new_state_to_values]
     CatanLearning.write_values_file(v_file, [svc])
 
-    state_to_value = svc.master
     query_state_value(svc, MarkovState(1, 0.5))
     @test query_state_value(svc, MarkovState(1, 0.5)) == 200
     @test query_state_value(svc, MarkovState(2, 0.5)) == 201
