@@ -26,14 +26,7 @@ struct StateValueContainer
     master::LMDBDict{UInt64, Float64}
     env::Environment
     path::AbstractString
-
 end
-
-#=
-function Base.show(io::IO, s::StateValueContainer)
-    print(io, s)
-end
-=#
 
 abstract type AbstractActionSet end
 abstract type AbstractAction end

@@ -1,5 +1,9 @@
 using LMDB
 
+public query_state_value
+public update_state_value
+public update_state_values
+public write_values_file
 
 StateValueContainer(configs::Dict{String, Any}) = StateValueContainer(configs["PlayerSettings"]["STATE_VALUES"])
 
