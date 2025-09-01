@@ -220,12 +220,16 @@ function train_linear_model_from_csv(features_csv; sv_threshold = 0.01)
     y = [value == true ? 1.0 : 0.0 for value in df[:, :WonGame]]
     # Extract the feature matrix
     X = Matrix(df[:, Not(:WonGame)])
+    pseudo_inv = pseudo_inverse(X, sv_threshold)
+    model = pseudo_inv * y
+    return model
+end
+
+function pseudo_inverse(X::Matrix, sv_threshold)
     (m,n) = size(X)
     U,S,Vt = svd(X)
     N_num = length(filter(x -> x >= sv_threshold, S))
-    pseudo_inv = transpose(Vt)[1:n, 1:N_num] * diagm(1 ./ S[1:N_num]) * transpose(U)[1:N_num, 1:m]
-    model = pseudo_inv * y
-    return model
+    return transpose(Vt)[1:n, 1:N_num] * diagm(1 ./ S[1:N_num]) * transpose(U)[1:N_num, 1:m]
 end
 
 function add_perturbation!(model::MachineModel, magnitude)
