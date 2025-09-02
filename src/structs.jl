@@ -20,7 +20,6 @@ struct Tournament <: AbstractTournament
     configs::TournamentConfig
     teams::AbstractVector{Symbol}
     winners::Dict{Union{Symbol, Nothing}, Int}
-    #Tournament(configs::Dict) = Tournament(TournamentConfig(configs["Tournament"]))
 end
 
 struct MutatingTournament <: AbstractTournament
@@ -28,15 +27,12 @@ struct MutatingTournament <: AbstractTournament
     teams::AbstractVector{Symbol}
     winners::Dict{Union{Symbol, Nothing}, Int}
     mutation_rule::Symbol
-    #MutatingTournament(configs::Dict) = MutatingTournament(TournamentConfig(configs["Tournament"]))
 end
 
 struct AsyncTournament <: AbstractTournament
     configs::TournamentConfig
     teams::AbstractVector{Symbol}
     channels::Dict{Symbol, Channel}
-    #AsyncTournament(configs::Dict) = AsyncTournament(TournamentConfig(configs["Tournament"]),
-    #channels = Catan.read_channels_from_config(configs))
 end
 
 struct StateValueContainer
