@@ -63,7 +63,7 @@ function do_tournament_one_epoch(tourney::AbstractTournament, configs; create_pl
     return finalize_epoch(tourney)
 end
 
-function do_tournament_one_map!(tourney::Tournament, configs, map_num::Integer; create_players = Catan.create_players)
+function do_tournament_one_map!(tourney::AbstractTournament, configs, map_num::Integer; create_players = Catan.create_players)
     map = Catan.generate_random_map()
     do_tournament_one_map!(tourney, configs, map_num, map; create_players)
 end
