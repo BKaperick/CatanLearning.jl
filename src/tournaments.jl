@@ -15,15 +15,43 @@ function initialize_tournament(configs::Dict)
     end
 end
 
-function do_tournament_one_epoch(tourney, teams, configs; create_players = Catan.create_players)::Vector{Tuple{Union{Nothing,Symbol}, Int}}
+function get_tournament_path(configs, tourney_id)
+    models_dir = joinpath(@__DIR__, get_player_config(configs, "MODELS_DIR"))
+    tournament_path = joinpath(models_dir, "tournament_$(tourney_id)")
+    ~isdir(models_dir) && mkdir(models_dir)
+    ~isdir(tournament_path) && mkdir(tournament_path)
+    #c.path = tournament_path
+    return tournament_path
+end
+function TournamentConfig(tournament_configs::Dict, player_configs::Dict)
+    tourney_id = generate_tournament_id()
+    return TournamentConfig(tournament_configs["GAMES_PER_MAP"], tournament_configs["MAPS_PER_EPOCH"], tournament_configs["NUM_EPOCHS"], 
+    tournament_configs["GENERATE_RANDOM_MAPS"],
+    tourney_id, get_tournament_path(player_configs, tourney_id))
+end
+
+function Tournament(configs::Dict)
+    initialize_tournament(configs::Dict)
+    Tournament(TournamentConfig(configs["Tournament"], configs))
+end
+function AsyncTournament(configs::Dict)
+    initialize_tournament(configs::Dict)
+    AsyncTournament(TournamentConfig(configs["Tournament"], configs), Catan.read_channels_from_config(configs))
+end
+function MutatingTournament(configs::Dict)
+    initialize_tournament(configs::Dict)
+    MutatingTournament(TournamentConfig(configs["Tournament"], configs), :rule)
+end
+
+function do_tournament_one_epoch(tourney::AbstractTournament, teams, configs; create_players = Catan.create_players)::Vector{Tuple{Union{Nothing,Symbol}, Int}}
     winners = init_winners(teams)
     map_str = ""
-    if !configs["Tournament"]["GENERATE_RANDOM_MAPS"]
+    if !tourney.generate_random_maps
         map_str = read(configs["LOAD_MAP"], String)
     end
     for j=1:tourney.maps_per_epoch
         @info "map $j / $(tourney.maps_per_epoch)"
-        if configs["Tournament"]["GENERATE_RANDOM_MAPS"]
+        if tourney.generate_random_maps
             do_tournament_one_map!(winners, tourney, configs, j; create_players = create_players)
         else
             @debug "loading map from $(configs["LOAD_MAP"])"
@@ -34,10 +62,10 @@ function do_tournament_one_epoch(tourney, teams, configs; create_players = Catan
     order_winners(winners)
 end
 
-function do_tournament_one_epoch_async(channels, tourney, teams, configs)
+function do_tournament_one_epoch_async(tourney::AsyncTournament, teams, configs)
     for j=1:tourney.maps_per_epoch
         @info "map $j / $(tourney.maps_per_epoch)"
-        do_tournament_one_map_async!(channels, tourney, configs)
+        do_tournament_one_map_async!(tourney, configs)
 
         #TODO better to control this with yield here or just implicitly with the Channel buffer size?
         #yield()
@@ -45,12 +73,12 @@ function do_tournament_one_epoch_async(channels, tourney, teams, configs)
 end
 
 
-function do_tournament_one_map!(winners, tourney, configs, map_num::Integer; create_players = Catan.create_players)
+function do_tournament_one_map!(winners, tourney::AbstractTournament, configs, map_num::Integer; create_players = Catan.create_players)
     map = Catan.generate_random_map()
     do_tournament_one_map!(winners, tourney, configs, map_num, map; create_players)
 end
 
-function do_tournament_one_map!(winners, tourney, configs, map_num::Integer, map_str::AbstractString; create_players = Catan.create_players)
+function do_tournament_one_map!(winners, tourney::AbstractTournament, configs, map_num::Integer, map_str::AbstractString; create_players = Catan.create_players)
     
     function log_games_per_map(map_num, tourney, i)
         g_num = (map_num - 1)*tourney.games_per_map + i
@@ -74,13 +102,14 @@ function do_tournament_one_map!(winners, tourney, configs, map_str::AbstractStri
     end
 end
 
-function do_tournament_one_map_async!(channels, tourney, configs)
+function do_tournament_one_map_async!(tourney::AsyncTournament, configs, map_str::AbstractString)
     @debug "running do_tournament_one_map_async!"
-    map_str = Catan.generate_random_map()
+    #map = Map(map_str)
+    map = Map(Catan.generate_random_map())
     for i=1:tourney.games_per_map
         @debug "game $i / $(tourney.games_per_map)"
         players = Catan.create_players(configs)
-        do_tournament_one_game_async!(channels, map_str, players, configs)
+        do_tournament_one_game_async!(tourney.channels, map, players, configs)
         yield()
     end
 end
@@ -121,7 +150,7 @@ end
 
 function run_tournament(configs::Dict)
     initialize_tournament(configs)
-    tourney = Tournament(configs, :Sequential)
+    tourney = Tournament(configs)
     teams = [Symbol(t) for t in configs["TEAMS"]]
     winners = init_winners(teams)
     for k=1:tourney.epochs
@@ -137,26 +166,19 @@ end
 
 function run_tournament_async(configs)
     initialize_tournament(configs)
-    tourney = Tournament(configs, :Sequential)
+    tourney = AsyncTournament(configs)
     teams = [Symbol(t) for t in configs["TEAMS"]]
-
-    channels = Catan.read_channels_from_config(configs)
     
     toggleprint("Runnin dis tourney")
 
-    data_points = 4*(tourney.games_per_map * tourney.maps_per_epoch * tourney.epochs)
+    data_points = 4*(tourney.configs.games_per_map * tourney.configs.maps_per_epoch * tourney.configs.epochs)
     @info "Running tournament of $(data_points/4) games in total"
     
     @sync begin
-        @async _run_tournament_async(channels, tourney, configs, teams)
-        @async consume_feature_channel!(channels[:main], data_points, configs["PlayerSettings"]["FEATURES"])
-        @async consume_feature_channel!(channels[:public], data_points, configs["PlayerSettings"]["PUBLIC_FEATURES"])
+        @async _run_tournament_async(tourney, configs, teams)
+        @async consume_feature_channel!(tourney.channels[:main], data_points, configs["PlayerSettings"]["FEATURES"])
+        @async consume_feature_channel!(tourney.channels[:public], data_points, configs["PlayerSettings"]["PUBLIC_FEATURES"])
     end
-    #=
-    _run_tournament_async(channels, tourney, player_schemas, configs, teams)
-    consume_feature_channel!(channels[:main], data_points, configs["PlayerSettings"]["FEATURES"])
-    consume_feature_channel!(channels[:public], data_points, configs["PlayerSettings"]["PUBLIC_FEATURES"])
-    =#
 end
 
 function consume_feature_channel!(channel, count, key)
@@ -166,10 +188,10 @@ function consume_feature_channel!(channel, count, key)
     close(channel)
 end
 
-function _run_tournament_async(channels, tourney, configs, teams)
+function _run_tournament_async(tourney::AsyncTournament, configs, teams)
     for k=1:tourney.epochs
         @info "epoch $k / $(tourney.epochs)"
-        do_tournament_one_epoch_async(channels, tourney, teams, configs)
+        do_tournament_one_epoch_async(tourney, teams, configs)
     end
 end
 
@@ -191,9 +213,8 @@ Run a tournament parameterized by `configs` which keeps track of the exploration
 Each epoch adds a new mutation
 """
 function run_state_space_tournament(configs)
-    tourney = Tournament(configs)
+    tourney = MutatingTournament(configs)
     @info "Starting tournament $(tourney.unique_id)"
-    tournament_path = get_tournament_path(configs, tourney.unique_id)
 
     teams = [Symbol(t) for t in configs["TEAMS"]]
     team_to_perturb = Dict{Symbol, DecisionModel}()
@@ -222,19 +243,19 @@ function run_state_space_tournament(configs)
             apply_mutation!(team_to_perturb, team_to_public_perturb, markov_teams, epoch_winner::Symbol)
         end
 
-        finalize_epoch!(team_to_perturb, team_to_public_perturb, configs, tournament_path, k, markov_teams, epoch_winner, validation_check)
+        finalize_epoch!(team_to_perturb, team_to_public_perturb, configs, tourney.path, k, markov_teams, epoch_winner, validation_check)
     end
     println(winners)
 end
 
-function get_tournament_path(configs, tourney_id)
-    models_dir = get_player_config(configs, "MODELS_DIR")
-    tournament_path = joinpath(models_dir, "tournament_$(tourney_id)")
-    ~isdir(models_dir) && mkdir(models_dir)
-    ~isdir(tournament_path) && mkdir(tournament_path)
-    return tournament_path
-end
 
+"""
+    initialize_epoch!(configs::Dict, team_to_perturb::Dict{Symbol, DecisionModel}, team_to_public_perturb::Dict{Symbol, DecisionModel}, teams, tourney, epoch_num)
+
+The start of a new epoch for a mutating tournament (see `run_state_space_tournament`) requires several steps before running the epoch games:
+    * Modify Value and Reward weighting for MarkovPlayers
+    * Add perturbation to LearningPlayer DecisionModels
+"""
 function initialize_epoch!(configs::Dict, team_to_perturb::Dict{Symbol, DecisionModel}, team_to_public_perturb::Dict{Symbol, DecisionModel}, teams, tourney, epoch_num)
     if epoch_num == 1
         for team in teams
@@ -299,6 +320,9 @@ function apply_mutation!(team_to_perturb::Dict{Symbol, DecisionModel}, team_to_p
 
     @info "$winner won the epoch, so all players copy his mutation"
     for team in teams
+        if team == winner
+            continue
+        end
         team_to_perturb[team].weights = copy(team_to_perturb[winner].weights)
         team_to_public_perturb[team].weights = copy(team_to_public_perturb[winner].weights)
     end

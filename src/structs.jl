@@ -2,24 +2,36 @@ using MLJ
 import Catan: ChosenAction
 import Base: show
 
-struct Tournament
+abstract type AbstractTournament
+end
+
+generate_tournament_id()::Int = rand(range(1,100_000))
+
+struct TournamentConfig
     games_per_map::Int
     maps_per_epoch::Int
     epochs::Int
-    mutation_rule::Symbol
+    generate_random_maps::Bool
     unique_id::Int
+    path::String
 end
 
-function Tournament(configs::Dict, mutation_rule::Symbol) 
-    @debug "$(configs["Tournament"]) $mutation_rule"
-    id = rand(range(1,100_000))
-    Tournament(configs["Tournament"]["GAMES_PER_MAP"], configs["Tournament"]["MAPS_PER_EPOCH"], configs["Tournament"]["NUM_EPOCHS"], mutation_rule, id)
+struct Tournament <: AbstractTournament
+    configs::TournamentConfig
+    #Tournament(configs::Dict) = Tournament(TournamentConfig(configs["Tournament"]))
 end
 
-function Tournament(configs::Dict) 
-    @debug "$(configs["Tournament"]) $mutation_rule"
-    id = rand(range(1,100_000))
-    Tournament(configs["Tournament"]["GAMES_PER_MAP"], configs["Tournament"]["MAPS_PER_EPOCH"], configs["Tournament"]["NUM_EPOCHS"], :noop, id)
+struct MutatingTournament <: AbstractTournament
+    configs::TournamentConfig
+    mutation_rule::Symbol
+    #MutatingTournament(configs::Dict) = MutatingTournament(TournamentConfig(configs["Tournament"]))
+end
+
+struct AsyncTournament <: AbstractTournament
+    configs::TournamentConfig
+    channels::Dict{Symbol, Channel}
+    #AsyncTournament(configs::Dict) = AsyncTournament(TournamentConfig(configs["Tournament"]),
+    #channels = Catan.read_channels_from_config(configs))
 end
 
 struct StateValueContainer
