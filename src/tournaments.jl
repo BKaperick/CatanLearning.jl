@@ -60,26 +60,15 @@ function do_tournament_one_epoch(tourney::AbstractTournament, configs; create_pl
             do_tournament_one_map!(tourney, configs, j, map_str; create_players = create_players)
         end
     end
-    # TODO move order_winners to a finalize_epoch method
     return finalize_epoch(tourney)
 end
 
-function _deprecated_do_tournament_one_epoch(tourney::AsyncTournament, configs; create_players = Catan.create_players)
-    for j=1:tourney.configs.maps_per_epoch
-        @info "map $j / $(tourney.configs.maps_per_epoch)"
-        do_tournament_one_map!(tourney, configs, map_str; create_players = create_players)
-
-        #TODO better to control this with yield here or just implicitly with the Channel buffer size?
-        #yield()
-    end
-end
-
-function do_tournament_one_map!(tourney::AbstractTournament, configs, map_num::Integer; create_players = Catan.create_players)
+function do_tournament_one_map!(tourney::Tournament, configs, map_num::Integer; create_players = Catan.create_players)
     map = Catan.generate_random_map()
     do_tournament_one_map!(tourney, configs, map_num, map; create_players)
 end
 
-function do_tournament_one_map!(tourney::AbstractTournament, configs, map_num::Integer, map_str::AbstractString; create_players = Catan.create_players)
+function do_tournament_one_map!(tourney::Tournament, configs, map_num::Integer, map_str::AbstractString; create_players = Catan.create_players)
     
     function log_games_per_map(map_num, tourney, i)
         g_num = (map_num - 1)*tourney.configs.games_per_map + i
