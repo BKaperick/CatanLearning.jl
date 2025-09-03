@@ -59,7 +59,6 @@ function do_tournament_one_epoch(tourney::AbstractTournament, configs; create_pl
             do_tournament_one_map!(tourney, configs, j, map_str; create_players = create_players)
         end
     end
-    finalize_epoch!(tourney)
 end
 
 function do_tournament_one_map!(tourney::AbstractTournament, configs, map_num::Integer; create_players = Catan.create_players)
@@ -67,7 +66,7 @@ function do_tournament_one_map!(tourney::AbstractTournament, configs, map_num::I
     do_tournament_one_map!(tourney, configs, map_num, map; create_players)
 end
 
-function do_tournament_one_map!(tourney::Tournament, configs, map_num::Integer, map_str::AbstractString; create_players = Catan.create_players)
+function do_tournament_one_map!(tourney::Union{MutatingTournament, Tournament}, configs, map_num::Integer, map_str::AbstractString; create_players = Catan.create_players)
     
     function log_games_per_map(map_num, tourney, i)
         g_num = (map_num - 1)*tourney.configs.games_per_map + i
@@ -180,6 +179,9 @@ Each epoch adds a new mutation
 """
 function run_state_space_tournament(configs)
     tourney = MutatingTournament(configs)
+    run(tourney, configs)
+end
+function run(tourney::MutatingTournament, configs::Dict)
     @info "Starting tournament $(tourney.unique_id)"
 
     team_to_perturb = Dict{Symbol, DecisionModel}()
@@ -207,10 +209,10 @@ function run_state_space_tournament(configs)
 
         finalize_epoch!(team_to_perturb, team_to_public_perturb, configs, tourney.configs.path, k, markov_teams, epoch_winner, validation_check)
     end
-    println(winners)
+    println(tourney.winners)
 end
 
-function initialize_epoch!(tourney::Union{Tournament, MutatingTournament})
+function initialize_epoch!(tourney::Union{Tournament, AsyncTournament})
     #tourney.winners = init_winners(tourney.teams)
 end
 

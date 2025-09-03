@@ -7,8 +7,22 @@ MAX_TURNS = 500
 #LOG_OUTPUT = "./data/oneoff_test_log.txt"
 LOG_LEVEL = "Logging.Warn"
 LOG_OUTPUT = "stderr"
+GAME_LOG_LEVEL = "Logging.Warn"
 TESTPREFIX_LOG_LEVEL = "Logging.Debug"
 TESTPREFIX_LOG_OUTPUT = "log.txt"
+
+[Tournament]
+GAMES_PER_MAP = 2
+MAPS_PER_EPOCH = 2
+NUM_EPOCHS = 2
+GENERATE_RANDOM_MAPS = true
+
+[Async]
+CHANNELS = ["main", "public"]
+[Async.main]
+SIZE = 4
+[Async.public]
+SIZE = 4
 
 [GameSettings]
 [PlayerSettings]
@@ -19,6 +33,10 @@ PUBLIC_FEATURES = "./data/public_features.csv"
 STATE_VALUES = "./state_values"
 SEARCH_DEPTH = 1
 [PlayerSettings.blue]
+TYPE = "DefaultRobotPlayer"
 [PlayerSettings.cyan]
+TYPE = "DefaultRobotPlayer"
 [PlayerSettings.green]
+TYPE = "DefaultRobotPlayer"
 [PlayerSettings.yellow]
+TYPE = "DefaultRobotPlayer"

@@ -35,7 +35,10 @@ get_legal_action_sets,
 feature_library,
 query_state_value,
 update_state_value,
-update_state_values
+update_state_values,
+Tournament,
+AsyncTournament,
+MutatingTournament
 
 
 @testsnippet global_test_setup begin
@@ -72,7 +75,10 @@ update_state_values
     feature_library,
     query_state_value,
     update_state_value,
-    update_state_values
+    update_state_values,
+    Tournament,
+    AsyncTournament,
+    MutatingTournament
 
     configs = parse_configs("Configuration.toml")
 
@@ -490,6 +496,36 @@ end
     @test query_state_value(svc, MarkovState(7, 0.5)) == 0.5
 
     rm(v_file, force=true, recursive=true)
+end
+
+@testitem "tourney" setup=[global_test_setup] begin
+    tourney = Tournament(configs)
+    total_games = tourney.configs.games_per_map * tourney.configs.maps_per_epoch * tourney.configs.epochs
+    @test total_games == 8
+
+    CatanLearning.run(tourney, configs)
+    # Check that the 3 games resulted in 3 winners
+    @test sum([v for (t,v) in tourney.winners]) == total_games
+end
+
+@testitem "async tourney" setup=[global_test_setup] begin
+    tourney = AsyncTournament(configs)
+    total_games = tourney.configs.games_per_map * tourney.configs.maps_per_epoch * tourney.configs.epochs
+    @test total_games == 8
+
+    CatanLearning.run(tourney, configs)
+    # Check that the 3 games resulted in 3 winners
+    #@test length(tourney.channels[:main]) == total_games
+end
+
+@testitem "mutating tourney" setup=[global_test_setup] begin
+    tourney = MutatingTournament(configs)
+    total_games = tourney.configs.games_per_map * tourney.configs.maps_per_epoch * tourney.configs.epochs
+    @test total_games == 8
+
+    CatanLearning.run(tourney, configs)
+    # Check that the 3 games resulted in 3 winners
+    @test sum([v for (t,v) in tourney.winners]) == total_games
 end
 
 function run_tests()
