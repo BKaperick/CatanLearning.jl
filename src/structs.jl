@@ -2,6 +2,17 @@ using MLJ
 import Catan: ChosenAction
 import Base: show
 
+abstract type DecisionModel
+end
+mutable struct MachineModel <: DecisionModel
+    machine::Machine
+end
+mutable struct LinearModel <: DecisionModel
+    weights::Vector{Float64}
+end
+mutable struct EmptyModel <: DecisionModel
+end
+
 abstract type AbstractTournament
 end
 
@@ -26,7 +37,10 @@ struct MutatingTournament <: AbstractTournament
     configs::TournamentConfig
     teams::AbstractVector{Symbol}
     winners::Dict{Union{Symbol, Nothing}, Int}
-    mutation_rule::Symbol
+    #mutation_rule::Symbol
+    team_to_perturb::Dict{Symbol, DecisionModel}
+    team_to_public_perturb::Dict{Symbol, DecisionModel}
+    markov_teams::AbstractVector{Symbol}
 end
 
 struct AsyncTournament <: AbstractTournament
@@ -136,17 +150,6 @@ end
 
 function MarkovRewardProcess(r::AbstractFloat, l::AbstractFloat, m::AbstractFloat, p::AbstractFloat, master::LMDBDict{UInt64, Float64}, current::Dict{UInt64, Float64})
     return MarkovRewardProcess(r, l, m, p, StateValueContainer(master, current))
-end
-
-abstract type DecisionModel
-end
-mutable struct MachineModel <: DecisionModel
-    machine::Machine
-end
-mutable struct LinearModel <: DecisionModel
-    weights::Vector{Float64}
-end
-mutable struct EmptyModel <: DecisionModel
 end
 
 """
