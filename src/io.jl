@@ -137,6 +137,14 @@ end
 function _write_features_file(file_name, features::Vector) 
     _write_features_file(open(file_name, "a"), file_name, features)
 end
+function _write_many_features_file(channel, count, file_name) 
+    file = open(file_name, "a")
+    for i=1:count
+        values = join([get_csv_friendly(f[2]) for f in take!(channel)], ",")
+        write(file, "$values\n")
+    end
+    close(file)
+end
 
 function _write_features_file(file::IO, file_name, features::Vector) 
     values = join([get_csv_friendly(f[2]) for f in features], ",")
