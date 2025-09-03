@@ -85,7 +85,8 @@ function do_tournament_one_map!(tourney, configs, map_str::AbstractString, iter_
     for i=1:tourney.configs.games_per_map
         main_logger = descend_logger(configs, "GAME")
             players = create_players(configs)
-            do_tournament_one_game!(map, players, configs)
+        winner = do_tournament_one_game!(map, players, configs)
+        tourney.winners[winner] += 1
         global_logger(main_logger)
         iter_logger(tourney, i)
     end
@@ -97,7 +98,7 @@ function do_tournament_one_map!(tourney::AsyncTournament, configs, map_num::Inte
     for i=1:tourney.configs.games_per_map
         players = create_players(configs)
         do_tournament_one_game_async!(tourney.channels, map, players, configs)
-        yield()
+        #yield()
     end
 end
 
@@ -111,9 +112,8 @@ function do_tournament_one_game!(map::Map, players, configs)
     if winner !== nothing
         w = winner.player.team
     end
-    tourney.winners[w] += 1
 
-    return winner
+    return w
 end
 
 function do_tournament_one_game_async!(channels, map::Map, players, configs)
@@ -136,26 +136,26 @@ end
 
 function run_tournament(configs::Dict)
     tourney = Tournament(configs)
-    for k=1:tourney.configs.epochs
-        @info "epoch $k / $(tourney.configs.epochs)"
-        # TODO do we need tourney to keep track of epoch winners ?
-        initialize_epoch!(tourney)
-        do_tournament_one_epoch(tourney, configs)
-    end
+    run(tourney, configs)
     @info tourney.winners
-    return winners
+    return tourney.winners
 end
 
-function run_tournament_async(configs)
-    tourney = AsyncTournament(configs)
-    
-    toggleprint("Runnin dis tourney")
-
+function run(tourney::AbstractTournament, configs::Dict)
     data_points = 4*(tourney.configs.games_per_map * tourney.configs.maps_per_epoch * tourney.configs.epochs)
     @info "Running tournament of $(data_points/4) games in total"
-    
+
+    for k=1:tourney.configs.epochs
+        @info "epoch $k / $(tourney.configs.epochs)"
+        initialize_epoch!(tourney)
+        do_tournament_one_epoch(tourney, configs)
+        finalize_epoch!(tourney)
+    end
+end
+
+function run_async(tourney::AsyncTournament, configs::Dict)
     @sync begin
-        @async _run_tournament_async(tourney, configs)
+        @async run(tourney, configs)
         @async consume_feature_channel!(tourney.channels[:main], data_points, configs["PlayerSettings"]["FEATURES"])
         @async consume_feature_channel!(tourney.channels[:public], data_points, configs["PlayerSettings"]["PUBLIC_FEATURES"])
     end
@@ -170,19 +170,6 @@ function consume_feature_channel!(channel, count, key)
         consume_channel!(channel, key)
     end
     close(channel)
-end
-
-function _run_tournament_async(tourney::AsyncTournament, configs)
-    for k=1:tourney.configs.epochs
-        @info "epoch $k / $(tourney.configs.epochs)"
-        do_tournament_one_epoch(tourney, configs)
-    end
-end
-
-function run_tournament(tourney, configs)
-    for k=1:tourney.configs.epochs
-        epoch_winners = do_tournament_one_epoch(tourney, configs)
-    end
 end
 
 """

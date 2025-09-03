@@ -17,10 +17,6 @@ query_state_value,
 update_state_value,
 update_state_values
 
-function toggleprint(str)
-    #println(str)
-end
-
 include("structs.jl")
 include("state_values.jl")
 include("learning/naive_model.jl")
@@ -48,8 +44,8 @@ function __init__()
 end
 
 function run(configs)
-    tourney = Tournament(configs, :Sequential)
-    run_tournament(tourney, configs)
+    tourney = Tournament(configs)
+    run(tourney, configs)
 end
 
 function descend_logger(configs, logger_prefix)

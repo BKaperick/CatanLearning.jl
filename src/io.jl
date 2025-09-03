@@ -36,12 +36,14 @@ function Catan.do_post_game_action(game::Game, board::Board, players::AbstractVe
 end
 
 function Catan.do_post_game_produce!(channels::Dict{Symbol, Channel}, game::Game, board::Board, players::AbstractVector{PlayerType}, player::Catan.DefaultRobotPlayer, winner::Union{PlayerType, Nothing})
-    main_features = compute_features_and_labels(game, board, player.player)
-    public_features = compute_public_features_and_labels(game, board, player.player)
-    put!(channels[:main], main_features)
-    toggleprint("Putting channel content to :main")
-    put!(channels[:public], public_features)
-    toggleprint("Putting channel content to :public")
+    if game.configs["WRITE_FEATURES"] == true
+        main_features = compute_features_and_labels(game, board, player.player)
+        public_features = compute_public_features_and_labels(game, board, player.player)
+        put!(channels[:main], main_features)
+        @debug "Putting channel content to :main"
+        put!(channels[:public], public_features)
+        @debug "Putting channel content to :public"
+    end
 end
 
 #=
@@ -69,7 +71,7 @@ end
 
 function consume_channel!(channel, file_name)
     features = take!(channel)
-    toggleprint("Consuming channel content to $file_name !")
+    @debug "Consuming channel content to $file_name !"
     _write_features_file(file_name, features)
 end
 
