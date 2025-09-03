@@ -197,11 +197,11 @@ end
 #
 
 function do_tournament_one_map!(tourney::AbstractTournament, configs, map_num::Integer; create_players = Catan.create_players)
-    map = Catan.generate_random_map()
+    map = Map(Catan.generate_random_map())
     do_tournament_one_map!(tourney, configs, map_num, map; create_players)
 end
 
-function do_tournament_one_map!(tourney::Union{MutatingTournament, Tournament}, configs, map_num::Integer, map_str::AbstractString; create_players = Catan.create_players)
+function do_tournament_one_map!(tourney::Union{MutatingTournament, Tournament}, configs, map_num::Integer, map::Map; create_players = Catan.create_players)
     
     function log_games_per_map(map_num, tourney, i)
         g_num = (map_num - 1)*tourney.configs.games_per_map + i
@@ -211,14 +211,13 @@ function do_tournament_one_map!(tourney::Union{MutatingTournament, Tournament}, 
     end
 
     iter_logger = (tourney, i) -> log_games_per_map(map_num, tourney, i)
-    do_tournament_one_map!(tourney, configs, map_str, iter_logger; create_players)
+    do_tournament_one_map!(tourney, configs, map, iter_logger; create_players)
 end
 
-function do_tournament_one_map!(tourney, configs, map_str::AbstractString, iter_logger; create_players = Catan.create_players)
-    map = Map(map_str)
+function do_tournament_one_map!(tourney::Union{Tournament, MutatingTournament}, configs, map::Map, iter_logger; create_players = Catan.create_players)
     for i=1:tourney.configs.games_per_map
         main_logger = descend_logger(configs, "GAME")
-            players = create_players(configs)
+        players = create_players(configs)
         winner = do_tournament_one_game!(map, players, configs)
         tourney.winners[winner] += 1
         global_logger(main_logger)
@@ -226,9 +225,8 @@ function do_tournament_one_map!(tourney, configs, map_str::AbstractString, iter_
     end
 end
 
-function do_tournament_one_map!(tourney::AsyncTournament, configs, map_num::Integer, map_str::AbstractString; create_players = Catan.create_players)
+function do_tournament_one_map!(tourney::AsyncTournament, configs, map::Map; create_players = Catan.create_players)
     @debug "running do_tournament_one_map_async!"
-    map = Map(map_str)
     for i=1:tourney.configs.games_per_map
         players = create_players(configs)
         do_tournament_one_game_async!(tourney.channels, map, players, configs)
