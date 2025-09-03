@@ -5,7 +5,7 @@ MAX_TURNS = 500
 
 [LogSettings]
 #LOG_OUTPUT = "./data/oneoff_test_log.txt"
-LOG_LEVEL = "Logging.Warn"
+LOG_LEVEL = "Logging.Info"
 LOG_OUTPUT = "stderr"
 GAME_LOG_LEVEL = "Logging.Warn"
 TESTPREFIX_LOG_LEVEL = "Logging.Debug"

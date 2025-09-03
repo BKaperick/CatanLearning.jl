@@ -63,22 +63,33 @@ function run_tournament(configs::Dict)
     return tourney.winners
 end
 
+function run_async_tournament(configs::Dict)
+    tourney = AsyncTournament(configs)
+    run(tourney, configs)
+end
+
 """
-    run_state_space_tournament(configs)
+    run_mutating_tournament(configs)
 
 Run a tournament parameterized by `configs` which keeps track of the exploration of state space and mutations.
 Each epoch adds a new mutation
 """
-function run_state_space_tournament(configs)
+function run_mutating_tournament(configs)
     tourney = MutatingTournament(configs)
     run(tourney, configs)
 end
 
-
 function run(tourney::AbstractTournament, configs::Dict)
     data_points = 4*(tourney.configs.games_per_map * tourney.configs.maps_per_epoch * tourney.configs.epochs)
-    @info "Running tournament of $(data_points/4) games in total"
+    @info "Running tournament $(tourney.configs.unique_id) with $(data_points/4) games in total"
+    _run(tourney, configs)
+end
 
+function _run(tourney::Tournament, configs::Dict)
+    _run_tournament(tourney, configs)
+end
+
+function _run_tournament(tourney::Union{Tournament, AsyncTournament}, configs::Dict)
     for k=1:tourney.configs.epochs
         @info "epoch $k / $(tourney.configs.epochs)"
         initialize_epoch!(tourney, configs, k)
@@ -87,9 +98,10 @@ function run(tourney::AbstractTournament, configs::Dict)
     end
 end
 
-function run_async(tourney::AsyncTournament, configs::Dict)
+function _run(tourney::AsyncTournament, configs::Dict)
+    data_points = 4*(tourney.configs.games_per_map * tourney.configs.maps_per_epoch * tourney.configs.epochs)
     @sync begin
-        @async run(tourney, configs)
+        @async _run_tournament(tourney, configs)
         @async consume_feature_channel!(tourney.channels[:main], data_points, configs["PlayerSettings"]["FEATURES"])
         @async consume_feature_channel!(tourney.channels[:public], data_points, configs["PlayerSettings"]["PUBLIC_FEATURES"])
     end
@@ -99,8 +111,7 @@ function run_async(tourney::AsyncTournament, configs::Dict)
     =#
 end
 
-function run(tourney::MutatingTournament, configs::Dict)
-    @info "Starting tournament $(tourney.unique_id)"
+function _run(tourney::MutatingTournament, configs::Dict)
     
     for k=1:tourney.configs.epochs
         @info "epoch $k / $(tourney.configs.epochs)"
@@ -121,7 +132,6 @@ end
 #
 
 function initialize_epoch!(tourney::Union{Tournament, AsyncTournament}, configs::Dict, epoch_num)
-    #tourney.winners = init_winners(tourney.teams)
 end
 
 """
@@ -192,28 +202,17 @@ end
 #
 
 function do_tournament_one_map!(tourney::AbstractTournament, configs::Dict, map_num::Integer, map_str::AbstractString; create_players = Catan.create_players)
-    
-    function log_games_per_map(map_num, tourney, i)
-        g_num = (map_num - 1)*tourney.configs.games_per_map + i
-        if g_num % 1 == 0
-            @debug "Game $(g_num) / $(tourney.configs.maps_per_epoch * tourney.configs.games_per_map)"
-        end
-    end
-
-    iter_logger = (tourney, i) -> log_games_per_map(map_num, tourney, i)
+    iter_logger = (tourney, i) -> log_games_per_map(map_num, tourney.configs, i)
     if tourney.configs.generate_random_maps
         map = Map(Catan.generate_random_map())
     else
         map = Map(map_str)
     end
-    _do_tournament_one_map!(tourney, configs, map, iter_logger; create_players)
-end
 
-function _do_tournament_one_map!(tourney::AbstractTournament, configs::Dict, map::Map, iter_logger; create_players = Catan.create_players)
     for i=1:tourney.configs.games_per_map
         main_logger = descend_logger(configs, "GAME")
         players = create_players(configs)
-        winner = do_tournament_one_game!(tourney, map, players, configs)
+        do_tournament_one_game!(tourney, map, players, configs)
         global_logger(main_logger)
         iter_logger(tourney, i)
     end
@@ -312,4 +311,11 @@ function create_enriched_players(configs, team_to_perturb::Dict{Symbol, Decision
         end
     end
     return players
+end
+    
+function log_games_per_map(map_num, tourney_configs, i)
+    g_num = (map_num - 1)*tourney_configs.games_per_map + i
+    if g_num % 1 == 0
+        @debug "Game $(g_num) / $(tourney_configs.maps_per_epoch * tourney_configs.games_per_map)"
+    end
 end

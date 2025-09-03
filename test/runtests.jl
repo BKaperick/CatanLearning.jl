@@ -498,7 +498,7 @@ end
     rm(v_file, force=true, recursive=true)
 end
 
-@testitem "tourney" setup=[global_test_setup] begin
+@testitem "singlethread_tourney" setup=[global_test_setup] begin
     tourney = Tournament(configs)
     total_games = tourney.configs.games_per_map * tourney.configs.maps_per_epoch * tourney.configs.epochs
     @test total_games == 8
@@ -508,7 +508,7 @@ end
     @test sum([v for (t,v) in tourney.winners]) == total_games
 end
 
-@testitem "async tourney" setup=[global_test_setup] begin
+@testitem "async_tourney" setup=[global_test_setup] begin
     tourney = AsyncTournament(configs)
     total_games = tourney.configs.games_per_map * tourney.configs.maps_per_epoch * tourney.configs.epochs
     @test total_games == 8
@@ -518,7 +518,7 @@ end
     #@test length(tourney.channels[:main]) == total_games
 end
 
-@testitem "mutating tourney" setup=[global_test_setup] begin
+@testitem "mutating_tourney" setup=[global_test_setup] begin
     tourney = MutatingTournament(configs)
     total_games = tourney.configs.games_per_map * tourney.configs.maps_per_epoch * tourney.configs.epochs
     @test total_games == 8
