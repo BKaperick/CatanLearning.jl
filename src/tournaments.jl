@@ -176,19 +176,14 @@ end
 function finalize_epoch!(tourney::AsyncTournament)
 end
 
-function do_tournament_one_epoch(tourney::AbstractTournament, configs; create_players = Catan.create_players)
+function do_tournament_one_epoch(tourney::AbstractTournament, configs::Dict; create_players = Catan.create_players)
     map_str = ""
     if !tourney.configs.generate_random_maps
         map_str = read(configs["LOAD_MAP"], String)
     end
     for j=1:tourney.configs.maps_per_epoch
         @info "map $j / $(tourney.configs.maps_per_epoch)"
-        if tourney.configs.generate_random_maps
-            do_tournament_one_map!(tourney, configs, j; create_players = create_players)
-        else
-            @debug "loading map from $(configs["LOAD_MAP"])"
-            do_tournament_one_map!(tourney, configs, j, map_str; create_players = create_players)
-        end
+        do_tournament_one_map!(tourney, configs, j, map_str; create_players = create_players)
     end
 end
 
@@ -196,12 +191,7 @@ end
 # ONE MAP
 #
 
-function do_tournament_one_map!(tourney::AbstractTournament, configs, map_num::Integer; create_players = Catan.create_players)
-    map = Map(Catan.generate_random_map())
-    do_tournament_one_map!(tourney, configs, map_num, map; create_players)
-end
-
-function do_tournament_one_map!(tourney::Union{MutatingTournament, Tournament}, configs, map_num::Integer, map::Map; create_players = Catan.create_players)
+function do_tournament_one_map!(tourney::AbstractTournament, configs::Dict, map_num::Integer, map_str::AbstractString; create_players = Catan.create_players)
     
     function log_games_per_map(map_num, tourney, i)
         g_num = (map_num - 1)*tourney.configs.games_per_map + i
@@ -211,26 +201,21 @@ function do_tournament_one_map!(tourney::Union{MutatingTournament, Tournament}, 
     end
 
     iter_logger = (tourney, i) -> log_games_per_map(map_num, tourney, i)
-    do_tournament_one_map!(tourney, configs, map, iter_logger; create_players)
+    if tourney.configs.generate_random_maps
+        map = Map(Catan.generate_random_map())
+    else
+        map = Map(map_str)
+    end
+    _do_tournament_one_map!(tourney, configs, map, iter_logger; create_players)
 end
 
-function do_tournament_one_map!(tourney::Union{Tournament, MutatingTournament}, configs, map::Map, iter_logger; create_players = Catan.create_players)
+function _do_tournament_one_map!(tourney::AbstractTournament, configs::Dict, map::Map, iter_logger; create_players = Catan.create_players)
     for i=1:tourney.configs.games_per_map
         main_logger = descend_logger(configs, "GAME")
         players = create_players(configs)
-        winner = do_tournament_one_game!(map, players, configs)
-        tourney.winners[winner] += 1
+        winner = do_tournament_one_game!(tourney, map, players, configs)
         global_logger(main_logger)
         iter_logger(tourney, i)
-    end
-end
-
-function do_tournament_one_map!(tourney::AsyncTournament, configs, map::Map; create_players = Catan.create_players)
-    @debug "running do_tournament_one_map_async!"
-    for i=1:tourney.configs.games_per_map
-        players = create_players(configs)
-        do_tournament_one_game_async!(tourney.channels, map, players, configs)
-        #yield()
     end
 end
 
@@ -238,7 +223,7 @@ end
 # ONE GAME
 #
 
-function do_tournament_one_game!(map::Map, players, configs)
+function do_tournament_one_game!(tourney::Union{Tournament, MutatingTournament}, map::Map, players, configs)
     game = Game(players, configs)
     board = Board(map, configs)
     _,winner = Catan.run(game, board)
@@ -248,18 +233,14 @@ function do_tournament_one_game!(map::Map, players, configs)
     if winner !== nothing
         w = winner.player.team
     end
-
-    return w
+    tourney.winners[w] += 1
+    return
 end
 
-function do_tournament_one_game_async!(channels, map::Map, players, configs)
+function do_tournament_one_game!(tourney::AsyncTournament, map::Map, players, configs)
     game = Game(players, configs)
     board = Board(map, configs)
-    @debug "starting game $(game.unique_id)"
-    main_logger = global_logger()
-    global_logger(NullLogger())
-    _,winner = Catan.run_async(channels, game, board)
-    global_logger(main_logger)
+    Catan.run_async(tourney.channels, game, board)
     @debug "finished game $(game.unique_id)"
     return
 end
