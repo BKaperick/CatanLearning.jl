@@ -81,6 +81,8 @@ MutatingTournament
     MutatingTournament
 
     configs = parse_configs("Configuration.toml")
+    rm(configs["PlayerSettings"]["FEATURES"], force=true)
+    rm(configs["PlayerSettings"]["PUBLIC_FEATURES"], force=true)
 
 
 features = collect(keys(feature_library))
@@ -421,7 +423,7 @@ end
     #TESTPREFIX_LOG_OUTPUT = "log.txt"
 
     # Before
-    @test global_logger().min_level == Logging.Warn
+    @test global_logger().min_level == Logging.Info
     @test typeof(global_logger().stream) == Base.TTY
     
     # Create logger but don't change global logger yet
@@ -437,7 +439,7 @@ end
     @test global_logger().min_level == Logging.Debug
     @test typeof(global_logger().stream) == IOStream
     @test global_logger().stream.name == "<file log.txt>"
-    @test main_logger.min_level == Logging.Warn
+    @test main_logger.min_level == Logging.Info
     @test typeof(main_logger.stream) == Base.TTY
 
     # Reset logger to original
@@ -516,6 +518,8 @@ end
     CatanLearning.run(tourney, configs)
     # Check that the 3 games resulted in 3 winners
     #@test length(tourney.channels[:main]) == total_games
+    @test countlines(configs["PlayerSettings"]["FEATURES"]) == 1 + (4 * total_games)
+    @test countlines(configs["PlayerSettings"]["PUBLIC_FEATURES"]) == 1 + (4 * total_games)
 end
 
 @testitem "mutating_tourney" setup=[global_test_setup] begin
