@@ -16,7 +16,8 @@ export LearningPlayer, EmpathRobotPlayer, HybridPlayer, compute_features, get_st
 query_state_value,
 update_state_value,
 update_state_values,
-Tournament
+Tournament,
+run_tournament
 
 include("structs.jl")
 include("state_values.jl")

@@ -36,6 +36,7 @@ feature_library,
 query_state_value,
 update_state_value,
 update_state_values,
+run_tournament,
 Tournament,
 AsyncTournament,
 MutatingTournament
@@ -76,11 +77,13 @@ MutatingTournament
     query_state_value,
     update_state_value,
     update_state_values,
+    run_tournament,
     Tournament,
     AsyncTournament,
     MutatingTournament
 
     configs = parse_configs("Configuration.toml")
+    markov_configs = parse_configs("MarkovConfiguration.toml")
     rm(configs["PlayerSettings"]["FEATURES"], force=true)
     rm(configs["PlayerSettings"]["PUBLIC_FEATURES"], force=true)
 
@@ -530,6 +533,22 @@ end
     CatanLearning.run(tourney, configs)
     # Check that the 3 games resulted in 3 winners
     @test sum([v for (t,v) in tourney.winners]) == total_games
+end
+
+@testitem "mutating_tourney_markov_players" setup=[global_test_setup] begin
+    configs["WRITE_FEATURES"] = true
+    CatanLearning.run_tournament(configs)
+    # 3 HybridPlayers vs 1 DefaultRobotPlayer
+    tourney = MutatingTournament(markov_configs)
+    total_games = tourney.configs.games_per_map * tourney.configs.maps_per_epoch * tourney.configs.epochs
+    @test total_games == 8
+    @test Set(tourney.markov_teams) == Set([:cyan, :green, :yellow])
+
+    CatanLearning.run(tourney, configs)
+    # Check that the 3 games resulted in 3 winners
+    @test sum([v for (t,v) in tourney.winners]) == total_games
+    @test haskey(tourney.team_to_perturb, :cyan)
+    @test ~haskey(tourney.team_to_perturb, :blue)
 end
 
 function run_tests()

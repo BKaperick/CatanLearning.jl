@@ -43,12 +43,12 @@ function MutatingTournament(configs::Dict)
     teams,winners = initialize_tournament(configs::Dict)
     team_to_perturb = Dict{Symbol, DecisionModel}()
     team_to_public_perturb = Dict{Symbol, DecisionModel}()
-    for team in teams
+    markov_teams = [t for t in teams if get_player_config(configs, "TYPE", t) == "HybridPlayer"]
+    for team in markov_teams
         # First iteration, start with stored model
         team_to_perturb[team] = try_load_serialized_model(team, configs)::DecisionModel
         team_to_public_perturb[team] = try_load_serialized_public_model(team, configs)::DecisionModel
     end
-    markov_teams = [t for t in teams if get_player_config(configs, "TYPE", t) == "HybridPlayer"]
     MutatingTournament(TournamentConfig(configs["Tournament"], configs), teams, winners, team_to_perturb, team_to_public_perturb, markov_teams)
 end
 
@@ -72,21 +72,24 @@ end
     run_mutating_tournament(configs)
 
 Run a tournament parameterized by `configs` which keeps track of the exploration of state space and mutations.
-Each epoch adds a new mutation
+Each epoch adds a new mutation, and then a validation epoch is run to confirm that mutation against the previous
+generation of `MarkovPlayers`.
 """
 function run_mutating_tournament(configs)
     tourney = MutatingTournament(configs)
     run(tourney, configs)
 end
 
-function run(tourney::AbstractTournament, configs::Dict)
+function run(tourney::T, configs::Dict)::T where T <: AbstractTournament
     data_points = 4*(tourney.configs.games_per_map * tourney.configs.maps_per_epoch * tourney.configs.epochs)
     @info "Running tournament $(tourney.configs.unique_id) with $(data_points/4) games in total"
     _run(tourney, configs)
+    return tourney
 end
 
 function _run(tourney::Tournament, configs::Dict)
     _run_tournament(tourney, configs)
+    return tourney
 end
 
 function _run_tournament(tourney::Union{Tournament, AsyncTournament}, configs::Dict)
@@ -122,6 +125,7 @@ function _run(tourney::MutatingTournament, configs::Dict)
         
         # Add a new perturbation to player's model weights
         initialize_epoch!(tourney, configs, k)
+
         prev_winners = copy(tourney.winners)
         with_enrichment = conf -> create_enriched_players(conf, tourney.team_to_perturb, tourney.team_to_public_perturb)
         do_tournament_one_epoch(tourney, configs; create_players = with_enrichment)
@@ -175,7 +179,7 @@ function finalize_epoch!(tourney::MutatingTournament, prev_winners, configs, epo
     end
     
     if validation_check
-        for team in teams
+        for team in tourney.markov_teams
             write_perturbed_linear_model(tourney.configs.path, epoch_num, team, tourney.team_to_perturb[team], get_player_config(configs, "MODELS_DIR", team))
             write_perturbed_linear_model(tourney.configs.path, epoch_num, team, tourney.team_to_public_perturb[team], get_player_config(configs, "MODELS_DIR", team), "public_model")
         end
@@ -281,9 +285,12 @@ function validate_mutation!(configs::Dict, team_to_perturb::Dict, team_to_public
     validation_team_to_perturb = Dict{Symbol, DecisionModel}([winner => perturb])
     validation_team_to_public_perturb = Dict{Symbol, DecisionModel}([winner => public_perturb])
 
+
     with_enrichment = conf -> create_enriched_players(conf, validation_team_to_perturb, validation_team_to_public_perturb)
-    ordered_winners = do_tournament_one_epoch(tourney, validation_configs; create_players = with_enrichment)::Vector{Tuple{Union{Symbol, Nothing}, Int}}
+    do_tournament_one_epoch(tourney, validation_configs; create_players = with_enrichment)
+    ordered_winners = order_winners(tourney.winners)
     validation_check = ordered_winners[1][1] == winner
+
     if validation_check
         @info "Finished validation epoch: accept mutation"
     else
