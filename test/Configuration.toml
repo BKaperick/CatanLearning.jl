@@ -5,9 +5,9 @@ MAX_TURNS = 500
 
 [LogSettings]
 #LOG_OUTPUT = "./data/oneoff_test_log.txt"
-LOG_LEVEL = "Logging.Info"
+LOG_LEVEL = "Info"
 LOG_OUTPUT = "stderr"
-GAME_LOG_LEVEL = "Logging.Warn"
+GAME_LOG_LEVEL = "Warn"
 TESTPREFIX_LOG_LEVEL = "Logging.Debug"
 TESTPREFIX_LOG_OUTPUT = "log.txt"
 
@@ -20,9 +20,9 @@ GENERATE_RANDOM_MAPS = true
 [Async]
 CHANNELS = ["main", "public"]
 [Async.main]
-SIZE = 4
+SIZE = 32
 [Async.public]
-SIZE = 4
+SIZE = 32
 
 [GameSettings]
 [PlayerSettings]

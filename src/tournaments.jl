@@ -105,10 +105,14 @@ function _run(tourney::AsyncTournament, configs::Dict)
         @async consume_feature_channel!(tourney.channels[:main], data_points, configs["PlayerSettings"]["FEATURES"])
         @async consume_feature_channel!(tourney.channels[:public], data_points, configs["PlayerSettings"]["PUBLIC_FEATURES"])
     end
-    #=_run_tournament_async(tourney, configs)
+end
+
+function _run_desactivated(tourney::AsyncTournament, configs::Dict)
+    data_points = 4*(tourney.configs.games_per_map * tourney.configs.maps_per_epoch * tourney.configs.epochs)
+    _run_tournament(tourney, configs)
+    @debug "finished tourney"
     consume_feature_channel!(tourney.channels[:main], data_points, configs["PlayerSettings"]["FEATURES"])
     consume_feature_channel!(tourney.channels[:public], data_points, configs["PlayerSettings"]["PUBLIC_FEATURES"])
-    =#
 end
 
 function _run(tourney::MutatingTournament, configs::Dict)
@@ -210,6 +214,7 @@ function do_tournament_one_map!(tourney::AbstractTournament, configs::Dict, map_
     end
 
     for i=1:tourney.configs.games_per_map
+        @debug "game $i / $(tourney.configs.games_per_map)"
         main_logger = descend_logger(configs, "GAME")
         players = create_players(configs)
         do_tournament_one_game!(tourney, map, players, configs)
