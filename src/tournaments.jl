@@ -18,8 +18,9 @@ function initialize_tournament(configs::Dict)
 end
 
 function get_tournament_path(configs, tourney_id)
-    models_dir = joinpath(@__DIR__, get_player_config(configs, "MODELS_DIR"))
+    models_dir = get_player_config(configs, "MODELS_DIR")
     tournament_path = joinpath(models_dir, "tournament_$(tourney_id)")
+    @info "Making directory $(models_dir)"
     ~isdir(models_dir) && mkdir(models_dir)
     ~isdir(tournament_path) && mkdir(tournament_path)
     return tournament_path

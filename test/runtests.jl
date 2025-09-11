@@ -555,6 +555,7 @@ function run_tests()
     @run_package_tests filter=ti->doset(ti)
     configs = parse_configs("Configuration.toml")
     rm("savefile.txt")
+    rm("models", recursive=true, force=true)
 end
 
 run_tests()
