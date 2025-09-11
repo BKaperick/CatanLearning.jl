@@ -15,11 +15,9 @@ get_player_config
 export LearningPlayer, EmpathRobotPlayer, HybridPlayer, compute_features, get_state_score, StateValueContainer,
 query_state_value,
 update_state_value,
-update_state_values
-
-function toggleprint(str)
-    #println(str)
-end
+update_state_values,
+Tournament,
+run_tournament
 
 include("structs.jl")
 include("state_values.jl")
@@ -48,8 +46,8 @@ function __init__()
 end
 
 function run(configs)
-    tourney = Tournament(configs, :Sequential)
-    run_tournament(tourney, configs)
+    tourney = Tournament(configs)
+    run(tourney, configs)
 end
 
 function descend_logger(configs, logger_prefix)

@@ -35,8 +35,8 @@ SEARCH_DEPTH = 1
 [PlayerSettings.blue]
 TYPE = "DefaultRobotPlayer"
 [PlayerSettings.cyan]
-TYPE = "DefaultRobotPlayer"
+TYPE = "HybridPlayer"
 [PlayerSettings.green]
-TYPE = "DefaultRobotPlayer"
+TYPE = "HybridPlayer"
 [PlayerSettings.yellow]
-TYPE = "DefaultRobotPlayer"
+TYPE = "HybridPlayer"

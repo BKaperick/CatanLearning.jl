@@ -207,8 +207,11 @@ end
 
 This is the access point for re-training a model based on new features or engine bug fixes.
 """
-function train_and_serialize_linear_model(features_csv::String, output_path::String; sv_threshold = 0.01)::LinearModel
+function train_and_serialize_linear_model(features_csv::String, output_path::String; sv_threshold = 0.01)::DecisionModel
     model = train_linear_model_from_csv(features_csv; sv_threshold = sv_threshold)
+    if length(model) == 0
+        return EmptyModel()
+    end
     @info "Serializing linear model trained on $features_csv into $output_path"
     df = DataFrame(Weights = model)
     CSV.write(output_path, df)
@@ -216,6 +219,9 @@ function train_and_serialize_linear_model(features_csv::String, output_path::Str
 end
 
 function train_linear_model_from_csv(features_csv; sv_threshold = 0.01)
+    if ~isfile(features_csv)
+        return []
+    end
     df = CatanLearning.load_typed_features_from_csv(features_csv)
     y = [value == true ? 1.0 : 0.0 for value in df[:, :WonGame]]
     # Extract the feature matrix

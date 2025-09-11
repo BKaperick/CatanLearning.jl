@@ -11,3 +11,4 @@ test/data/*
 src/learning/.ipynb_checkpoints/
 *.mem
 models/tournament_*
+*.mdb
