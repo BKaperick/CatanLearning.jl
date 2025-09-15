@@ -1,4 +1,4 @@
-using Catan: GameApi, BoardApi, PlayerApi, PreAction, ChosenAction, random_sample_resources, unsafe_random_sample_one_resource, get_random_resource,
+using Catan: GameApi, BoardApi, PlayerApi, PreAction, ChosenAction, random_sample_resources, unsafe_random_sample_one_resource, get_random_resource, get_random_other_resource,
              construct_city, construct_settlement, construct_road,
              do_play_devcard, propose_trade_goods, do_robber_move_theft,
             get_admissible_theft_victims, choose_road_location, trade_goods, choose_building_location
