@@ -27,7 +27,8 @@ function get_tournament_path(configs, tourney_id)
 end
 function TournamentConfig(tournament_configs::Dict, player_configs::Dict)
     tourney_id = generate_tournament_id()
-    return TournamentConfig(tournament_configs["GAMES_PER_MAP"], tournament_configs["MAPS_PER_EPOCH"], tournament_configs["NUM_EPOCHS"], 
+    players = Catan.initialize_players(player_configs)
+    return TournamentConfig(players, tournament_configs["GAMES_PER_MAP"], tournament_configs["MAPS_PER_EPOCH"], tournament_configs["NUM_EPOCHS"], 
     tournament_configs["GENERATE_RANDOM_MAPS"],
     tourney_id, get_tournament_path(player_configs, tourney_id))
 end

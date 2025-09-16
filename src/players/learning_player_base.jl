@@ -14,6 +14,7 @@ function get_estimated_resources(board::Board, players::AbstractVector{PlayerPub
     resources = random_sample_resources(Catan.RESOURCE_TO_COUNT, target.resource_count)
     return Dict(counter(resources))
 end
+
 """
     `get_estimated_remaining_devcards`
 
@@ -124,7 +125,7 @@ function get_legal_action_sets(board::Board, players::AbstractVector{PlayerPubli
             candidate_tile = candidate_tiles[1]
             candidate_victims = get_admissible_theft_victims(board, players, player, candidate_tile)
             for victim in candidate_victims
-                victim_team = victim.team    
+                
                 # Here, we have one ActionSet per set of parameters
                 action_set = ActionSet{SampledAction}(:PlaceRobber)
                 resources = get_estimated_resources(board, players, victim)
