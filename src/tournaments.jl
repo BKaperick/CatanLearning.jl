@@ -27,7 +27,7 @@ function get_tournament_path(configs, tourney_id)
 end
 function TournamentConfig(tournament_configs::Dict, player_configs::Dict)
     tourney_id = generate_tournament_id()
-    players = Catan.initialize_players(player_configs)
+    players = Catan.create_players(player_configs)
     return TournamentConfig(players, tournament_configs["GAMES_PER_MAP"], tournament_configs["MAPS_PER_EPOCH"], tournament_configs["NUM_EPOCHS"], 
     tournament_configs["GENERATE_RANDOM_MAPS"],
     tourney_id, get_tournament_path(player_configs, tourney_id))
@@ -52,6 +52,14 @@ function MutatingTournament(configs::Dict)
         team_to_public_perturb[team] = try_load_serialized_public_model(team, configs)::DecisionModel
     end
     MutatingTournament(TournamentConfig(configs["Tournament"], configs), teams, winners, team_to_perturb, team_to_public_perturb, markov_teams)
+end
+
+get_markov_players(tourney::AbstractTournament) = Channel() do c
+    for player in tourney.configs.players
+        if player isa MarkovPlayer
+            push!(c, player)
+        end
+    end
 end
 
 #
@@ -129,8 +137,7 @@ function _run(tourney::MutatingTournament, configs::Dict)
         initialize_epoch!(tourney, configs, k)
 
         prev_winners = copy(tourney.winners)
-        with_enrichment = players -> create_enriched_players(players, tourney.team_to_perturb, tourney.team_to_public_perturb)
-        do_tournament_one_epoch(tourney, configs; create_players = with_enrichment)
+        do_tournament_one_epoch(tourney, configs)
 
         finalize_epoch!(tourney, prev_winners, configs, k)
     end
@@ -155,15 +162,16 @@ function initialize_epoch!(tourney::MutatingTournament, configs::Dict, epoch_num
     # Linear spacing of reward weight across epochs 
     value_weight = epoch_num/(tourney.configs.epochs-1)
 
-    for team in tourney.markov_teams
+    for player in get_markov_players(tourney)
+        team = player.player.team
         if get_player_config(configs, "MODIFY_REINFORCEMENT_WEIGHTS", team)
             @info "setting value weight for $team to $value_weight"
             Catan.set_player_config(configs, team, "VALUE_WEIGHT", value_weight)
             Catan.set_player_config(configs, team, "REWARD_WEIGHT", 1 - value_weight)
         end
         # Every other iteration, start with perturbed model
-        add_perturbation!(tourney.team_to_perturb[team], 0.1)
-        add_perturbation!(tourney.team_to_public_perturb[team], 0.1)
+        add_perturbation!(player.model, 0.1)
+        add_perturbation!(player.model_public, 0.1)
     end
 end
 
@@ -173,11 +181,11 @@ function finalize_epoch!(tourney::MutatingTournament, prev_winners, configs, epo
     println(epoch_winners)
 
     epoch_winner = epoch_winners[1][1]
-    validation_check = validate_mutation!(configs, tourney.team_to_perturb, tourney.team_to_public_perturb, tourney.markov_teams, epoch_winner)
+    validation_check = validate_mutation!(configs, tourney.markov_teams, epoch_winner)
     
     if validation_check
         # Part of validation check ensures epoch_winner is not `nothing`
-        apply_mutation!(tourney.team_to_perturb, tourney.team_to_public_perturb, tourney.markov_teams, epoch_winner::Symbol)
+        apply_mutation!(get_markov_players(tourney), epoch_winner::Symbol)
     end
     
     if validation_check
@@ -196,14 +204,14 @@ end
 function finalize_epoch!(tourney::AsyncTournament)
 end
 
-function do_tournament_one_epoch(tourney::AbstractTournament, configs::Dict; create_players = Catan.create_players)
+function do_tournament_one_epoch(tourney::AbstractTournament, configs::Dict; refresh_players! = Catan.refresh_players!)
     map_str = ""
     if !tourney.configs.generate_random_maps
         map_str = read(configs["LOAD_MAP"], String)
     end
     for j=1:tourney.configs.maps_per_epoch
         @info "map $j / $(tourney.configs.maps_per_epoch)"
-        do_tournament_one_map!(tourney, configs, j, map_str; create_players = create_players)
+        do_tournament_one_map!(tourney, configs, j, map_str; refresh_players! = refresh_players!)
     end
 end
 
@@ -211,7 +219,7 @@ end
 # ONE MAP
 #
 
-function do_tournament_one_map!(tourney::AbstractTournament, configs::Dict, map_num::Integer, map_str::AbstractString; create_players = Catan.create_players)
+function do_tournament_one_map!(tourney::AbstractTournament, configs::Dict, map_num::Integer, map_str::AbstractString; refresh_players! = Catan.refresh_players!)
     iter_logger = (tourney, i) -> log_games_per_map(map_num, tourney.configs, i)
     if tourney.configs.generate_random_maps
         map = Map(Catan.generate_random_map())
@@ -222,8 +230,8 @@ function do_tournament_one_map!(tourney::AbstractTournament, configs::Dict, map_
     for i=1:tourney.configs.games_per_map
         @debug "game $i / $(tourney.configs.games_per_map)"
         main_logger = descend_logger(configs, "GAME")
-        player_types = create_players(tourney.configs.players)
-        do_tournament_one_game!(tourney, map, player_types, configs)
+        refresh_players!(tourney.configs.players)
+        do_tournament_one_game!(tourney, map, tourney.configs.players, configs)
         global_logger(main_logger)
         iter_logger(tourney, i)
     end
@@ -271,25 +279,19 @@ function consume_feature_channel!(channel, count, key)
 end
 
 
-function validate_mutation!(configs::Dict, team_to_perturb::Dict, team_to_public_perturb::Dict, teams::AbstractVector{Symbol}, winner::Union{Nothing, Symbol})::Bool
+function validate_mutation!(configs::Dict, markov_teams::AbstractVector{Symbol}, winner::Union{Nothing, Symbol})::Bool
     @info "Starting validation epoch for winner $winner"
-    if winner === nothing || !(winner in teams)
+    if winner === nothing || !(winner in markov_teams)
         @info "skipping mutation since player $winner won epoch"
         return false
     end
-    perturb = team_to_perturb[winner]
-    public_perturb = team_to_public_perturb[winner]
     # TODO validate
     # Create 1 hybrid players with the mutation and compare to baseline model
     validation_configs = deepcopy(configs)
+    # TODO should we pass the existing players in here as well ?
     tourney = Tournament(configs)
 
-    validation_team_to_perturb = Dict{Symbol, DecisionModel}([winner => perturb])
-    validation_team_to_public_perturb = Dict{Symbol, DecisionModel}([winner => public_perturb])
-
-
-    with_enrichment = players -> create_enriched_players(players, validation_team_to_perturb, validation_team_to_public_perturb)
-    do_tournament_one_epoch(tourney, validation_configs; create_players = with_enrichment)
+    do_tournament_one_epoch(tourney, validation_configs)
     ordered_winners = order_winners(tourney.winners)
     validation_check = ordered_winners[1][1] == winner
 
@@ -301,30 +303,23 @@ function validate_mutation!(configs::Dict, team_to_perturb::Dict, team_to_public
     return validation_check
 end
 
-function apply_mutation!(team_to_perturb::Dict{Symbol, DecisionModel}, team_to_public_perturb::Dict{Symbol, DecisionModel}, teams::AbstractVector{Symbol}, winner::Symbol)
+function apply_mutation!(markov_players::AbstractVector{PlayerType}, winner_team::Symbol)
+    winners = [p for p in markov_players if p.player.team == winner_team]
+    #=
+    if length(winners) == 0
+        return
+    end
+    =#
+    winner = winners[1]
 
     @info "$winner won the epoch, so all players copy his mutation"
-    for team in teams
-        if team == winner
+    for player in markov_players
+        if player.player.team == winner
             continue
         end
-        team_to_perturb[team].weights = copy(team_to_perturb[winner].weights)
-        team_to_public_perturb[team].weights = copy(team_to_public_perturb[winner].weights)
+        player.model.weights = copy(winner.model.weights)
+        player.model_public.weights = copy(winner.model_public.weights)
     end
-
-end
-
-function create_enriched_players(players::AbstractVector{Player}, team_to_perturb::Dict{Symbol, DecisionModel}, team_to_public_perturb::Dict{Symbol, DecisionModel})
-    player_types = Catan.create_players(players)
-
-    # Enrich players if needed
-    for p in player_types
-        if typeof(p) <: MarkovPlayer
-            p.model = get(team_to_perturb, p.player.team, p.model)
-            p.model_public = get(team_to_public_perturb, p.player.team, p.model_public)
-        end
-    end
-    return player_types
 end
     
 function log_games_per_map(map_num, tourney_configs, i)

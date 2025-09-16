@@ -19,7 +19,7 @@ end
 generate_tournament_id()::Int = rand(range(1,100_000))
 
 struct TournamentConfig
-    players::AbstractVector{Player}
+    players::AbstractVector{PlayerType}
     games_per_map::Int
     maps_per_epoch::Int
     epochs::Int
