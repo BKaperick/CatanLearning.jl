@@ -89,18 +89,9 @@ function run(tourney::T, configs::Dict)::T where T <: AbstractTournament
     return tourney
 end
 
-function _run(tourney::Tournament, configs::Dict)
+function _run(tourney::Union{Tournament, MutatingTournament}, configs::Dict)
     _run_tournament(tourney, configs)
     return tourney
-end
-
-function _run_tournament(tourney::Union{Tournament, AsyncTournament}, configs::Dict)
-    for k=1:tourney.configs.epochs
-        @info "epoch $k / $(tourney.configs.epochs)"
-        initialize_epoch!(tourney, configs, k)
-        do_tournament_one_epoch(tourney, configs)
-        finalize_epoch!(tourney)
-    end
 end
 
 function _run(tourney::AsyncTournament, configs::Dict)
@@ -120,20 +111,15 @@ function _run_desactivated(tourney::AsyncTournament, configs::Dict)
     consume_feature_channel!(tourney.channels[:public], data_points, configs["PlayerSettings"]["PUBLIC_FEATURES"])
 end
 
-function _run(tourney::MutatingTournament, configs::Dict)
+function _run_tournament(tourney::AbstractTournament, configs::Dict)
     
     for k=1:tourney.configs.epochs
         @info "epoch $k / $(tourney.configs.epochs)"
         
-        # Add a new perturbation to player's model weights
         initialize_epoch!(tourney, configs, k)
-
-        prev_winners = copy(tourney.winners)
         do_tournament_one_epoch(tourney, configs)
-
-        finalize_epoch!(tourney, prev_winners, configs, k)
+        finalize_epoch!(tourney, configs, k)
     end
-    println(tourney.winners)
 end
 
 #
@@ -153,6 +139,7 @@ The start of a new epoch for a mutating tournament (see `run_state_space_tournam
 function initialize_epoch!(tourney::MutatingTournament, configs::Dict, epoch_num)
     # Linear spacing of reward weight across epochs 
     value_weight = epoch_num/(tourney.configs.epochs-1)
+    empty!(tourney.winners)
 
     for player in get_markov_players(tourney)
         team = player.player.team
@@ -167,13 +154,13 @@ function initialize_epoch!(tourney::MutatingTournament, configs::Dict, epoch_num
     end
 end
 
-function finalize_epoch!(tourney::MutatingTournament, prev_winners, configs, epoch_num)
+function finalize_epoch!(tourney::MutatingTournament, configs, epoch_num)
 
-    epoch_winners = order_winners(merge(-, tourney.winners, prev_winners))
+    epoch_winners = order_winners(tourney.winners)
     println(epoch_winners)
 
     epoch_winner = epoch_winners[1][1]
-    validation_check = validate_mutation!(configs, tourney.markov_teams, epoch_winner)
+    validation_check = validate_mutation!(configs, epoch_winner)
     
     if validation_check
         # Part of validation check ensures epoch_winner is not `nothing`
@@ -190,11 +177,11 @@ function finalize_epoch!(tourney::MutatingTournament, prev_winners, configs, epo
 end
 
 
-function finalize_epoch!(tourney::Tournament)
+function finalize_epoch!(tourney::Tournament, _, __)
     @info tourney.winners
 end
 
-function finalize_epoch!(tourney::AsyncTournament)
+function finalize_epoch!(tourney::AsyncTournament, _, __)
 end
 
 function do_tournament_one_epoch(tourney::AbstractTournament, configs::Dict; refresh_players! = Catan.refresh_players!)
@@ -244,7 +231,11 @@ function do_tournament_one_game!(tourney::Union{Tournament, MutatingTournament},
     if winner !== nothing
         w = winner.player.team
     end
-    tourney.winners[w] += 1
+    if haskey(tourney.winners, w)
+        tourney.winners[w] += 1
+    else
+        tourney.winners[w] = 1
+    end
     return
 end
 
@@ -261,9 +252,7 @@ end
 #
 
 function init_winners(teams)::Dict{Union{Symbol, Nothing}, Int}
-    winners = Dict{Union{Symbol, Nothing}, Int}([(k,0) for k in teams])
-    winners[nothing] = 0
-    return winners
+    return Dict{Union{Symbol, Nothing}, Int}()
 end
 
 function consume_feature_channel!(channel, count, key)
@@ -272,9 +261,9 @@ function consume_feature_channel!(channel, count, key)
 end
 
 
-function validate_mutation!(configs::Dict, markov_teams::AbstractVector{Symbol}, winner::Union{Nothing, Symbol})::Bool
+function validate_mutation!(configs::Dict, winner::Union{Nothing, Symbol})::Bool
     @info "Starting validation epoch for winner $winner"
-    if winner === nothing || !(winner in markov_teams)
+    if winner === nothing
         @info "skipping mutation since player $winner won epoch"
         return false
     end
@@ -298,11 +287,12 @@ end
 
 function apply_mutation!(markov_players::AbstractVector{PlayerType}, winner_team::Symbol)
     winners = [p for p in markov_players if p.player.team == winner_team]
-    #=
+    
     if length(winners) == 0
+        @info "Skipping mutation application since winner $(winner_team) is not a MarkovPlayer"
         return
     end
-    =#
+    
     winner = winners[1]
 
     @info "$winner won the epoch, so all players copy his mutation"
