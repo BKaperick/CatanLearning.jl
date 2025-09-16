@@ -547,8 +547,8 @@ end
     CatanLearning.run(tourney, configs)
     # Check that the 3 games resulted in 3 winners
     @test sum([v for (t,v) in tourney.winners]) == total_games
-    @test haskey(tourney.team_to_perturb, :cyan)
-    @test ~haskey(tourney.team_to_perturb, :blue)
+    #@test haskey(tourney.team_to_perturb, :cyan)
+    #@test ~haskey(tourney.team_to_perturb, :blue)
 end
 
 function run_tests()

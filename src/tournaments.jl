@@ -43,15 +43,7 @@ function AsyncTournament(configs::Dict)
 end
 function MutatingTournament(configs::Dict)
     teams,winners = initialize_tournament(configs::Dict)
-    team_to_perturb = Dict{Symbol, DecisionModel}()
-    team_to_public_perturb = Dict{Symbol, DecisionModel}()
-    markov_teams = [t for t in teams if get_player_config(configs, "TYPE", t) == "HybridPlayer"]
-    for team in markov_teams
-        # First iteration, start with stored model
-        team_to_perturb[team] = try_load_serialized_model(team, configs)::DecisionModel
-        team_to_public_perturb[team] = try_load_serialized_public_model(team, configs)::DecisionModel
-    end
-    MutatingTournament(TournamentConfig(configs["Tournament"], configs), teams, winners, team_to_perturb, team_to_public_perturb, markov_teams)
+    MutatingTournament(TournamentConfig(configs["Tournament"], configs), teams, winners)
 end
 
 get_markov_players(tourney::AbstractTournament) = Channel() do c
@@ -189,9 +181,10 @@ function finalize_epoch!(tourney::MutatingTournament, prev_winners, configs, epo
     end
     
     if validation_check
-        for team in tourney.markov_teams
-            write_perturbed_linear_model(tourney.configs.path, epoch_num, team, tourney.team_to_perturb[team], get_player_config(configs, "MODELS_DIR", team))
-            write_perturbed_linear_model(tourney.configs.path, epoch_num, team, tourney.team_to_public_perturb[team], get_player_config(configs, "MODELS_DIR", team), "public_model")
+        for player in get_markov_players(tourney)
+            team = player.player.team
+            write_perturbed_linear_model(tourney.configs.path, epoch_num, team, player.model, get_player_config(configs, "MODELS_DIR", team))
+            write_perturbed_linear_model(tourney.configs.path, epoch_num, team, player.model_public, get_player_config(configs, "MODELS_DIR", team), "public_model")
         end
     end
 end
@@ -211,7 +204,7 @@ function do_tournament_one_epoch(tourney::AbstractTournament, configs::Dict; ref
     end
     for j=1:tourney.configs.maps_per_epoch
         @info "map $j / $(tourney.configs.maps_per_epoch)"
-        do_tournament_one_map!(tourney, configs, j, map_str; refresh_players! = refresh_players!)
+        do_tournament_one_map!(tourney, configs, j, map_str)
     end
 end
 
@@ -219,7 +212,7 @@ end
 # ONE MAP
 #
 
-function do_tournament_one_map!(tourney::AbstractTournament, configs::Dict, map_num::Integer, map_str::AbstractString; refresh_players! = Catan.refresh_players!)
+function do_tournament_one_map!(tourney::AbstractTournament, configs::Dict, map_num::Integer, map_str::AbstractString)
     iter_logger = (tourney, i) -> log_games_per_map(map_num, tourney.configs, i)
     if tourney.configs.generate_random_maps
         map = Map(Catan.generate_random_map())
@@ -230,7 +223,7 @@ function do_tournament_one_map!(tourney::AbstractTournament, configs::Dict, map_
     for i=1:tourney.configs.games_per_map
         @debug "game $i / $(tourney.configs.games_per_map)"
         main_logger = descend_logger(configs, "GAME")
-        refresh_players!(tourney.configs.players)
+        Catan.refresh_players!(tourney.configs.players)
         do_tournament_one_game!(tourney, map, tourney.configs.players, configs)
         global_logger(main_logger)
         iter_logger(tourney, i)

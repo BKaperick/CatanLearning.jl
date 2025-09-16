@@ -38,10 +38,6 @@ struct MutatingTournament <: AbstractTournament
     configs::TournamentConfig
     teams::AbstractVector{Symbol}
     winners::Dict{Union{Symbol, Nothing}, Int}
-    #mutation_rule::Symbol
-    team_to_perturb::Dict{Symbol, DecisionModel}
-    team_to_public_perturb::Dict{Symbol, DecisionModel}
-    markov_teams::AbstractVector{Symbol}
 end
 
 struct AsyncTournament <: AbstractTournament
