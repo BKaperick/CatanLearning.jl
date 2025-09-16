@@ -129,7 +129,7 @@ function _run(tourney::MutatingTournament, configs::Dict)
         initialize_epoch!(tourney, configs, k)
 
         prev_winners = copy(tourney.winners)
-        with_enrichment = conf -> create_enriched_players(conf, tourney.team_to_perturb, tourney.team_to_public_perturb)
+        with_enrichment = players -> create_enriched_players(players, tourney.team_to_perturb, tourney.team_to_public_perturb)
         do_tournament_one_epoch(tourney, configs; create_players = with_enrichment)
 
         finalize_epoch!(tourney, prev_winners, configs, k)
@@ -222,8 +222,8 @@ function do_tournament_one_map!(tourney::AbstractTournament, configs::Dict, map_
     for i=1:tourney.configs.games_per_map
         @debug "game $i / $(tourney.configs.games_per_map)"
         main_logger = descend_logger(configs, "GAME")
-        players = create_players(configs)
-        do_tournament_one_game!(tourney, map, players, configs)
+        player_types = create_players(tourney.configs.players)
+        do_tournament_one_game!(tourney, map, player_types, configs)
         global_logger(main_logger)
         iter_logger(tourney, i)
     end
@@ -288,7 +288,7 @@ function validate_mutation!(configs::Dict, team_to_perturb::Dict, team_to_public
     validation_team_to_public_perturb = Dict{Symbol, DecisionModel}([winner => public_perturb])
 
 
-    with_enrichment = conf -> create_enriched_players(conf, validation_team_to_perturb, validation_team_to_public_perturb)
+    with_enrichment = players -> create_enriched_players(players, validation_team_to_perturb, validation_team_to_public_perturb)
     do_tournament_one_epoch(tourney, validation_configs; create_players = with_enrichment)
     ordered_winners = order_winners(tourney.winners)
     validation_check = ordered_winners[1][1] == winner
@@ -314,17 +314,17 @@ function apply_mutation!(team_to_perturb::Dict{Symbol, DecisionModel}, team_to_p
 
 end
 
-function create_enriched_players(configs, team_to_perturb::Dict{Symbol, DecisionModel}, team_to_public_perturb::Dict{Symbol, DecisionModel})
-    players = Catan.create_players(configs)
+function create_enriched_players(players::AbstractVector{Player}, team_to_perturb::Dict{Symbol, DecisionModel}, team_to_public_perturb::Dict{Symbol, DecisionModel})
+    player_types = Catan.create_players(players)
 
     # Enrich players if needed
-    for p in players
+    for p in player_types
         if typeof(p) <: MarkovPlayer
             p.model = get(team_to_perturb, p.player.team, p.model)
             p.model_public = get(team_to_public_perturb, p.player.team, p.model_public)
         end
     end
-    return players
+    return player_types
 end
     
 function log_games_per_map(map_num, tourney_configs, i)
