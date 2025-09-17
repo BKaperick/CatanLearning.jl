@@ -26,9 +26,8 @@ mutable struct HybridPlayer <: MarkovPlayer
     current_state::Union{Nothing, MarkovState}
 end
 
-HybridPlayer(team::Symbol, configs::Dict) = HybridPlayer(team::Symbol, StateValueContainer(configs), configs)
-
-function HybridPlayer(team::Symbol, svc::StateValueContainer, configs)
+function HybridPlayer(player::Player, team::Symbol, configs::Dict)
+    svc = StateValueContainer(configs)
     model = try_load_serialized_model(team, configs)::DecisionModel
     model_public = try_load_serialized_public_model(team, configs)
 
@@ -38,9 +37,10 @@ function HybridPlayer(team::Symbol, svc::StateValueContainer, configs)
     value_weight = get_player_config(configs, "VALUE_WEIGHT", team)
     process = MarkovRewardProcess(learning_rate, reward_discount, 1.0, 0.0, svc)
     policy = WeightsRewardPlusValueMarkovPolicy(model, reward_weight, value_weight)
-    player = Player(team, configs)
     HybridPlayer(player, model, model_public, process, policy, configs, nothing)
 end
+HybridPlayer(team::Symbol, configs::Dict) = HybridPlayer(Player(team, configs), team, configs)
+HybridPlayer(player::Player) = HybridPlayer(player, player.team, player.configs)
 
 function Base.copy(player::HybridPlayer)
     # Note, we `copy` only the player data, while the RL data should persist in order to pass updates the state info properly
@@ -55,13 +55,15 @@ function Base.copy(player::HybridPlayer)
     )
 end
 
-function EmpathRobotPlayer(team::Symbol, configs::Dict) 
+function EmpathRobotPlayer(player::Player, team::Symbol, configs::Dict) 
     EmpathRobotPlayer(
-        Player(team, configs), 
+        player, 
         try_load_serialized_model(team, configs),
         try_load_serialized_public_model(team, configs)
     )
 end
+EmpathRobotPlayer(team::Symbol, configs::Dict) = EmpathRobotPlayer(Player(team, configs), team, configs)
+EmpathRobotPlayer(player::Player) = EmpathRobotPlayer(player, player.team, player.configs)
 
 function Base.copy(player::EmpathRobotPlayer)
     return EmpathRobotPlayer(copy(player.player), player.model, player.model_public)

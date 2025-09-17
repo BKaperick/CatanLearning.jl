@@ -19,6 +19,7 @@ end
 generate_tournament_id()::Int = rand(range(1,100_000))
 
 struct TournamentConfig
+    players::AbstractVector{PlayerType}
     games_per_map::Int
     maps_per_epoch::Int
     epochs::Int
@@ -37,10 +38,6 @@ struct MutatingTournament <: AbstractTournament
     configs::TournamentConfig
     teams::AbstractVector{Symbol}
     winners::Dict{Union{Symbol, Nothing}, Int}
-    #mutation_rule::Symbol
-    team_to_perturb::Dict{Symbol, DecisionModel}
-    team_to_public_perturb::Dict{Symbol, DecisionModel}
-    markov_teams::AbstractVector{Symbol}
 end
 
 struct AsyncTournament <: AbstractTournament

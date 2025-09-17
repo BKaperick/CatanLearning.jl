@@ -37,8 +37,10 @@ include("io.jl")
 include("tournaments.jl")
 
 function __init__()
-    Catan.add_player_to_register("EmpathRobotPlayer", (t,c) -> EmpathRobotPlayer(t,c))
-    Catan.add_player_to_register("HybridPlayer", (t,c) -> HybridPlayer(t,c))
+    Catan.add_player_to_register("EmpathRobotPlayer", (t,c) -> EmpathRobotPlayer(t,c),
+    p -> EmpathRobotPlayer(p))
+    Catan.add_player_to_register("HybridPlayer", (t,c) -> HybridPlayer(t,c),
+    p -> HybridPlayer(p))
 
     # Upsert the configs from this package
     default_config_path = joinpath(@__DIR__, "..", "DefaultConfiguration.toml")

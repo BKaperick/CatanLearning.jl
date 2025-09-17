@@ -540,15 +540,15 @@ end
     CatanLearning.run_tournament(configs)
     # 3 HybridPlayers vs 1 DefaultRobotPlayer
     tourney = MutatingTournament(markov_configs)
-    total_games = tourney.configs.games_per_map * tourney.configs.maps_per_epoch * tourney.configs.epochs
-    @test total_games == 8
-    @test Set(tourney.markov_teams) == Set([:cyan, :green, :yellow])
+    epoch_games = tourney.configs.games_per_map * tourney.configs.maps_per_epoch
+    @test epoch_games == 4
+    @test Set([p.player.team for p in CatanLearning.get_markov_players(tourney)]) == Set([:cyan, :green, :yellow])
 
     CatanLearning.run(tourney, configs)
     # Check that the 3 games resulted in 3 winners
-    @test sum([v for (t,v) in tourney.winners]) == total_games
-    @test haskey(tourney.team_to_perturb, :cyan)
-    @test ~haskey(tourney.team_to_perturb, :blue)
+    @test sum([v for (t,v) in tourney.winners]) == epoch_games
+    #@test haskey(tourney.team_to_perturb, :cyan)
+    #@test ~haskey(tourney.team_to_perturb, :blue)
 end
 
 function run_tests()
