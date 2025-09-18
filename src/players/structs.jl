@@ -28,6 +28,9 @@ end
 
 function HybridPlayer(player::Player, team::Symbol, configs::Dict)
     svc = StateValueContainer(configs)
+    return HybridPlayer(player, svc, team, configs)
+end
+function HybridPlayer(player::Player, svc::StateValueContainer, team::Symbol, configs::Dict)
     model = try_load_serialized_model(team, configs)::DecisionModel
     model_public = try_load_serialized_public_model(team, configs)
 
@@ -41,6 +44,7 @@ function HybridPlayer(player::Player, team::Symbol, configs::Dict)
 end
 HybridPlayer(team::Symbol, configs::Dict) = HybridPlayer(Player(team, configs), team, configs)
 HybridPlayer(player::Player) = HybridPlayer(player, player.team, player.configs)
+HybridPlayer(player::Player, svc::StateValueContainer) = HybridPlayer(player, svc, player.team, player.configs)
 
 function Base.copy(player::HybridPlayer)
     # Note, we `copy` only the player data, while the RL data should persist in order to pass updates the state info properly

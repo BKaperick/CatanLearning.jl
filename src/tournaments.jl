@@ -112,7 +112,14 @@ function _run_desactivated(tourney::AsyncTournament, configs::Dict)
 end
 
 function _run_tournament(tourney::AbstractTournament, configs::Dict)
-    
+    svc = nothing
+    for (i,player) in enumerate(get_markov_players(tourney))
+        if i == 1
+            svc = player.process.state_values
+        else
+            player.process.state_values = svc
+        end
+    end
     for k=1:tourney.configs.epochs
         @info "epoch $k / $(tourney.configs.epochs)"
         
