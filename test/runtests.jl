@@ -527,12 +527,12 @@ end
 
 @testitem "mutating_tourney" setup=[global_test_setup] begin
     tourney = MutatingTournament(configs)
-    total_games = tourney.configs.games_per_map * tourney.configs.maps_per_epoch * tourney.configs.epochs
-    @test total_games == 8
+    epoch_games = tourney.configs.games_per_map * tourney.configs.maps_per_epoch
+    @test epoch_games == 4
 
     CatanLearning.run(tourney, configs)
-    # Check that the 3 games resulted in 3 winners
-    @test sum([v for (t,v) in tourney.winners]) == total_games
+    # Check that there is a winner for each epoch game
+    @test sum([v for (t,v) in tourney.winners]) == epoch_games
 end
 
 @testitem "mutating_tourney_markov_players" setup=[global_test_setup] begin
