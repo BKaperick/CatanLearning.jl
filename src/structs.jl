@@ -18,32 +18,34 @@ end
 
 generate_tournament_id()::Int = rand(range(1,100_000))
 
-struct TournamentConfig
+mutable struct TournamentConfig
     players::AbstractVector{PlayerType}
-    games_per_map::Int
-    maps_per_epoch::Int
-    epochs::Int
-    generate_random_maps::Bool
-    unique_id::Int
-    path::String
+    const games_per_map::Int
+    const maps_per_epoch::Int
+    const epochs::Int
+    const generate_random_maps::Bool
+    const unique_id::Int
+    const path::String
 end
 
 struct Tournament <: AbstractTournament
     configs::TournamentConfig
-    teams::AbstractVector{Symbol}
     winners::Dict{Union{Symbol, Nothing}, Int}
 end
 
 struct MutatingTournament <: AbstractTournament
     configs::TournamentConfig
-    teams::AbstractVector{Symbol}
     winners::Dict{Union{Symbol, Nothing}, Int}
 end
 
 struct AsyncTournament <: AbstractTournament
     configs::TournamentConfig
-    teams::AbstractVector{Symbol}
     channels::Dict{Symbol, Channel}
+end
+
+struct FastTournament <: AbstractTournament
+    configs::TournamentConfig
+    winners::Dict{Union{Symbol, Nothing}, Int}
 end
 
 struct StateValueContainer
