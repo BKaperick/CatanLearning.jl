@@ -37,7 +37,7 @@ end
 
 function Catan.do_post_game_produce!(channels::Dict{Symbol, Channel}, game::Game, board::Board, players::AbstractVector{PlayerType}, player::Catan.DefaultRobotPlayer, winner::Union{PlayerType, Nothing})
     if game.configs["WRITE_FEATURES"] == true
-        @debug "putting data"
+        @debug "putting data for $(game.unique_id)"
         main_features = compute_features_and_labels(game, board, player.player)
         public_features = compute_public_features_and_labels(game, board, player.player)
         @debug "finished computing features"
@@ -144,7 +144,9 @@ function _write_many_features_file(channel, count, file_name)
     for i=1:count
         feats = take!(channel)
         values = join([get_csv_friendly(f[2]) for f in feats], ",")
+        lock(file)
         write(file, "$values\n")
+        unlock(file)
     end
     close(file)
 end

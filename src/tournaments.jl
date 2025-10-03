@@ -44,7 +44,7 @@ function MutatingTournament(configs::Dict)
 end
 function FastTournament(configs::Dict)
     initialize_tournament!(configs::Dict)
-    FastTournament(TournamentConfig(configs["Tournament"], configs), Dict())
+    FastTournament(TournamentConfig(configs["Tournament"], configs), Dict(), Catan.read_channels_from_config(configs))
 end
 
 get_markov_players(tourney::AbstractTournament) = Channel() do c
@@ -119,6 +119,10 @@ function finalize_tournament(tourney, configs)
     end
 end
 
+function finalize_tournament(tourney::FastTournament, configs)
+    close(tourney.channels[:main])
+    close(tourney.channels[:public])
+end
 #
 # ONE EPOCH
 #
@@ -174,7 +178,7 @@ function finalize_epoch!(tourney::MutatingTournament, configs, epoch_num)
 end
 
 
-function finalize_epoch!(tourney::Union{Tournament, FastTournament}, _, __)
+function finalize_epoch!(tourney, _, __)
     @info tourney.winners
 end
 
@@ -198,6 +202,8 @@ function do_tournament_one_epoch(tourney::FastTournament, configs::Dict)
     if !tourney.configs.generate_random_maps
         map_str = read(configs["LOAD_MAP"], String)
     end
+
+
     Threads.@threads for j=1:tourney.configs.maps_per_epoch
         # We can't share players across threads
         thread_players = Vector{PlayerType}([copy(p) for p in tourney.configs.players])
@@ -205,6 +211,12 @@ function do_tournament_one_epoch(tourney::FastTournament, configs::Dict)
         @debug "Thread $(Threads.threadid()): $(repr(UInt64(pointer_from_objref(thread_players[1].player))))"
         @info "map $j / $(tourney.configs.maps_per_epoch)"
         do_tournament_one_map!(tourney, thread_players, configs, j, map_str)
+
+        data_points = 4*(tourney.configs.games_per_map)
+        #open(tourney.channels[:main])
+        #open(tourney.channels[:public])
+        f_consumer = errormonitor(Threads.@spawn consume_feature_channel!(tourney.channels[:main], data_points, configs["PlayerSettings"]["FEATURES"]))
+        pf_consumer = errormonitor(Threads.@spawn consume_feature_channel!(tourney.channels[:public], data_points, configs["PlayerSettings"]["PUBLIC_FEATURES"]))
     end
 end
 
@@ -263,13 +275,20 @@ function do_tournament_one_game!(tourney::AsyncTournament, map::Map, players, co
     return
 end
 
+function do_tournament_one_game!(tourney::FastTournament, map::Map, players, configs)
+    game = Game(players, configs)
+    board = Board(map, configs)
+    board, winner = Catan.run_async(tourney.channels, game, board)
+    @debug "finished game $(game.unique_id)"
+    return
+end
+
 #
 # HELPER METHODS
 #
 
 function consume_feature_channel!(channel, count, key)
     _write_many_features_file(channel, count, key)
-    close(channel)
 end
 
 function validate_mutation!(configs::Dict, winner::Union{Nothing, Symbol})::Bool

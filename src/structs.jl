@@ -46,6 +46,7 @@ end
 struct FastTournament <: AbstractTournament
     configs::TournamentConfig
     winners::Dict{Union{Symbol, Nothing}, Int}
+    channels::Dict{Symbol, Channel}
 end
 
 struct StateValueContainer
