@@ -4,6 +4,7 @@ using Profile
 using BenchmarkTools
 using DataStructures
 using LMDB
+using StaticArrays
 
 import MLJModelInterface
 const MMI = MLJModelInterface

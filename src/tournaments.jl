@@ -206,7 +206,7 @@ function do_tournament_one_epoch(tourney::FastTournament, configs::Dict)
 
     Threads.@threads for j=1:tourney.configs.maps_per_epoch
         # We can't share players across threads
-        thread_players = Vector{PlayerType}([copy(p) for p in tourney.configs.players])
+        thread_players = SVector{length(tourney.configs.players), PlayerType}([copy(p) for p in tourney.configs.players])
 
         @debug "Thread $(Threads.threadid()): $(repr(UInt64(pointer_from_objref(thread_players[1].player))))"
         @info "map $j / $(tourney.configs.maps_per_epoch)"
@@ -215,8 +215,8 @@ function do_tournament_one_epoch(tourney::FastTournament, configs::Dict)
         data_points = 4*(tourney.configs.games_per_map)
         #open(tourney.channels[:main])
         #open(tourney.channels[:public])
-        f_consumer = errormonitor(Threads.@spawn consume_feature_channel!(tourney.channels[:main], data_points, configs["PlayerSettings"]["FEATURES"]))
-        pf_consumer = errormonitor(Threads.@spawn consume_feature_channel!(tourney.channels[:public], data_points, configs["PlayerSettings"]["PUBLIC_FEATURES"]))
+        errormonitor(Threads.@spawn consume_feature_channel!(tourney.channels[:main], data_points, configs["PlayerSettings"]["FEATURES"]))
+        errormonitor(Threads.@spawn consume_feature_channel!(tourney.channels[:public], data_points, configs["PlayerSettings"]["PUBLIC_FEATURES"]))
     end
 end
 
