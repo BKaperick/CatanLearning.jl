@@ -18,7 +18,6 @@ query_state_value,
 update_state_value,
 update_state_values,
 Tournament,
-FastTournament,
 MutatingTournament,
 AsyncTournament,
 run
@@ -55,12 +54,11 @@ end
 """
     run(tourney_type::Type{<:AbstractTournament}, configs_path::AbstractString, seed = nothing)
 
-1. Tournament
+1. Tournament - Standard tournament, supports parallel multi-threaded epochs
 2. AsyncTournament
 3. MutatingTournament - Run a tournament parameterized by `configs` which keeps track of the exploration of state space 
 and mutations.  Each epoch adds a new mutation, and then a validation epoch is run to confirm that mutation against the 
 previous generation of `MarkovPlayers`.
-4. FastTournament - Experimental tournament parallelizing games as much as possible
 """
 function run(tourney_type::Type{<:AbstractTournament}, configs_path::AbstractString, seed = nothing)
     run(tourney_type, Catan.parse_configs(configs_path), seed)

@@ -39,8 +39,7 @@ update_state_values,
 run_tournament,
 Tournament,
 AsyncTournament,
-MutatingTournament,
-    FastTournament
+MutatingTournament
 
 
 @testsnippet global_test_setup begin
@@ -81,8 +80,7 @@ MutatingTournament,
     run_tournament,
     Tournament,
     AsyncTournament,
-    MutatingTournament,
-    FastTournament
+    MutatingTournament
 
     configs = parse_configs("Configuration.toml")
     markov_configs = parse_configs("MarkovConfiguration.toml")
@@ -512,17 +510,6 @@ end
 
     CatanLearning.run(tourney, configs)
     # Check that the 3 games resulted in 3 winners
-    @test sum([v for (t,v) in tourney.winners]) == total_games
-end
-
-@testitem "fast_tourney" setup=[global_test_setup] begin
-    tourney = FastTournament(configs)
-    total_games = tourney.configs.games_per_map * tourney.configs.maps_per_epoch * tourney.configs.epochs
-    @test total_games == 8
-
-    CatanLearning.run(tourney, configs)
-
-    # Check that the 8 games resulted in 8 winners
     @test sum([v for (t,v) in tourney.winners]) == total_games
 end
 

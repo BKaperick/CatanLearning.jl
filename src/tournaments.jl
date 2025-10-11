@@ -32,7 +32,7 @@ end
 
 function Tournament(configs::Dict)
     initialize_tournament!(configs::Dict)
-    Tournament(TournamentConfig(configs["Tournament"], configs), Dict())
+    Tournament(TournamentConfig(configs["Tournament"], configs), Dict(), Catan.read_channels_from_config(configs))
 end
 function AsyncTournament(configs::Dict)
     initialize_tournament!(configs::Dict)
@@ -41,10 +41,6 @@ end
 function MutatingTournament(configs::Dict)
     initialize_tournament!(configs::Dict)
     MutatingTournament(TournamentConfig(configs["Tournament"], configs), Dict())
-end
-function FastTournament(configs::Dict)
-    initialize_tournament!(configs::Dict)
-    FastTournament(TournamentConfig(configs["Tournament"], configs), Dict(), Catan.read_channels_from_config(configs))
 end
 
 get_markov_players(tourney::AbstractTournament) = Channel() do c
@@ -73,7 +69,7 @@ function run(tourney::T, configs::Dict)::T where T <: AbstractTournament
     return tourney
 end
 
-function _run(tourney::Union{Tournament, MutatingTournament, FastTournament}, configs::Dict)
+function _run(tourney::Union{Tournament, MutatingTournament}, configs::Dict)
     _run_tournament(tourney, configs)
     return tourney
 end
@@ -112,14 +108,14 @@ function _run_tournament(tourney::AbstractTournament, configs::Dict)
     finalize_tournament(tourney, configs)
 end
 
-function finalize_tournament(tourney, configs)
+function finalize_tournament(tourney::MutatingTournament, configs)
     # If the tournament didn't use its directory, then remove it
     if length(readdir(tourney.configs.path)) == 0
         rm(tourney.configs.path)
     end
 end
 
-function finalize_tournament(tourney::FastTournament, configs)
+function finalize_tournament(tourney::Union{Tournament, AsyncTournament}, configs)
     close(tourney.channels[:main])
     close(tourney.channels[:public])
 end
@@ -197,12 +193,11 @@ function do_tournament_one_epoch(tourney::AbstractTournament, configs::Dict)
     end
 end
 
-function do_tournament_one_epoch(tourney::FastTournament, configs::Dict)
+function do_tournament_one_epoch(tourney::Tournament, configs::Dict)
     map_str = ""
     if !tourney.configs.generate_random_maps
         map_str = read(configs["LOAD_MAP"], String)
     end
-
 
     Threads.@threads for j=1:tourney.configs.maps_per_epoch
         # We can't share players across threads
@@ -249,7 +244,7 @@ end
 # ONE GAME
 #
 
-function do_tournament_one_game!(tourney::Union{Tournament, MutatingTournament, FastTournament}, map::Map, players, configs)
+function do_tournament_one_game!(tourney::Union{Tournament, MutatingTournament}, map::Map, players, configs)
     game = Game(players, configs)
     board = Board(map, configs)
     _,winner = Catan.run(game, board)
@@ -275,7 +270,7 @@ function do_tournament_one_game!(tourney::AsyncTournament, map::Map, players, co
     return
 end
 
-function do_tournament_one_game!(tourney::FastTournament, map::Map, players, configs)
+function do_tournament_one_game!(tourney::Tournament, map::Map, players, configs)
     game = Game(players, configs)
     board = Board(map, configs)
     board, winner = Catan.run_async(tourney.channels, game, board)

@@ -31,6 +31,7 @@ end
 struct Tournament <: AbstractTournament
     configs::TournamentConfig
     winners::Dict{Union{Symbol, Nothing}, Int}
+    channels::Dict{Symbol, Channel}
 end
 
 struct MutatingTournament <: AbstractTournament
@@ -40,12 +41,6 @@ end
 
 struct AsyncTournament <: AbstractTournament
     configs::TournamentConfig
-    channels::Dict{Symbol, Channel}
-end
-
-struct FastTournament <: AbstractTournament
-    configs::TournamentConfig
-    winners::Dict{Union{Symbol, Nothing}, Int}
     channels::Dict{Symbol, Channel}
 end
 
