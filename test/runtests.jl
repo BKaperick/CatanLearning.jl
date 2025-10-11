@@ -503,7 +503,7 @@ end
     rm(v_file, force=true, recursive=true)
 end
 
-@testitem "singlethread_tourney" setup=[global_test_setup] begin
+@testitem "standard_tourney" setup=[global_test_setup] begin
     tourney = Tournament(configs)
     total_games = tourney.configs.games_per_map * tourney.configs.maps_per_epoch * tourney.configs.epochs
     @test total_games == 8
@@ -511,6 +511,8 @@ end
     CatanLearning.run(tourney, configs)
     # Check that the 3 games resulted in 3 winners
     @test sum([v for (t,v) in tourney.winners]) == total_games
+    @test countlines(configs["PlayerSettings"]["FEATURES"]) == 1 + (4 * total_games)
+    @test countlines(configs["PlayerSettings"]["PUBLIC_FEATURES"]) == 1 + (4 * total_games)
 end
 
 @testitem "async_tourney" setup=[global_test_setup] begin

@@ -1,6 +1,7 @@
 SAVE_GAME_TO_FILE = false
 LOAD_MAP = "./data/sample.csv"
 PRINT_BOARD = false
+WRITE_FEATURES = true
 MAX_TURNS = 500
 
 [LogSettings]
