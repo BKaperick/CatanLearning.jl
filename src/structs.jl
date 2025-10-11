@@ -18,14 +18,14 @@ end
 
 generate_tournament_id()::Int = rand(range(1,100_000))
 
-mutable struct TournamentConfig
+struct TournamentConfig
     players::AbstractVector{PlayerType}
-    const games_per_map::Int
-    const maps_per_epoch::Int
-    const epochs::Int
-    const generate_random_maps::Bool
-    const unique_id::Int
-    const path::String
+    games_per_map::Int
+    maps_per_epoch::Int
+    epochs::Int
+    generate_random_maps::Bool
+    unique_id::Int
+    path::String
 end
 
 struct Tournament <: AbstractTournament
