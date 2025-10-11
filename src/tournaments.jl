@@ -34,10 +34,6 @@ function Tournament(configs::Dict)
     initialize_tournament!(configs::Dict)
     Tournament(TournamentConfig(configs["Tournament"], configs), Dict(), Catan.read_channels_from_config(configs))
 end
-function AsyncTournament(configs::Dict)
-    initialize_tournament!(configs::Dict)
-    AsyncTournament(TournamentConfig(configs["Tournament"], configs), Catan.read_channels_from_config(configs))
-end
 function MutatingTournament(configs::Dict)
     initialize_tournament!(configs::Dict)
     MutatingTournament(TournamentConfig(configs["Tournament"], configs), Dict())
@@ -74,15 +70,6 @@ function _run(tourney::Union{Tournament, MutatingTournament}, configs::Dict)
     return tourney
 end
 
-function _run(tourney::AsyncTournament, configs::Dict)
-    data_points = 4*(tourney.configs.games_per_map * tourney.configs.maps_per_epoch * tourney.configs.epochs)
-    @sync begin
-        errormonitor(Threads.@spawn _run_tournament(tourney, configs))
-        errormonitor(Threads.@spawn consume_feature_channel!(configs, tourney.channels[:main], data_points, configs["PlayerSettings"]["FEATURES"]))
-        errormonitor(Threads.@spawn consume_feature_channel!(configs, tourney.channels[:public], data_points, configs["PlayerSettings"]["PUBLIC_FEATURES"]))
-    end
-end
-
 function initialize_players!(tourney::AbstractTournament)
 
     # Ensure all markov players are sharing the same StateValueContainer
@@ -115,7 +102,7 @@ function finalize_tournament(tourney::MutatingTournament, configs)
     end
 end
 
-function finalize_tournament(tourney::Union{Tournament, AsyncTournament}, configs)
+function finalize_tournament(tourney::Tournament, configs)
     close(tourney.channels[:main])
     close(tourney.channels[:public])
 end
@@ -176,9 +163,6 @@ end
 
 function finalize_epoch!(tourney, _, __)
     @info tourney.winners
-end
-
-function finalize_epoch!(tourney::AsyncTournament, _, __)
 end
 
 function do_tournament_one_epoch(tourney::AbstractTournament, configs::Dict)
@@ -259,14 +243,6 @@ function do_tournament_one_game!(tourney::Union{Tournament, MutatingTournament},
     else
         tourney.winners[w] = 1
     end
-    return
-end
-
-function do_tournament_one_game!(tourney::AsyncTournament, map::Map, players, configs)
-    game = Game(players, configs)
-    board = Board(map, configs)
-    Catan.run_async(tourney.channels, game, board)
-    @debug "finished game $(game.unique_id)"
     return
 end
 
