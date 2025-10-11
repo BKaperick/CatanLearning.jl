@@ -82,8 +82,8 @@ function _run(tourney::AsyncTournament, configs::Dict)
     data_points = 4*(tourney.configs.games_per_map * tourney.configs.maps_per_epoch * tourney.configs.epochs)
     @sync begin
         errormonitor(Threads.@spawn _run_tournament(tourney, configs))
-        errormonitor(Threads.@spawn consume_feature_channel!(tourney.channels[:main], data_points, configs["PlayerSettings"]["FEATURES"]))
-        errormonitor(Threads.@spawn consume_feature_channel!(tourney.channels[:public], data_points, configs["PlayerSettings"]["PUBLIC_FEATURES"]))
+        errormonitor(Threads.@spawn consume_feature_channel!(configs, tourney.channels[:main], data_points, configs["PlayerSettings"]["FEATURES"]))
+        errormonitor(Threads.@spawn consume_feature_channel!(configs, tourney.channels[:public], data_points, configs["PlayerSettings"]["PUBLIC_FEATURES"]))
     end
 end
 
@@ -213,10 +213,9 @@ function do_tournament_one_epoch(tourney::FastTournament, configs::Dict)
         do_tournament_one_map!(tourney, thread_players, configs, j, map_str)
 
         data_points = 4*(tourney.configs.games_per_map)
-        #open(tourney.channels[:main])
-        #open(tourney.channels[:public])
-        errormonitor(Threads.@spawn consume_feature_channel!(tourney.channels[:main], data_points, configs["PlayerSettings"]["FEATURES"]))
-        errormonitor(Threads.@spawn consume_feature_channel!(tourney.channels[:public], data_points, configs["PlayerSettings"]["PUBLIC_FEATURES"]))
+
+        errormonitor(Threads.@spawn consume_feature_channel!(configs, tourney.channels[:main], data_points, configs["PlayerSettings"]["FEATURES"]))
+        errormonitor(Threads.@spawn consume_feature_channel!(configs, tourney.channels[:public], data_points, configs["PlayerSettings"]["PUBLIC_FEATURES"]))
     end
 end
 
@@ -240,6 +239,7 @@ function do_tournament_one_map!(tourney::AbstractTournament, players::AbstractVe
         @assert all(PlayerApi.is_in_initial_state.([p.player for p in players]))
         
         do_tournament_one_game!(tourney, map, players, configs)
+
         global_logger(main_logger)
         iter_logger(tourney, i)
     end
@@ -280,6 +280,16 @@ function do_tournament_one_game!(tourney::FastTournament, map::Map, players, con
     board = Board(map, configs)
     board, winner = Catan.run_async(tourney.channels, game, board)
     @debug "finished game $(game.unique_id)"
+    
+    w = winner
+    if winner !== nothing
+        w = winner.player.team
+    end
+    if haskey(tourney.winners, w)
+        tourney.winners[w] += 1
+    else
+        tourney.winners[w] = 1
+    end
     return
 end
 
@@ -287,8 +297,10 @@ end
 # HELPER METHODS
 #
 
-function consume_feature_channel!(channel, count, key)
-    _write_many_features_file(channel, count, key)
+function consume_feature_channel!(configs, channel, count, key)
+    if configs["WRITE_FEATURES"] == true
+        _write_many_features_file(channel, count, key)
+    end
 end
 
 function validate_mutation!(configs::Dict, winner::Union{Nothing, Symbol})::Bool

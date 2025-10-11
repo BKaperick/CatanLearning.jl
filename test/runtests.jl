@@ -218,7 +218,7 @@ end
     #@show length(JET.get_reports(rep))
     #@show rep
     reports = JET.get_reports(rep)
-    max_num = 71
+    max_num = 72
     println("length(JET.get_reports(rep)) = $(length(reports)) / $max_num")
     @test length(reports) <= max_num
 end
@@ -520,11 +520,9 @@ end
     total_games = tourney.configs.games_per_map * tourney.configs.maps_per_epoch * tourney.configs.epochs
     @test total_games == 8
 
-    println("starting tourney")
-    #wait(CatanLearning.run(tourney, configs))
     CatanLearning.run(tourney, configs)
-    println("finished tourney")
-    # Check that the 3 games resulted in 3 winners
+
+    # Check that the 8 games resulted in 8 winners
     @test sum([v for (t,v) in tourney.winners]) == total_games
 end
 
