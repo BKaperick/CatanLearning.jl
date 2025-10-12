@@ -1,7 +1,7 @@
 name = "CatanLearning"
 uuid = "4c91a4e0-7dfb-465a-9cbf-f9fc204cf8e7"
 authors = ["Bryan Kaperick <bryankaperick@gmail.com>"]
-version = "1.1.0"
+version = "2.0.0"
 
 [deps]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
@@ -33,7 +33,7 @@ TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
 TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
 
 [compat]
-Catan = "1.1.0"
+Catan = "2.0.0"
 DataStructures = "0.18.22"
 Distributions = "0.25.120"
 Documenter = "1.14.1"
