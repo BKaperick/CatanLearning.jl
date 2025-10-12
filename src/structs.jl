@@ -30,19 +30,17 @@ end
 
 struct Tournament <: AbstractTournament
     configs::TournamentConfig
-    teams::AbstractVector{Symbol}
     winners::Dict{Union{Symbol, Nothing}, Int}
+    channels::Dict{Symbol, Channel}
 end
 
 struct MutatingTournament <: AbstractTournament
     configs::TournamentConfig
-    teams::AbstractVector{Symbol}
     winners::Dict{Union{Symbol, Nothing}, Int}
 end
 
 struct AsyncTournament <: AbstractTournament
     configs::TournamentConfig
-    teams::AbstractVector{Symbol}
     channels::Dict{Symbol, Channel}
 end
 

@@ -1,4 +1,4 @@
-function initialize_tournament(configs::Dict)
+function initialize_tournament!(configs::Dict)
     if configs["WRITE_FEATURES"] == true
         @info "Initializing player feature files"
         f = get_features()
@@ -12,9 +12,6 @@ function initialize_tournament(configs::Dict)
             write_features_header_if_needed(pf_file_name, pf, configs)
         end
     end
-    teams = [Symbol(t) for t in configs["TEAMS"]]
-    winners = init_winners(teams)
-    return teams,winners
 end
 
 function get_tournament_path(configs, tourney_id)
@@ -34,16 +31,12 @@ function TournamentConfig(tournament_configs::Dict, player_configs::Dict)
 end
 
 function Tournament(configs::Dict)
-    teams,winners = initialize_tournament(configs::Dict)
-    Tournament(TournamentConfig(configs["Tournament"], configs), teams, winners)
-end
-function AsyncTournament(configs::Dict)
-    teams,_ = initialize_tournament(configs::Dict)
-    AsyncTournament(TournamentConfig(configs["Tournament"], configs), teams, Catan.read_channels_from_config(configs))
+    initialize_tournament!(configs::Dict)
+    Tournament(TournamentConfig(configs["Tournament"], configs), Dict(), Catan.read_channels_from_config(configs))
 end
 function MutatingTournament(configs::Dict)
-    teams,winners = initialize_tournament(configs::Dict)
-    MutatingTournament(TournamentConfig(configs["Tournament"], configs), teams, winners)
+    initialize_tournament!(configs::Dict)
+    MutatingTournament(TournamentConfig(configs["Tournament"], configs), Dict())
 end
 
 get_markov_players(tourney::AbstractTournament) = Channel() do c
@@ -65,23 +58,6 @@ function run_tournament(configs::Dict)
     return tourney.winners
 end
 
-function run_async_tournament(configs::Dict)
-    tourney = AsyncTournament(configs)
-    run(tourney, configs)
-end
-
-"""
-    run_mutating_tournament(configs)
-
-Run a tournament parameterized by `configs` which keeps track of the exploration of state space and mutations.
-Each epoch adds a new mutation, and then a validation epoch is run to confirm that mutation against the previous
-generation of `MarkovPlayers`.
-"""
-function run_mutating_tournament(configs)
-    tourney = MutatingTournament(configs)
-    run(tourney, configs)
-end
-
 function run(tourney::T, configs::Dict)::T where T <: AbstractTournament
     data_points = 4*(tourney.configs.games_per_map * tourney.configs.maps_per_epoch * tourney.configs.epochs)
     @info "Running tournament $(tourney.configs.unique_id) with $(data_points/4) games in total"
@@ -94,25 +70,21 @@ function _run(tourney::Union{Tournament, MutatingTournament}, configs::Dict)
     return tourney
 end
 
-function _run(tourney::AsyncTournament, configs::Dict)
-    data_points = 4*(tourney.configs.games_per_map * tourney.configs.maps_per_epoch * tourney.configs.epochs)
-    @sync begin
-        @async _run_tournament(tourney, configs)
-        @async consume_feature_channel!(tourney.channels[:main], data_points, configs["PlayerSettings"]["FEATURES"])
-        @async consume_feature_channel!(tourney.channels[:public], data_points, configs["PlayerSettings"]["PUBLIC_FEATURES"])
+function initialize_players!(tourney::AbstractTournament)
+
+    # Ensure all markov players are sharing the same StateValueContainer
+    svc = nothing
+    for (i,player) in enumerate(get_markov_players(tourney))
+        if i == 1
+            svc = player.process.state_values
+        else
+            player.process.state_values = svc
+        end
     end
 end
 
-function _run_desactivated(tourney::AsyncTournament, configs::Dict)
-    data_points = 4*(tourney.configs.games_per_map * tourney.configs.maps_per_epoch * tourney.configs.epochs)
-    _run_tournament(tourney, configs)
-    @debug "finished tourney"
-    consume_feature_channel!(tourney.channels[:main], data_points, configs["PlayerSettings"]["FEATURES"])
-    consume_feature_channel!(tourney.channels[:public], data_points, configs["PlayerSettings"]["PUBLIC_FEATURES"])
-end
-
 function _run_tournament(tourney::AbstractTournament, configs::Dict)
-    
+    initialize_players!(tourney)
     for k=1:tourney.configs.epochs
         @info "epoch $k / $(tourney.configs.epochs)"
         
@@ -120,13 +92,25 @@ function _run_tournament(tourney::AbstractTournament, configs::Dict)
         do_tournament_one_epoch(tourney, configs)
         finalize_epoch!(tourney, configs, k)
     end
+    finalize_tournament(tourney, configs)
 end
 
+function finalize_tournament(tourney::MutatingTournament, configs)
+    # If the tournament didn't use its directory, then remove it
+    if length(readdir(tourney.configs.path)) == 0
+        rm(tourney.configs.path)
+    end
+end
+
+function finalize_tournament(tourney::Tournament, configs)
+    close(tourney.channels[:main])
+    close(tourney.channels[:public])
+end
 #
 # ONE EPOCH
 #
 
-function initialize_epoch!(tourney::Union{Tournament, AsyncTournament}, configs::Dict, epoch_num)
+function initialize_epoch!(tourney::AbstractTournament, configs::Dict, epoch_num)
 end
 
 """
@@ -177,21 +161,40 @@ function finalize_epoch!(tourney::MutatingTournament, configs, epoch_num)
 end
 
 
-function finalize_epoch!(tourney::Tournament, _, __)
+function finalize_epoch!(tourney, _, __)
     @info tourney.winners
 end
 
-function finalize_epoch!(tourney::AsyncTournament, _, __)
-end
-
-function do_tournament_one_epoch(tourney::AbstractTournament, configs::Dict; refresh_players! = Catan.refresh_players!)
+function do_tournament_one_epoch(tourney::AbstractTournament, configs::Dict)
     map_str = ""
     if !tourney.configs.generate_random_maps
         map_str = read(configs["LOAD_MAP"], String)
     end
     for j=1:tourney.configs.maps_per_epoch
         @info "map $j / $(tourney.configs.maps_per_epoch)"
-        do_tournament_one_map!(tourney, configs, j, map_str)
+        #@warn "T: $(repr(UInt64(pointer_from_objref(tourney.configs.players[1].player))))"
+        do_tournament_one_map!(tourney, tourney.configs.players, configs, j, map_str)
+    end
+end
+
+function do_tournament_one_epoch(tourney::Tournament, configs::Dict)
+    map_str = ""
+    if !tourney.configs.generate_random_maps
+        map_str = read(configs["LOAD_MAP"], String)
+    end
+
+    Threads.@threads for j=1:tourney.configs.maps_per_epoch
+        # We can't share players across threads
+        thread_players = SVector{length(tourney.configs.players), PlayerType}([copy(p) for p in tourney.configs.players])
+
+        @debug "Thread $(Threads.threadid()): $(repr(UInt64(pointer_from_objref(thread_players[1].player))))"
+        @info "map $j / $(tourney.configs.maps_per_epoch)"
+        do_tournament_one_map!(tourney, thread_players, configs, j, map_str)
+
+        data_points = 4*(tourney.configs.games_per_map)
+
+        errormonitor(Threads.@spawn consume_feature_channel!(configs, tourney.channels[:main], data_points, configs["PlayerSettings"]["FEATURES"]))
+        errormonitor(Threads.@spawn consume_feature_channel!(configs, tourney.channels[:public], data_points, configs["PlayerSettings"]["PUBLIC_FEATURES"]))
     end
 end
 
@@ -199,7 +202,7 @@ end
 # ONE MAP
 #
 
-function do_tournament_one_map!(tourney::AbstractTournament, configs::Dict, map_num::Integer, map_str::AbstractString)
+function do_tournament_one_map!(tourney::AbstractTournament, players::AbstractVector{PlayerType}, configs::Dict, map_num::Integer, map_str::AbstractString)
     iter_logger = (tourney, i) -> log_games_per_map(map_num, tourney.configs, i)
     if tourney.configs.generate_random_maps
         map = Map(Catan.generate_random_map())
@@ -210,8 +213,12 @@ function do_tournament_one_map!(tourney::AbstractTournament, configs::Dict, map_
     for i=1:tourney.configs.games_per_map
         @debug "game $i / $(tourney.configs.games_per_map)"
         main_logger = descend_logger(configs, "GAME")
-        Catan.refresh_players!(tourney.configs.players)
-        do_tournament_one_game!(tourney, map, tourney.configs.players, configs)
+
+        Catan.refresh_players!(players)
+        @assert all(PlayerApi.is_in_initial_state.([p.player for p in players]))
+        
+        do_tournament_one_game!(tourney, map, players, configs)
+
         global_logger(main_logger)
         iter_logger(tourney, i)
     end
@@ -239,11 +246,21 @@ function do_tournament_one_game!(tourney::Union{Tournament, MutatingTournament},
     return
 end
 
-function do_tournament_one_game!(tourney::AsyncTournament, map::Map, players, configs)
+function do_tournament_one_game!(tourney::Tournament, map::Map, players, configs)
     game = Game(players, configs)
     board = Board(map, configs)
-    Catan.run_async(tourney.channels, game, board)
+    board, winner = Catan.run_async(tourney.channels, game, board)
     @debug "finished game $(game.unique_id)"
+    
+    w = winner
+    if winner !== nothing
+        w = winner.player.team
+    end
+    if haskey(tourney.winners, w)
+        tourney.winners[w] += 1
+    else
+        tourney.winners[w] = 1
+    end
     return
 end
 
@@ -251,15 +268,11 @@ end
 # HELPER METHODS
 #
 
-function init_winners(teams)::Dict{Union{Symbol, Nothing}, Int}
-    return Dict{Union{Symbol, Nothing}, Int}()
+function consume_feature_channel!(configs, channel, count, key)
+    if configs["WRITE_FEATURES"] == true
+        _write_many_features_file(channel, count, key)
+    end
 end
-
-function consume_feature_channel!(channel, count, key)
-    _write_many_features_file(channel, count, key)
-    close(channel)
-end
-
 
 function validate_mutation!(configs::Dict, winner::Union{Nothing, Symbol})::Bool
     @info "Starting validation epoch for winner $winner"

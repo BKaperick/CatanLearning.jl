@@ -4,6 +4,7 @@ using Profile
 using BenchmarkTools
 using DataStructures
 using LMDB
+using StaticArrays
 
 import MLJModelInterface
 const MMI = MLJModelInterface
@@ -17,7 +18,9 @@ query_state_value,
 update_state_value,
 update_state_values,
 Tournament,
-run_tournament
+MutatingTournament,
+AsyncTournament,
+run
 
 include("structs.jl")
 include("state_values.jl")
@@ -47,8 +50,25 @@ function __init__()
     Catan.update_default_configs(default_config_path)
 end
 
-function run(configs)
-    tourney = Tournament(configs)
+
+"""
+    run(tourney_type::Type{<:AbstractTournament}, configs_path::AbstractString, seed = nothing)
+
+1. Tournament - Standard tournament, supports parallel multi-threaded epochs
+2. AsyncTournament
+3. MutatingTournament - Run a tournament parameterized by `configs` which keeps track of the exploration of state space 
+and mutations.  Each epoch adds a new mutation, and then a validation epoch is run to confirm that mutation against the 
+previous generation of `MarkovPlayers`.
+"""
+function run(tourney_type::Type{<:AbstractTournament}, configs_path::AbstractString, seed = nothing)
+    run(tourney_type, Catan.parse_configs(configs_path), seed)
+end
+
+function run(tourney_type::Type{<:AbstractTournament}, configs::Dict, seed = nothing)
+    if seed !== nothing
+        Random.seed!(seed)
+    end
+    tourney = tourney_type(configs)
     run(tourney, configs)
 end
 
